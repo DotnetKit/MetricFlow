@@ -5,19 +5,21 @@ namespace DotnetKit.MetricFlow.Core
     public class CodeTracker<T> : IDisposable
         where T : ICounter
     {
-        private readonly IMetricCounters<T> _counters;
-        private readonly string _blockname;
+        private readonly IMetricTracker<T> _counters;
+        private readonly string _metricName;
+
         private bool _disposed = false;
 
-        public CodeTracker(IMetricCounters<T> counters, string blockname)
+        public CodeTracker(IMetricTracker<T> counters, string metricName, Dictionary<string, string>? metricMetadata = null)
 
         {
             _counters = counters;
-            _blockname = blockname;
-            _counters.In(_blockname);
+            _metricName = metricName;
+            _counters.In(_metricName, metricMetadata);
+
         }
 
-        public string Name => _blockname;
+        public string Name => _metricName;
 
         protected virtual void Dispose(bool disposing)
         {
@@ -29,7 +31,7 @@ namespace DotnetKit.MetricFlow.Core
             if (disposing)
             {
                 // invoke disposer
-                _counters.Out(_blockname);
+                _counters.Out(_metricName);
             }
             _disposed = true;
         }

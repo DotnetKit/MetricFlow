@@ -2,15 +2,9 @@
 {
     public interface ICounter
     {
-        long InCount { get; }
-        long OutCount { get; }
-        TimeSpan TotalDuration { get; }
-        TimeSpan AverageDuration { get; }
-        TimeSpan MinDuration { get; }
-        TimeSpan MaxDuration { get; }
-
+        string Name { get; }
+        CounterValues Values { get; }
         long Inc();
-
         long Dec();
     }
 }

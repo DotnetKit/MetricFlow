@@ -1,5 +1,8 @@
 ﻿namespace CustomCounters
 {
+    /// <summary>
+    ///  Counter based on UTC time, used to measure time in ticks rather thant default Stopwatch implementation
+    /// </summary>
     public class UtcCounter : CounterBase
     {
         private long _inTicks = 0;

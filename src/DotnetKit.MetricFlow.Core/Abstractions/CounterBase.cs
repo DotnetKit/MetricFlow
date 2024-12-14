@@ -1,61 +1,99 @@
-﻿namespace DotnetKit.MetricFlow.Core.Abstractions
+﻿using System.Text;
+using DotnetKit.MetricFlow.Core.Abstractions;
+using DotnetKit.MetricFlow.Core.Extensions;
+
+public abstract class CounterBase(string name, Dictionary<string, string> metricMetadata) : ICounter
 {
-    public abstract class CounterBase : ICounter
+    private DateTime _startedAt;
+    private DateTime _endedAt;
+    private long _inCount = 0;
+    private long _outCount = 0;
+    private long _totalDuration = 0;
+
+    private long _maxDuration = 0;
+    private long _minDuration = 0;
+    private long _averageDuration = 0;
+
+    public string Name => name;
+    public Dictionary<string, string> Metadata => metricMetadata;
+
+    public CounterValues Values => new CounterValues(
+        Interlocked.Read(ref _inCount),
+        Interlocked.Read(ref _outCount),
+        TimeSpan.FromMilliseconds(Interlocked.Read(ref _totalDuration)),
+        TimeSpan.FromMilliseconds(Interlocked.Read(ref _averageDuration)),
+        TimeSpan.FromMilliseconds(Interlocked.Read(ref _minDuration)),
+        TimeSpan.FromMilliseconds(Interlocked.Read(ref _maxDuration))
+
+        );
+
+    public abstract void Start();
+
+    public abstract long Stop();
+
+    public long Inc()
     {
-        private long _inCount = 0;
-        private long _outCount = 0;
-        private long _totalDuration = 0;
-
-        private long _maxDuration = 0;
-        private long _minDuration = 0;
-        private long _averageDuration = 0;
-
-        public long InCount => _inCount;
-        public long OutCount => _outCount;
-
-        public abstract void Start();
-
-        public abstract long Stop();
-
-        public virtual long Inc()
-        {
-            Start();
-            return Interlocked.Increment(ref _inCount);
-        }
-
-        public virtual long Dec()
-        {
-            UpdateState(Stop());
-            return Interlocked.Increment(ref _outCount);
-        }
-
-        public TimeSpan TotalDuration => new TimeSpan(_totalDuration);
-
-        public TimeSpan AverageDuration => new TimeSpan(_averageDuration);
-
-        public TimeSpan MinDuration => new TimeSpan(_minDuration);
-
-        public TimeSpan MaxDuration => new TimeSpan(_maxDuration);
-
-        protected void UpdateState(long duration)
-        {
-            Interlocked.Exchange(ref _totalDuration, _totalDuration + duration);
-            if (_maxDuration < duration)
-            {
-                Interlocked.Exchange(ref _maxDuration, duration);
-            }
-            if (_minDuration == 0 || _minDuration > duration)
-            {
-                Interlocked.Exchange(ref _minDuration, duration);
-            }
-            if (_averageDuration != 0)
-            {
-                Interlocked.Exchange(ref _averageDuration, (_averageDuration + duration) / 2);
-            }
-            else
-            {
-                Interlocked.Exchange(ref _averageDuration, duration);
-            }
-        }
+        Start();
+        _startedAt = DateTime.UtcNow;
+        return Interlocked.Increment(ref _inCount);
     }
+
+    public long Dec()
+    {
+        FinalizeState(Stop());
+        return Interlocked.Increment(ref _outCount);
+    }
+
+    protected void FinalizeState(long duration)
+    {
+        _endedAt = DateTime.UtcNow;
+        Interlocked.Add(ref _totalDuration, duration);
+
+        UpdateMaxDuration(duration);
+        UpdateMinDuration(duration);
+        UpdateAverageDuration(duration);
+    }
+
+    private void UpdateMaxDuration(long duration)
+    {
+        long initialValue, computedValue;
+        do
+        {
+            initialValue = _maxDuration;
+            if (duration <= initialValue) break;
+            computedValue = duration;
+        } while (Interlocked.CompareExchange(ref _maxDuration, computedValue, initialValue) != initialValue);
+    }
+
+    private void UpdateMinDuration(long duration)
+    {
+        long initialValue, computedValue;
+        do
+        {
+            initialValue = _minDuration;
+            if (initialValue != 0 && duration >= initialValue) break;
+            computedValue = duration;
+        } while (Interlocked.CompareExchange(ref _minDuration, computedValue, initialValue) != initialValue);
+    }
+
+    private void UpdateAverageDuration(long duration)
+    {
+        long initialValue, computedValue;
+        do
+        {
+            initialValue = _averageDuration;
+            computedValue = initialValue == 0 ? duration : (initialValue + duration) / 2;
+        } while (Interlocked.CompareExchange(ref _averageDuration, computedValue, initialValue) != initialValue);
+    }
+
+    public override string ToString()
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine(Name);
+        sb.AppendLine(Metadata.ToFormattedString("MetricMetadata"));
+        sb.AppendLine(Values.ToString());
+
+        return sb.ToString();
+    }
+
 }

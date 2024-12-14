@@ -8,21 +8,22 @@ namespace SimpleMetricCountersExample
 
         public static async Task RunExample()
         {
-            var perfCounters = new MetricCounters("ExecutionTime.Metrics");
+            var tracker = new MetricTracker("ExecutionTimeMetricsTopic", new() { ["tenant_id"] = "TenantId1" });
 
             for (var i = 0; i < OPERATION_COUNT; i++)
             {
-                using (var _ = perfCounters.Track("Operation1"))
+                using (var _ = tracker.Track("Operation1", new() { ["metric_operation1_id"] = i.ToString() }))
                 {
                     await Task.Delay(2);
                 }
-                using (var _ = perfCounters.Track("Operation2"))
+                using (var _ = tracker.Track("Operation2", new() { ["metric_operation2_id"] = i.ToString() }))
                 {
-                    await Task.Delay(1);
+
+                    await Task.Delay(4);
                 }
             }
 
-            perfCounters.WriteToConsole();
+            Console.WriteLine(tracker.ToString());
 
             /*
                 ======================================
