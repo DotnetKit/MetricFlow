@@ -4,14 +4,14 @@ using DotnetKit.MetricFlow.Core.Extensions;
 
 namespace DotnetKit.MetricFlow.Core.Abstractions
 {
-    public abstract class MetricTrackerBase<T>(string topic, Func<string, Dictionary<string, string>?, T> counterFactory, Dictionary<string, string>? topicMetadata = null) : IMetricTracker<T>
+    public abstract class MetricTrackerBase<T>(string topic, Func<string, Dictionary<string, string>?, T> counterFactory, Dictionary<string, string>? topicTags = null) : IMetricTracker<T>
         where T : ICounter
     {
         private readonly ConcurrentDictionary<string, T> _blockCounters = new ConcurrentDictionary<string, T>();
 
         public string Topic => topic;
 
-        public Dictionary<string, string>? TopicMetadata => topicMetadata;
+        public Dictionary<string, string>? TopicTags => topicTags;
 
         public long In(string metricName, Dictionary<string, string>? metricMetadata = null)
         {
@@ -48,9 +48,9 @@ namespace DotnetKit.MetricFlow.Core.Abstractions
         {
             var sb = new StringBuilder();
             sb.AppendLine(Topic);
-            if (TopicMetadata != null)
+            if (TopicTags != null)
             {
-                sb.AppendLine(TopicMetadata.ToFormattedString("TopicMetadata"));
+                sb.AppendLine(TopicTags.ToFormattedString("Topic Tags"));
             }
             foreach (var counter in GetCounters())
             {
