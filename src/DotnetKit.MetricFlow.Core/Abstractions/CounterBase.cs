@@ -2,10 +2,11 @@
 using DotnetKit.MetricFlow.Core.Abstractions;
 using DotnetKit.MetricFlow.Core.Extensions;
 
-public abstract class CounterBase(string name, Dictionary<string, string> metricMetadata) : ICounter
+public abstract class CounterBase(string name, Dictionary<string, string>? metricMetadata) : ICounter
 {
-    private DateTime _startedAt;
-    private DateTime _endedAt;
+    public DateTime TimeStamp => DateTime.UtcNow;
+    private DateTime? _startedAt = null;
+    private DateTime? _endedAt = null;
     private long _inCount = 0;
     private long _outCount = 0;
     private long _totalDuration = 0;
@@ -15,7 +16,7 @@ public abstract class CounterBase(string name, Dictionary<string, string> metric
     private long _averageDuration = 0;
 
     public string Name => name;
-    public Dictionary<string, string> Metadata => metricMetadata;
+    public Dictionary<string, string> Metadata => metricMetadata ?? [];
 
     public CounterValues Values => new CounterValues(
         Interlocked.Read(ref _inCount),
