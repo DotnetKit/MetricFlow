@@ -1,5 +1,9 @@
 # MetricFlow
 
+![internal](https://github.com/dotnetkit/metricflow/actions/workflows/publish-internal.yml/badge.svg)
+![public](https://github.com/dotnetkit/metricflow/actions/workflows/publish-public.yml/badge.svg)
+![Dotnetkit.MetricFlow](https://img.shields.io/nuget/v/Dotnetkit.MetricFlow)
+
 MetricFlow is a lightweight .NET library designed to help developers define and track functional and domain-oriented metrics (such as counters, timers, and event-based measurements).
 
 ## Features
