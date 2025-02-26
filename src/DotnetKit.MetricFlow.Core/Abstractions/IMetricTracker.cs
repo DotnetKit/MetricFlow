@@ -8,11 +8,11 @@
 
         IEnumerable<T> GetCounters();
 
-        long In(string counterName, Dictionary<string, string>? topicTags = null);
+        long? In(string counterName, Dictionary<string, string>? topicTags = null);
 
         IDisposable Track(string counterName, Dictionary<string, string>? topicTags = null);
 
-        long Out(string counterName, Dictionary<string, string>? topicTags = null);
+        long? Out(string counterName, Dictionary<string, string>? topicTags = null);
 
         void Clear();
     }

@@ -4,24 +4,35 @@ using DotnetKit.MetricFlow.Core.Extensions;
 
 namespace DotnetKit.MetricFlow.Core.Abstractions
 {
-    public abstract class MetricTrackerBase<T>(string topic, Func<string, Dictionary<string, string>?, T> counterFactory, Dictionary<string, string>? topicTags = null) : IMetricTracker<T>
+    public abstract class MetricTrackerBase<T>(string topic,
+     Func<string, Dictionary<string, string>?, T> counterFactory,
+     Dictionary<string, string>? topicTags = null,
+     int? samplingRate = 100) : IMetricTracker<T>
         where T : ICounter
     {
         private readonly ConcurrentDictionary<string, T> _blockCounters = new ConcurrentDictionary<string, T>();
-
+        private readonly Random _randomizer = new Random();
         public string Topic => topic;
 
         public Dictionary<string, string>? TopicTags => topicTags;
 
-        public long In(string metricName, Dictionary<string, string>? metricMetadata = null)
+        public long? In(string metricName, Dictionary<string, string>? metricMetadata = null)
         {
+            if (IsSampled(samplingRate, _randomizer))
+            {
+                return 0;
+            }
             var counter = _blockCounters.GetOrAdd(metricName, counterFactory(metricName, metricMetadata));
             // Handle metadata as needed
             return counter.Inc();
         }
 
-        public long Out(string metricName, Dictionary<string, string>? metricMetadata = null)
+        public long? Out(string metricName, Dictionary<string, string>? metricMetadata = null)
         {
+            if (IsSampled(samplingRate, _randomizer))
+            {
+                return 0;
+            }
             var counter = _blockCounters.GetOrAdd(metricName, counterFactory(metricName, metricMetadata));
             // Handle metadata as needed
             return counter.Dec();
@@ -57,6 +68,10 @@ namespace DotnetKit.MetricFlow.Core.Abstractions
                 sb.AppendLine(counter.ToString());
             }
             return sb.ToString();
+        }
+        private static bool IsSampled(int? samplingRate, Random randomizer)
+        {
+            return !samplingRate.HasValue || (randomizer.NextDouble() * 100) <= 100 - samplingRate.Value;
         }
 
     }
