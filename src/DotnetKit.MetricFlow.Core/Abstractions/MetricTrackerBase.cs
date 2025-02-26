@@ -7,7 +7,7 @@ namespace DotnetKit.MetricFlow.Core.Abstractions
     public abstract class MetricTrackerBase<T>(string topic,
      Func<string, Dictionary<string, string>?, T> counterFactory,
      Dictionary<string, string>? topicTags = null,
-     int? samplingRate = 100) : IMetricTracker<T>
+     double? samplingRate = 1.0) : IMetricTracker<T>
         where T : ICounter
     {
         private readonly ConcurrentDictionary<string, T> _blockCounters = new ConcurrentDictionary<string, T>();
@@ -69,9 +69,9 @@ namespace DotnetKit.MetricFlow.Core.Abstractions
             }
             return sb.ToString();
         }
-        private static bool IsSampled(int? samplingRate, Random randomizer)
+        private static bool IsSampled(double? samplingRate, Random randomizer)
         {
-            return !samplingRate.HasValue || (randomizer.NextDouble() * 100) <= 100 - samplingRate.Value;
+            return !samplingRate.HasValue || randomizer.NextDouble() <= 1 - samplingRate.Value;
         }
 
     }

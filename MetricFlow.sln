@@ -12,7 +12,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetKit.MetricFlow.Core",
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{01644C81-1609-407B-A964-A15BFA59E822}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MetricFlow.Tests", "MetricFlow.Tests\MetricFlow.Tests.csproj", "{3897CD1F-6CA5-41EC-9845-1979426CD7B8}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MetricFlow.Tests", "tests\MetricFlow.Tests\MetricFlow.Tests.csproj", "{3897CD1F-6CA5-41EC-9845-1979426CD7B8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
