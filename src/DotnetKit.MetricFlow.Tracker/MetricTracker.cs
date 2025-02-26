@@ -1,6 +1,6 @@
-﻿using DotnetKit.MetricFlow.Core.Abstractions;
+﻿using DotnetKit.MetricFlow.Tracker.Abstractions;
 
-namespace DotnetKit.MetricFlow.Core
+namespace DotnetKit.MetricFlow.Tracker
 {
 
     public class MetricTracker(string topic, Dictionary<string, string>? topicTags = null, double? samplingRate = 1.0) :

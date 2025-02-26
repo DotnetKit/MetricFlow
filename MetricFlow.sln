@@ -8,11 +8,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{827E0CD3-B72
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SimpleMetricCountersExample", "examples\SimpleMetricCountersExample\SimpleMetricCountersExample.csproj", "{78058871-2DC0-6810-ED9E-588E6E3A1265}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetKit.MetricFlow.Core", "src\DotnetKit.MetricFlow.Core\DotnetKit.MetricFlow.Core.csproj", "{FA380F17-C8DB-4AE3-7DE8-26742745EBDB}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{01644C81-1609-407B-A964-A15BFA59E822}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MetricFlow.Tests", "tests\MetricFlow.Tests\MetricFlow.Tests.csproj", "{3897CD1F-6CA5-41EC-9845-1979426CD7B8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MetricFlow.Tests", "tests\MetricFlow.Tests\MetricFlow.Tests.csproj", "{3897CD1F-6CA5-41EC-9845-1979426CD7B8}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetKit.MetricFlow.Tracker", "src\DotnetKit.MetricFlow.Tracker\DotnetKit.MetricFlow.Tracker.csproj", "{60112D90-095C-44EA-90E9-846B4EDBF758}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -24,22 +24,22 @@ Global
 		{78058871-2DC0-6810-ED9E-588E6E3A1265}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{78058871-2DC0-6810-ED9E-588E6E3A1265}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{78058871-2DC0-6810-ED9E-588E6E3A1265}.Release|Any CPU.Build.0 = Release|Any CPU
-		{FA380F17-C8DB-4AE3-7DE8-26742745EBDB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{FA380F17-C8DB-4AE3-7DE8-26742745EBDB}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{FA380F17-C8DB-4AE3-7DE8-26742745EBDB}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{FA380F17-C8DB-4AE3-7DE8-26742745EBDB}.Release|Any CPU.Build.0 = Release|Any CPU
 		{3897CD1F-6CA5-41EC-9845-1979426CD7B8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{3897CD1F-6CA5-41EC-9845-1979426CD7B8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3897CD1F-6CA5-41EC-9845-1979426CD7B8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3897CD1F-6CA5-41EC-9845-1979426CD7B8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{60112D90-095C-44EA-90E9-846B4EDBF758}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{60112D90-095C-44EA-90E9-846B4EDBF758}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{60112D90-095C-44EA-90E9-846B4EDBF758}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{60112D90-095C-44EA-90E9-846B4EDBF758}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{78058871-2DC0-6810-ED9E-588E6E3A1265} = {B36A84DF-456D-A817-6EDD-3EC3E7F6E11F}
-		{FA380F17-C8DB-4AE3-7DE8-26742745EBDB} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{3897CD1F-6CA5-41EC-9845-1979426CD7B8} = {01644C81-1609-407B-A964-A15BFA59E822}
+		{60112D90-095C-44EA-90E9-846B4EDBF758} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {7CE4E738-181F-42CA-B63C-365DBD1BC7B9}

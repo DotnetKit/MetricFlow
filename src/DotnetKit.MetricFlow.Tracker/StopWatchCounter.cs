@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 
-namespace DotnetKit.MetricFlow.Core
+namespace DotnetKit.MetricFlow.Tracker
 {
     /// <summary>Default implementation of a counter based on Stopwatch helper</summary>
     public class StopWatchCounter(string name, Dictionary<string, string>? metricMetadata) : CounterBase(name, metricMetadata)

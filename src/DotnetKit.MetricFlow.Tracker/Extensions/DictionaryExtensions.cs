@@ -1,4 +1,4 @@
-namespace DotnetKit.MetricFlow.Core.Extensions
+namespace DotnetKit.MetricFlow.Tracker.Extensions
 {
     internal static class DictionaryExtensions
     {

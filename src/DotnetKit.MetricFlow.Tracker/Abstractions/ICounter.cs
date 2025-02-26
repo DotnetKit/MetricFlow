@@ -1,4 +1,4 @@
-﻿namespace DotnetKit.MetricFlow.Core.Abstractions
+﻿namespace DotnetKit.MetricFlow.Tracker.Abstractions
 {
     public interface ICounter
     {

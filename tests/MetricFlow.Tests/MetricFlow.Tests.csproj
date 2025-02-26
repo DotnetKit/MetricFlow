@@ -25,7 +25,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\DotnetKit.MetricFlow.Core\DotnetKit.MetricFlow.Core.csproj" />
+    <ProjectReference Include="..\..\src\DotnetKit.MetricFlow.Tracker\DotnetKit.MetricFlow.Tracker.csproj" />
   </ItemGroup>
 
 </Project>

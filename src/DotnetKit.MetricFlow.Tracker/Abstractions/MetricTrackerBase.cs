@@ -1,8 +1,8 @@
 ﻿using System.Collections.Concurrent;
 using System.Text;
-using DotnetKit.MetricFlow.Core.Extensions;
+using DotnetKit.MetricFlow.Tracker.Extensions;
 
-namespace DotnetKit.MetricFlow.Core.Abstractions
+namespace DotnetKit.MetricFlow.Tracker.Abstractions
 {
     public abstract class MetricTrackerBase<T>(string topic,
      Func<string, Dictionary<string, string>?, T> counterFactory,

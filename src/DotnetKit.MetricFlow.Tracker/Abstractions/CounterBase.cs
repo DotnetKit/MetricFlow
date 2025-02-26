@@ -1,6 +1,6 @@
 ﻿using System.Text;
-using DotnetKit.MetricFlow.Core.Abstractions;
-using DotnetKit.MetricFlow.Core.Extensions;
+using DotnetKit.MetricFlow.Tracker.Abstractions;
+using DotnetKit.MetricFlow.Tracker.Extensions;
 
 public abstract class CounterBase(string name, Dictionary<string, string>? metricMetadata) : ICounter
 {
