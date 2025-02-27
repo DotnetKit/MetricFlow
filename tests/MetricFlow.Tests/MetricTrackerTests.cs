@@ -72,5 +72,25 @@ namespace MetricFlow.Tests
             values?.InCount.Should().Be(1);
             values?.OutCount.Should().Be(1);
         }
+          [Fact]
+        public void MetricTracker_ShouldTrackFailedMetrics()
+        {
+            // Arrange
+            var tracker = new MetricTracker("TestTopic");
+
+            // Act
+            tracker.In("TestMetric");
+            tracker.Out("TestMetric");
+
+            tracker.In("TestMetric");
+            tracker.Out("TestMetric",failed:true);
+            // Assert
+            var values = tracker.GetValues("TestMetric");
+            values.Should().NotBeNull();
+            values!.InCount.Should().Be(1);
+            values.OutCount.Should().Be(1);
+            values.FailedCount.Should().Be(1);
+        }
+
     }
 }
