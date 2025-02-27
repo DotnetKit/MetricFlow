@@ -12,7 +12,7 @@
 
         IDisposable Track(string counterName, Dictionary<string, string>? topicTags = null);
 
-        long? Out(string counterName, Dictionary<string, string>? topicTags = null);
+        long? Out(string counterName, Dictionary<string, string>? topicTags = null, bool? failed = false);
 
         void Clear();
     }

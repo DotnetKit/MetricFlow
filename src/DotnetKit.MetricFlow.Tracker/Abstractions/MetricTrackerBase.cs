@@ -27,7 +27,7 @@ namespace DotnetKit.MetricFlow.Tracker.Abstractions
             return counter.Inc();
         }
 
-        public long? Out(string metricName, Dictionary<string, string>? metricMetadata = null)
+        public long? Out(string metricName, Dictionary<string, string>? metricMetadata = null, bool? failed = false)
         {
             if (IsSampled(samplingRate, _randomizer))
             {
@@ -35,7 +35,7 @@ namespace DotnetKit.MetricFlow.Tracker.Abstractions
             }
             var counter = _blockCounters.GetOrAdd(metricName, counterFactory(metricName, metricMetadata));
             // Handle metadata as needed
-            return counter.Dec();
+            return counter.Dec(failed);
         }
 
         public IDisposable Track(string metricName, Dictionary<string, string>? metricMetadata = null)
