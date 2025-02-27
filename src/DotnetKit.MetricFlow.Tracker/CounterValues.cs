@@ -5,6 +5,7 @@ namespace DotnetKit.MetricFlow.Tracker.Abstractions
     public record CounterValues(
         long InCount,
         long OutCount,
+        long FailedCount,
         TimeSpan TotalDuration,
         TimeSpan AverageDuration,
         TimeSpan MinDuration,
@@ -18,7 +19,7 @@ namespace DotnetKit.MetricFlow.Tracker.Abstractions
         public override string ToString()
         {
             var sb = new StringBuilder();
-            sb.AppendLine($"Count (in, out): {InCount} / {OutCount}");
+            sb.AppendLine($"Count (in, out, failed): {InCount} / {OutCount} / {FailedCount}");
             sb.AppendLine($"Avg duration: {AverageDuration.TotalMilliseconds} ms");
             sb.AppendLine($"Duration (min, max) : {MinDuration.TotalMilliseconds} ms / {MaxDuration.TotalMilliseconds} ms");
             sb.AppendLine($"Total duration: {TotalDuration.TotalMilliseconds} ms");

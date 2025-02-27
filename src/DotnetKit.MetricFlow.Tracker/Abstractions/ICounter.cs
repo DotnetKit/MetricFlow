@@ -6,6 +6,6 @@
         DateTime TimeStamp { get; }
         CounterValues Values { get; }
         long Inc();
-        long Dec();
+        long Dec(bool? failed = false);
     }
 }

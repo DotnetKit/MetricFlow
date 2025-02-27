@@ -8,6 +8,7 @@ public abstract class CounterBase(string name, Dictionary<string, string>? metri
     private DateTime? _startedAt = null;
     private DateTime? _endedAt = null;
     private long _inCount = 0;
+    private long _failedCount = 0;
     private long _outCount = 0;
     private long _totalDuration = 0;
 
@@ -21,6 +22,7 @@ public abstract class CounterBase(string name, Dictionary<string, string>? metri
     public CounterValues Values => new CounterValues(
         Interlocked.Read(ref _inCount),
         Interlocked.Read(ref _outCount),
+        Interlocked.Read(ref _failedCount),
         TimeSpan.FromMilliseconds(Interlocked.Read(ref _totalDuration)),
         TimeSpan.FromMilliseconds(Interlocked.Read(ref _averageDuration)),
         TimeSpan.FromMilliseconds(Interlocked.Read(ref _minDuration)),
@@ -39,9 +41,14 @@ public abstract class CounterBase(string name, Dictionary<string, string>? metri
         return Interlocked.Increment(ref _inCount);
     }
 
-    public long Dec()
+    public long Dec(bool? failed = false)
     {
         FinalizeState(Stop());
+
+        if (failed == true)
+        {
+            Interlocked.Increment(ref _failedCount);
+        }
         return Interlocked.Increment(ref _outCount);
     }
 
