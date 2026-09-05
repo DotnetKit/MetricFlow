@@ -1,4 +1,4 @@
-﻿using DotnetKit.MetricFlow.Tracker;    
+using DotnetKit.MetricFlow.Tracker;    
 
 namespace SimpleMetricCountersExample
 {
@@ -40,26 +40,24 @@ namespace SimpleMetricCountersExample
             Topic Tags:  tenant_id:TenantId1, session_id:74f627d9-5787-42b1-bab6-f1953ac3e215
             GlobalOperation
             MetricMetadata:
-            Count (in, out): 1 / 1
-            Avg duration: 1336323 ms
-            Duration (min, max) : 1336323 ms / 1336323 ms
-            Total duration: 1336323 ms
-            2
+            Count (in, out, failed): 1 / 1 / 0
+            Avg duration: 70.1 ms
+            Duration (min, max) : 70.1 ms / 70.1 ms
+            Total duration: 70.1 ms
 
             Operation1
             MetricMetadata:  operation_id:0
-            Count (in, out): 10 / 10
-            Avg duration: 29906 ms
-            Duration (min, max) : 22745 ms / 182873 ms
-            Total duration: 615900 ms
-            2
+            Count (in, out, failed): 10 / 10 / 0
+            Avg duration: 2.4 ms
+            Duration (min, max) : 2.2 ms / 3.3 ms
+            Total duration: 24.0 ms
 
             Operation2
             MetricMetadata:  operation_id:10
-            Count (in, out): 10 / 10
-            Avg duration: 112361 ms
-            Duration (min, max) : 41157 ms / 166233 ms
-            Total duration: 695333 ms
+            Count (in, out, failed): 10 / 10 / 0
+            Avg duration: 4.4 ms
+            Duration (min, max) : 3.1 ms / 4.6 ms
+            Total duration: 44.0 ms
             ======================================
              */
 

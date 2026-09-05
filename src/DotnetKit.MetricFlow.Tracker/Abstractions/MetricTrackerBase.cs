@@ -1,4 +1,5 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Text;
 using DotnetKit.MetricFlow.Tracker.Extensions;
 
@@ -11,35 +12,49 @@ namespace DotnetKit.MetricFlow.Tracker.Abstractions
         where T : ICounter
     {
         private readonly ConcurrentDictionary<string, T> _blockCounters = new ConcurrentDictionary<string, T>();
-        private readonly Random _randomizer = new Random();
+        private readonly AsyncLocal<Dictionary<string, Stack<long>>?> _asyncTimestamps = new();
+        private readonly AsyncLocal<Dictionary<string, int>?> _asyncDroppedCounts = new();
+
         public string Topic => topic;
 
         public Dictionary<string, string>? TopicTags => topicTags;
 
         public long? In(string metricName, Dictionary<string, string>? metricMetadata = null)
         {
-            if (IsSampled(samplingRate, _randomizer))
+            if (ShouldDrop(samplingRate))
             {
+                RecordDropped(metricName);
                 return 0;
             }
-            var counter = _blockCounters.GetOrAdd(metricName, counterFactory(metricName, metricMetadata));
-            // Handle metadata as needed
+
+            RecordStartTimestamp(metricName);
+            var counter = GetOrAddCounter(metricName, metricMetadata);
             return counter.Inc();
         }
 
-        public long? Out(string metricName, Dictionary<string, string>? metricMetadata = null, bool? failed = false)
+        public long? Out(string metricName, Dictionary<string, string>? metricMetadata = null, bool? failed = false, TimeSpan? duration = null)
         {
-            if (IsSampled(samplingRate, _randomizer))
+            if (TryConsumeDropped(metricName))
             {
                 return 0;
             }
-            var counter = _blockCounters.GetOrAdd(metricName, counterFactory(metricName, metricMetadata));
-            // Handle metadata as needed
-            return counter.Dec(failed);
+
+            if (!duration.HasValue && TryPopStartTimestamp(metricName, out var startTimestamp))
+            {
+                duration = Stopwatch.GetElapsedTime(startTimestamp);
+            }
+
+            var counter = GetOrAddCounter(metricName, metricMetadata);
+            return duration.HasValue ? counter.Dec(duration.Value, failed) : counter.Dec(failed);
         }
 
         public IDisposable Track(string metricName, Dictionary<string, string>? metricMetadata = null)
         {
+            if (ShouldDrop(samplingRate))
+            {
+                return NoOpDisposable.Instance;
+            }
+
             return new CodeTracker<T>(this, metricName, metricMetadata);
         }
 
@@ -55,6 +70,7 @@ namespace DotnetKit.MetricFlow.Tracker.Abstractions
             }
             return null;
         }
+
         public override string ToString()
         {
             var sb = new StringBuilder();
@@ -69,10 +85,94 @@ namespace DotnetKit.MetricFlow.Tracker.Abstractions
             }
             return sb.ToString();
         }
-        private static bool IsSampled(double? samplingRate, Random randomizer)
+
+        private T GetOrAddCounter(string metricName, Dictionary<string, string>? metricMetadata)
         {
-            return !samplingRate.HasValue || randomizer.NextDouble() <= 1 - samplingRate.Value;
+            return _blockCounters.GetOrAdd(
+                metricName,
+                static (name, state) => state.counterFactory(name, state.metricMetadata),
+                (counterFactory, metricMetadata));
         }
 
+        private static bool ShouldDrop(double? rate)
+        {
+            if (!rate.HasValue || rate.Value >= 1.0)
+            {
+                return false;
+            }
+            if (rate.Value <= 0.0)
+            {
+                return true;
+            }
+            return Random.Shared.NextDouble() > rate.Value;
+        }
+
+        private void RecordStartTimestamp(string metricName)
+        {
+            var dict = _asyncTimestamps.Value;
+            if (dict == null)
+            {
+                dict = new Dictionary<string, Stack<long>>();
+                _asyncTimestamps.Value = dict;
+            }
+
+            if (!dict.TryGetValue(metricName, out var stack))
+            {
+                stack = new Stack<long>();
+                dict[metricName] = stack;
+            }
+
+            stack.Push(Stopwatch.GetTimestamp());
+        }
+
+        private bool TryPopStartTimestamp(string metricName, out long timestamp)
+        {
+            var dict = _asyncTimestamps.Value;
+            if (dict != null && dict.TryGetValue(metricName, out var stack) && stack.Count > 0)
+            {
+                timestamp = stack.Pop();
+                return true;
+            }
+
+            timestamp = 0;
+            return false;
+        }
+
+        private void RecordDropped(string metricName)
+        {
+            var dict = _asyncDroppedCounts.Value;
+            if (dict == null)
+            {
+                dict = new Dictionary<string, int>();
+                _asyncDroppedCounts.Value = dict;
+            }
+
+            dict[metricName] = dict.TryGetValue(metricName, out var count) ? count + 1 : 1;
+        }
+
+        private bool TryConsumeDropped(string metricName)
+        {
+            var dict = _asyncDroppedCounts.Value;
+            if (dict != null && dict.TryGetValue(metricName, out var count) && count > 0)
+            {
+                if (count == 1)
+                {
+                    dict.Remove(metricName);
+                }
+                else
+                {
+                    dict[metricName] = count - 1;
+                }
+                return true;
+            }
+
+            return false;
+        }
+
+        private sealed class NoOpDisposable : IDisposable
+        {
+            public static readonly NoOpDisposable Instance = new();
+            public void Dispose() { }
+        }
     }
 }

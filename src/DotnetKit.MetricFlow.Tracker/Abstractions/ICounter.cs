@@ -1,4 +1,4 @@
-﻿namespace DotnetKit.MetricFlow.Tracker.Abstractions
+namespace DotnetKit.MetricFlow.Tracker.Abstractions
 {
     public interface ICounter
     {
@@ -7,5 +7,6 @@
         CounterValues Values { get; }
         long Inc();
         long Dec(bool? failed = false);
+        long Dec(TimeSpan duration, bool? failed = false);
     }
 }

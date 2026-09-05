@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using DotnetKit.MetricFlow.Tracker.Abstractions;
 using DotnetKit.MetricFlow.Tracker.Extensions;
 
@@ -10,25 +10,36 @@ public abstract class CounterBase(string name, Dictionary<string, string>? metri
     private long _inCount = 0;
     private long _failedCount = 0;
     private long _outCount = 0;
-    private long _totalDuration = 0;
-
-    private long _maxDuration = 0;
-    private long _minDuration = 0;
-    private long _averageDuration = 0;
+    private long _totalDurationTicks = 0;
+    private long _maxDurationTicks = 0;
+    private long _minDurationTicks = 0;
 
     public string Name => name;
     public Dictionary<string, string> Metadata => metricMetadata ?? [];
 
-    public CounterValues Values => new CounterValues(
-        Interlocked.Read(ref _inCount),
-        Interlocked.Read(ref _outCount),
-        Interlocked.Read(ref _failedCount),
-        TimeSpan.FromMilliseconds(Interlocked.Read(ref _totalDuration)),
-        TimeSpan.FromMilliseconds(Interlocked.Read(ref _averageDuration)),
-        TimeSpan.FromMilliseconds(Interlocked.Read(ref _minDuration)),
-        TimeSpan.FromMilliseconds(Interlocked.Read(ref _maxDuration))
+    public CounterValues Values
+    {
+        get
+        {
+            var inCount = Interlocked.Read(ref _inCount);
+            var outCount = Interlocked.Read(ref _outCount);
+            var failedCount = Interlocked.Read(ref _failedCount);
+            var totalTicks = Interlocked.Read(ref _totalDurationTicks);
+            var minTicks = Interlocked.Read(ref _minDurationTicks);
+            var maxTicks = Interlocked.Read(ref _maxDurationTicks);
+            var avgTicks = outCount > 0 ? totalTicks / outCount : 0;
 
-        );
+            return new CounterValues(
+                inCount,
+                outCount,
+                failedCount,
+                TimeSpan.FromTicks(totalTicks),
+                TimeSpan.FromTicks(avgTicks),
+                TimeSpan.FromTicks(minTicks),
+                TimeSpan.FromTicks(maxTicks)
+            );
+        }
+    }
 
     public abstract void Start();
 
@@ -52,46 +63,51 @@ public abstract class CounterBase(string name, Dictionary<string, string>? metri
         return Interlocked.Increment(ref _outCount);
     }
 
-    protected void FinalizeState(long duration)
+    public long Dec(TimeSpan duration, bool? failed = false)
     {
+        FinalizeState(duration.Ticks);
+
+        if (failed == true)
+        {
+            Interlocked.Increment(ref _failedCount);
+        }
+        return Interlocked.Increment(ref _outCount);
+    }
+
+    protected void FinalizeState(long durationTicks)
+    {
+        if (durationTicks < 0)
+        {
+            durationTicks = 0;
+        }
+
         _endedAt = DateTime.UtcNow;
-        Interlocked.Add(ref _totalDuration, duration);
+        Interlocked.Add(ref _totalDurationTicks, durationTicks);
 
-        UpdateMaxDuration(duration);
-        UpdateMinDuration(duration);
-        UpdateAverageDuration(duration);
+        UpdateMaxDuration(durationTicks);
+        UpdateMinDuration(durationTicks);
     }
 
-    private void UpdateMaxDuration(long duration)
+    private void UpdateMaxDuration(long durationTicks)
     {
         long initialValue, computedValue;
         do
         {
-            initialValue = _maxDuration;
-            if (duration <= initialValue) break;
-            computedValue = duration;
-        } while (Interlocked.CompareExchange(ref _maxDuration, computedValue, initialValue) != initialValue);
+            initialValue = _maxDurationTicks;
+            if (durationTicks <= initialValue) break;
+            computedValue = durationTicks;
+        } while (Interlocked.CompareExchange(ref _maxDurationTicks, computedValue, initialValue) != initialValue);
     }
 
-    private void UpdateMinDuration(long duration)
+    private void UpdateMinDuration(long durationTicks)
     {
         long initialValue, computedValue;
         do
         {
-            initialValue = _minDuration;
-            if (initialValue != 0 && duration >= initialValue) break;
-            computedValue = duration;
-        } while (Interlocked.CompareExchange(ref _minDuration, computedValue, initialValue) != initialValue);
-    }
-
-    private void UpdateAverageDuration(long duration)
-    {
-        long initialValue, computedValue;
-        do
-        {
-            initialValue = _averageDuration;
-            computedValue = initialValue == 0 ? duration : (initialValue + duration) / 2;
-        } while (Interlocked.CompareExchange(ref _averageDuration, computedValue, initialValue) != initialValue);
+            initialValue = _minDurationTicks;
+            if (initialValue != 0 && durationTicks >= initialValue) break;
+            computedValue = durationTicks;
+        } while (Interlocked.CompareExchange(ref _minDurationTicks, computedValue, initialValue) != initialValue);
     }
 
     public override string ToString()
@@ -103,5 +119,4 @@ public abstract class CounterBase(string name, Dictionary<string, string>? metri
 
         return sb.ToString();
     }
-
 }

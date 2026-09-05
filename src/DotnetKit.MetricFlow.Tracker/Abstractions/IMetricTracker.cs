@@ -1,4 +1,4 @@
-﻿namespace DotnetKit.MetricFlow.Tracker.Abstractions
+namespace DotnetKit.MetricFlow.Tracker.Abstractions
 {
     public interface IMetricTracker<T>
        where T : ICounter
@@ -12,7 +12,7 @@
 
         IDisposable Track(string counterName, Dictionary<string, string>? topicTags = null);
 
-        long? Out(string counterName, Dictionary<string, string>? topicTags = null, bool? failed = false);
+        long? Out(string counterName, Dictionary<string, string>? topicTags = null, bool? failed = false, TimeSpan? duration = null);
 
         void Clear();
     }

@@ -81,3 +81,12 @@ To run the example, execute the following command:
 
 ```sh
 dotnet run --project examples/SimpleMetricCountersExample
+```
+
+## Roadmap
+
+See [ROADMAP.md](ROADMAP.md) for the development roadmap, upcoming milestones, and architectural improvements.
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for a detailed history of changes, releases, and fixes.

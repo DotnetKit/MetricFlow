@@ -1,24 +1,23 @@
-﻿namespace CustomCounters
+using DotnetKit.MetricFlow.Tracker.Abstractions;
+
+namespace CustomCounters
 {
     /// <summary>
-    ///  Counter based on UTC time, used to measure time in ticks rather thant default Stopwatch implementation
+    ///  Counter based on UTC time, used to measure time in ticks
     /// </summary>
-    public class UtcCounter : CounterBase
+    public class UtcCounter(string name, Dictionary<string, string>? metricMetadata = null) : CounterBase(name, metricMetadata)
     {
         private long _inTicks = 0;
-        private long _outTicks = 0;
-
 
         public override void Start()
         {
             Interlocked.Exchange(ref _inTicks, DateTimeOffset.UtcNow.Ticks);
-            Interlocked.Exchange(ref _outTicks, DateTimeOffset.UtcNow.Ticks);
         }
+
         public override long Stop()
         {
-            return _outTicks - Interlocked.Exchange(ref _outTicks, DateTimeOffset.UtcNow.Ticks);
-
+            var start = Interlocked.Read(ref _inTicks);
+            return start > 0 ? DateTimeOffset.UtcNow.Ticks - start : 0;
         }
-
     }
 }

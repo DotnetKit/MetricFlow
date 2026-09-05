@@ -1,4 +1,5 @@
-﻿using DotnetKit.MetricFlow.Tracker.Abstractions;
+using System.Diagnostics;
+using DotnetKit.MetricFlow.Tracker.Abstractions;
 
 namespace DotnetKit.MetricFlow.Tracker
 {
@@ -7,16 +8,18 @@ namespace DotnetKit.MetricFlow.Tracker
     {
         private readonly IMetricTracker<T> _counters;
         private readonly string _metricName;
+        private readonly Dictionary<string, string>? _metricMetadata;
+        private readonly long _startTimestamp;
 
         private bool _disposed = false;
 
         public CodeTracker(IMetricTracker<T> counters, string metricName, Dictionary<string, string>? metricMetadata = null)
-
         {
             _counters = counters;
             _metricName = metricName;
+            _metricMetadata = metricMetadata;
+            _startTimestamp = Stopwatch.GetTimestamp();
             _counters.In(_metricName, metricMetadata);
-
         }
 
         public string Name => _metricName;
@@ -30,8 +33,8 @@ namespace DotnetKit.MetricFlow.Tracker
 
             if (disposing)
             {
-                // invoke disposer
-                _counters.Out(_metricName);
+                var elapsed = Stopwatch.GetElapsedTime(_startTimestamp);
+                _counters.Out(_metricName, _metricMetadata, failed: false, duration: elapsed);
             }
             _disposed = true;
         }
