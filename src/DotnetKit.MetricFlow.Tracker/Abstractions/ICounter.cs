@@ -3,10 +3,11 @@ namespace DotnetKit.MetricFlow.Tracker.Abstractions
     public interface ICounter
     {
         string Name { get; }
-        DateTime TimeStamp { get; }
-        CounterValues Values { get; }
-        long Inc();
-        long Dec(bool? failed = false);
-        long Dec(TimeSpan duration, bool? failed = false);
+        bool IsEnabled { get; set; }
+        object? OnIn(in InContext context);
+        void OnOut(object? state, in OutContext context);
+        IMetricSnapshot? GetSnapshot(string metricName);
+        IEnumerable<IMetricSnapshot> GetAllSnapshots();
+        void Reset();
     }
 }

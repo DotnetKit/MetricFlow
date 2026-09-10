@@ -1,22 +1,14 @@
-using System.Diagnostics;
-using DotnetKit.MetricFlow.Tracker.Abstractions;
+using DotnetKit.MetricFlow.Tracker.Counters;
 
 namespace DotnetKit.MetricFlow.Tracker
 {
-    /// <summary>Default implementation of a counter based on Stopwatch helper</summary>
-    public class StopWatchCounter(string name, Dictionary<string, string>? metricMetadata) : CounterBase(name, metricMetadata)
+    /// <summary>
+    /// StopWatchCounter provides high-resolution duration tracking based on Stopwatch.
+    /// </summary>
+    public class StopWatchCounter : DurationCounter
     {
-        private long _fallbackStartTimestamp;
-
-        public override void Start()
+        public StopWatchCounter(string name = DefaultCounterName) : base(name)
         {
-            Interlocked.Exchange(ref _fallbackStartTimestamp, Stopwatch.GetTimestamp());
-        }
-
-        public override long Stop()
-        {
-            var start = Interlocked.Read(ref _fallbackStartTimestamp);
-            return start > 0 ? Stopwatch.GetElapsedTime(start).Ticks : 0;
         }
     }
 }

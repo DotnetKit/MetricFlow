@@ -1,23 +1,34 @@
 using DotnetKit.MetricFlow.Tracker.Abstractions;
+using DotnetKit.MetricFlow.Tracker.Counters;
 
 namespace CustomCounters
 {
     /// <summary>
-    ///  Counter based on UTC time, used to measure time in ticks
+    /// Counter based on UTC time using Pattern A state token.
     /// </summary>
-    public class UtcCounter(string name, Dictionary<string, string>? metricMetadata = null) : CounterBase(name, metricMetadata)
+    public class UtcCounter(string name = "UtcDuration") : CounterBase(name)
     {
-        private long _inTicks = 0;
+        private readonly DurationCounter _inner = new(name);
 
-        public override void Start()
+        public override object? OnIn(in InContext context)
         {
-            Interlocked.Exchange(ref _inTicks, DateTimeOffset.UtcNow.Ticks);
+            if (!IsEnabled) return null;
+            return DateTimeOffset.UtcNow.Ticks;
         }
 
-        public override long Stop()
+        public override void OnOut(object? state, in OutContext context)
         {
-            var start = Interlocked.Read(ref _inTicks);
-            return start > 0 ? DateTimeOffset.UtcNow.Ticks - start : 0;
+            if (!IsEnabled) return;
+            TimeSpan elapsed = TimeSpan.Zero;
+            if (state is long startTicks && startTicks > 0)
+            {
+                elapsed = TimeSpan.FromTicks(DateTimeOffset.UtcNow.Ticks - startTicks);
+            }
+            _inner.OnOut(state, new OutContext(context.MetricName, context.Failed, context.Exception, elapsed, context.Tags));
         }
+
+        public override IMetricSnapshot? GetSnapshot(string metricName) => _inner.GetSnapshot(metricName);
+        public override IEnumerable<IMetricSnapshot> GetAllSnapshots() => _inner.GetAllSnapshots();
+        public override void Reset() => _inner.Reset();
     }
 }
