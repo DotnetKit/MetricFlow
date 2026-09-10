@@ -11,7 +11,7 @@ namespace DotnetKit.MetricFlow.Tracker.Abstractions
      double? samplingRate = 1.0) : IMetricTracker<T>
         where T : ICounter
     {
-        private readonly ConcurrentDictionary<string, T> _blockCounters = new ConcurrentDictionary<string, T>();
+        private readonly ConcurrentDictionary<string, T> _blockCounters = new();
         private readonly AsyncLocal<Dictionary<string, Stack<long>>?> _asyncTimestamps = new();
         private readonly AsyncLocal<Dictionary<string, int>?> _asyncDroppedCounts = new();
 

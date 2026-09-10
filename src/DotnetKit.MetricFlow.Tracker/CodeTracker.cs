@@ -11,7 +11,7 @@ namespace DotnetKit.MetricFlow.Tracker
         private readonly Dictionary<string, string>? _metricMetadata;
         private readonly long _startTimestamp;
 
-        private bool _disposed = false;
+        private bool _disposed;
 
         public CodeTracker(IMetricTracker<T> counters, string metricName, Dictionary<string, string>? metricMetadata = null)
         {

@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace DotnetKit.MetricFlow.Tracker.Abstractions
+namespace DotnetKit.MetricFlow.Tracker
 {
     public record CounterValues(
         long InCount,

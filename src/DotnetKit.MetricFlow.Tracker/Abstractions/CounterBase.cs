@@ -1,18 +1,19 @@
 using System.Text;
-using DotnetKit.MetricFlow.Tracker.Abstractions;
 using DotnetKit.MetricFlow.Tracker.Extensions;
+
+namespace DotnetKit.MetricFlow.Tracker.Abstractions;
 
 public abstract class CounterBase(string name, Dictionary<string, string>? metricMetadata) : ICounter
 {
     public DateTime TimeStamp => DateTime.UtcNow;
-    private DateTime? _startedAt = null;
-    private DateTime? _endedAt = null;
-    private long _inCount = 0;
-    private long _failedCount = 0;
-    private long _outCount = 0;
-    private long _totalDurationTicks = 0;
-    private long _maxDurationTicks = 0;
-    private long _minDurationTicks = 0;
+    private DateTime? _startedAt;
+    private DateTime? _endedAt;
+    private long _inCount;
+    private long _failedCount;
+    private long _outCount;
+    private long _totalDurationTicks;
+    private long _maxDurationTicks;
+    private long _minDurationTicks;
 
     public string Name => name;
     public Dictionary<string, string> Metadata => metricMetadata ?? [];
