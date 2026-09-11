@@ -1,10 +1,11 @@
-using DotnetKit.MetricFlow.Tracker;    
+using DotnetKit.MetricFlow.Tracker;
+using DotnetKit.MetricFlow.Tracker.Extensions;    
 
 namespace SimpleMetricCountersExample
 {
     public static class BenchRunner
     {
-        private const int OPERATION_COUNT = 10;
+        private const int OperationCount = 10;
 
         public static async Task RunExample()
         {
@@ -12,55 +13,77 @@ namespace SimpleMetricCountersExample
             {
                 ["tenant_id"] = "TenantId1",
                 ["session_id"] = Guid.NewGuid().ToString()
-            });
+            })
+            .AddExceptionCounter()
+            .AddMemoryCounter();
 
             tracker.In("GlobalOperation");
 
-            for (var i = 0; i < OPERATION_COUNT; i++)
+            for (var i = 0; i < OperationCount; i++)
             {
-
-                using (var __ = tracker.Track("Operation1", new() { ["operation_id"] = $"{i}" }))
-                {
-                    await Task.Delay(2);
-                }
-                using (var __ = tracker.Track("Operation2", new() { ["operation_id"] = $"{OPERATION_COUNT - i}" }))
-                {
-
-                    await Task.Delay(4);
-                }
+                await ExecuteOperation1Async(tracker, i);
+                await ExecuteOperation2Async(tracker, i);
             }
 
             tracker.Out("GlobalOperation");
 
             Console.WriteLine(tracker.ToString());
+        }
 
-            /*
-            ======================================
-            ExecutionTimeMetricsTopic
-            Topic Tags:  tenant_id:TenantId1, session_id:74f627d9-5787-42b1-bab6-f1953ac3e215
-            GlobalOperation
-            MetricMetadata:
-            Count (in, out, failed): 1 / 1 / 0
-            Avg duration: 70.1 ms
-            Duration (min, max) : 70.1 ms / 70.1 ms
-            Total duration: 70.1 ms
+        internal static async Task ExecuteOperation1Async(MetricTracker tracker, int i)
+        {
+            // Operation1: tracks duration and memory allocation
+           
+                using var op1 = tracker.Track("Operation1", new() { ["operation_id"] = $"{i}" });
+              
+                    await Task.Delay(2);
 
-            Operation1
-            MetricMetadata:  operation_id:0
-            Count (in, out, failed): 10 / 10 / 0
-            Avg duration: 2.4 ms
-            Duration (min, max) : 2.2 ms / 3.3 ms
-            Total duration: 24.0 ms
+                    // Allocate memory to exercise MemoryCounter (16 KB - 160 KB)
+                    _ = AllocateMemory((i + 1) * 16, (byte)i); 
+           
+        }
 
-            Operation2
-            MetricMetadata:  operation_id:10
-            Count (in, out, failed): 10 / 10 / 0
-            Avg duration: 4.4 ms
-            Duration (min, max) : 3.1 ms / 4.6 ms
-            Total duration: 44.0 ms
-            ======================================
-             */
+        internal static async Task ExecuteOperation2Async(MetricTracker tracker, int i)
+        {
+            // Operation2: tracks duration, memory allocation, and throws modulo-based exceptions
+            try
+            {
+                using var op2 = tracker.Track("Operation2", new() { ["operation_id"] = $"{OperationCount - i}" });
+                try
+                {
+                    await Task.Delay(4);
 
+                    // Allocate memory to exercise MemoryCounter (32 KB - 320 KB)
+                    _ = AllocateMemory((OperationCount - i) * 32, (byte)i);
+
+                    // Throw exception based on modulo to exercise ExceptionCounter
+                    if (i % 4 == 0)
+                    {
+                        throw (i % 2 == 0)
+                            ? new TimeoutException($"Operation2 timeout at iteration {i}")
+                            : new TaskCanceledException($"Operation2 canceled at iteration {i}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    op2.SetException(ex);
+                    throw;
+                }
+            }
+            catch
+            {
+                // Handled to allow benchmark loop to continue
+            }
+        }
+
+        internal static byte[] AllocateMemory(int sizeInKilobytes, byte touchByte = 1)
+        {
+            var buffer = new byte[sizeInKilobytes * 1024];
+            if (buffer.Length > 0)
+            {
+                buffer[0] = touchByte;
+            }
+            return buffer;
         }
     }
 }

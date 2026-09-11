@@ -182,6 +182,39 @@ namespace MetricFlow.Tests
         }
 
         [Fact]
+        public void ToString_ShouldAlwaysGroupSnapshotsByOperation()
+        {
+            // Arrange
+            var tracker = new MetricTracker("GroupingTopic")
+                .AddMemoryCounter()
+                .AddExceptionCounter();
+
+            tracker.In("OpA");
+            tracker.Out("OpA");
+
+            tracker.In("OpB");
+            tracker.Out("OpB");
+
+            // Act
+            var groupedOutput = tracker.ToString();
+
+            // Assert: All snapshots for OpA should be contiguous before OpB or vice versa
+            var opAFirstIndex = groupedOutput.IndexOf("Metric: OpA");
+            var opALastIndex = groupedOutput.LastIndexOf("Metric: OpA");
+            var opBFirstIndex = groupedOutput.IndexOf("Metric: OpB");
+            var opBLastIndex = groupedOutput.LastIndexOf("Metric: OpB");
+
+            if (opAFirstIndex < opBFirstIndex)
+            {
+                opALastIndex.Should().BeLessThan(opBFirstIndex);
+            }
+            else
+            {
+                opBLastIndex.Should().BeLessThan(opAFirstIndex);
+            }
+        }
+
+        [Fact]
         public void StronglyTypedCounterBase_ShouldProvideTypeSafeStateHandling()
         {
             // Arrange

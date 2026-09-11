@@ -1,4 +1,6 @@
 using DotnetKit.MetricFlow.Tracker;
+using DotnetKit.MetricFlow.Tracker.Counters;
+using DotnetKit.MetricFlow.Tracker.Extensions;
 using FluentAssertions;
 using Xunit;
 
@@ -155,5 +157,69 @@ namespace MetricFlow.Tests
             values.OutCount.Should().Be(1);
         }
 
+        [Fact]
+        public void Track_WithSetFailed_ShouldRecordFailureWithoutException()
+        {
+            // Arrange
+            var tracker = new MetricTracker("TestTopic")
+                .AddExceptionCounter();
+
+            // Act
+            using (var scope = tracker.Track("LogicalFailureOp"))
+            {
+                // Simulate a logical failure (e.g. Result.Failure or HTTP 400 without exception)
+                scope.SetFailed();
+            }
+
+            // Assert DurationCounter records failed: true
+            var durationValues = tracker.GetValues("LogicalFailureOp");
+            durationValues.Should().NotBeNull();
+            durationValues!.InCount.Should().Be(1);
+            durationValues.OutCount.Should().Be(1);
+            durationValues.FailedCount.Should().Be(1);
+
+            // Assert ExceptionCounter records failure with "UnspecifiedError" category
+            var exceptionSnapshot = tracker.GetSnapshot("LogicalFailureOp", ExceptionCounter.DefaultCounterName) as ExceptionSnapshot;
+            exceptionSnapshot.Should().NotBeNull();
+            exceptionSnapshot!.TotalOperations.Should().Be(1);
+            exceptionSnapshot.TotalFailures.Should().Be(1);
+            exceptionSnapshot.ExceptionsByType.Should().ContainKey("UnspecifiedError").WhoseValue.Should().Be(1);
+        }
+
+        [Fact]
+        public void Track_WithSetFailedFalse_ShouldNotRecordFailure()
+        {
+            // Arrange
+            var tracker = new MetricTracker("TestTopic");
+
+            // Act
+            using (var scope = tracker.Track("SuccessfulOp"))
+            {
+                scope.SetFailed(false);
+            }
+
+            // Assert
+            var values = tracker.GetValues("SuccessfulOp");
+            values.Should().NotBeNull();
+            values!.InCount.Should().Be(1);
+            values.OutCount.Should().Be(1);
+            values.FailedCount.Should().Be(0);
+        }
+
+        [Fact]
+        public void Track_WhenDroppedBySampling_SetFailedShouldBeSafeNoOp()
+        {
+            // Arrange
+            var tracker = new MetricTracker("TestTopic", samplingRate: 0.0);
+
+            // Act & Assert (should not throw InvalidCastException or NullReferenceException)
+            var act = () =>
+            {
+                using var scope = tracker.Track("DroppedOp");
+                scope.SetFailed();
+            };
+
+            act.Should().NotThrow();
+        }
     }
 }

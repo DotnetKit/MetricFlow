@@ -197,9 +197,12 @@ namespace DotnetKit.MetricFlow.Tracker.Abstractions
                 sb.AppendLine(tagsDict.ToFormattedString("Topic Tags"));
             }
 
-            foreach (var counter in _counters.Values)
+            var snapshotsByOperation = GetAllSnapshots()
+                .GroupBy(s => s.MetricName, StringComparer.OrdinalIgnoreCase);
+
+            foreach (var group in snapshotsByOperation)
             {
-                foreach (var snapshot in counter.GetAllSnapshots())
+                foreach (var snapshot in group)
                 {
                     sb.AppendLine(snapshot.ToFormattedString());
                 }
