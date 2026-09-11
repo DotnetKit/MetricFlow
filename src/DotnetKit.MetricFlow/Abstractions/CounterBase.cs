@@ -1,4 +1,4 @@
-namespace DotnetKit.MetricFlow.Tracker.Abstractions
+namespace DotnetKit.MetricFlow.Abstractions
 {
     /// <summary>
     /// Strongly-typed abstract base class for metric counters with custom state token.

@@ -1,5 +1,5 @@
-using DotnetKit.MetricFlow.Tracker;
-using DotnetKit.MetricFlow.Tracker.Extensions;    
+using DotnetKit.MetricFlow;
+using DotnetKit.MetricFlow.Extensions;
 
 namespace SimpleMetricCountersExample
 {

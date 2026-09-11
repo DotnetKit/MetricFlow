@@ -1,4 +1,4 @@
-namespace DotnetKit.MetricFlow.Tracker.Extensions
+namespace DotnetKit.MetricFlow.Extensions
 {
     /// <summary>
     /// Extension methods for tracking scopes returned by IMetricTracker.Track.

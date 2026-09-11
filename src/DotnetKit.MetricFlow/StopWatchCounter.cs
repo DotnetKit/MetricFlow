@@ -1,6 +1,6 @@
-using DotnetKit.MetricFlow.Tracker.Counters;
+using DotnetKit.MetricFlow.Counters;
 
-namespace DotnetKit.MetricFlow.Tracker
+namespace DotnetKit.MetricFlow
 {
     /// <summary>
     /// StopWatchCounter provides high-resolution duration tracking based on Stopwatch.

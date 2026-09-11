@@ -1,6 +1,6 @@
 using System.Net;
-using DotnetKit.MetricFlow.Tracker;
-using DotnetKit.MetricFlow.Tracker.Abstractions;
+using DotnetKit.MetricFlow;
+using DotnetKit.MetricFlow.Abstractions;
 using FluentAssertions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;

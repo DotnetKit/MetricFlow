@@ -1,7 +1,7 @@
 using System.Diagnostics;
-using DotnetKit.MetricFlow.Tracker.Abstractions;
+using DotnetKit.MetricFlow.Abstractions;
 
-namespace DotnetKit.MetricFlow.Tracker
+namespace DotnetKit.MetricFlow
 {
     public class CodeTracker : IDisposable
     {

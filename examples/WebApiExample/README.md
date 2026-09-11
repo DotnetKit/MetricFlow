@@ -80,8 +80,8 @@ This helps in monitoring the performance and usage of the API.
 
 ```csharp
 using System.Diagnostics;
-using DotnetKit.MetricFlow.Tracker;
-using DotnetKit.MetricFlow.Tracker.Abstractions;
+using DotnetKit.MetricFlow;
+using DotnetKit.MetricFlow.Abstractions;
 
 var builder = WebApplication.CreateBuilder(args);
 

@@ -1,4 +1,4 @@
-namespace DotnetKit.MetricFlow.Tracker.Configuration
+namespace DotnetKit.MetricFlow.Configuration
 {
     public record CounterConfig(string CounterName, bool Enabled);
 

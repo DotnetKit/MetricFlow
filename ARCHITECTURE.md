@@ -213,7 +213,7 @@ MetricFlow guarantees complete thread safety across all layers:
 To create a new custom counter, implement `ICounter` (or derive from the strongly-typed `CounterBase<TState>` / untyped `CounterBase`):
 
 ```csharp
-using DotnetKit.MetricFlow.Tracker.Abstractions;
+using DotnetKit.MetricFlow.Abstractions;
 
 public class ThreadPoolQueueCounter : CounterBase<long>
 {

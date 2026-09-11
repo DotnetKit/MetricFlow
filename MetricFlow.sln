@@ -1,4 +1,4 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.5.2.0
@@ -13,7 +13,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{01644C81
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MetricFlow.Tests", "tests\MetricFlow.Tests\MetricFlow.Tests.csproj", "{3897CD1F-6CA5-41EC-9845-1979426CD7B8}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetKit.MetricFlow.Tracker", "src\DotnetKit.MetricFlow.Tracker\DotnetKit.MetricFlow.Tracker.csproj", "{60112D90-095C-44EA-90E9-846B4EDBF758}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotnetKit.MetricFlow", "src\DotnetKit.MetricFlow\DotnetKit.MetricFlow.csproj", "{60112D90-095C-44EA-90E9-846B4EDBF758}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebApiExample", "examples\WebApiExample\WebApiExample.csproj", "{62617707-AE70-492E-B36D-63D0108EC269}"
 EndProject

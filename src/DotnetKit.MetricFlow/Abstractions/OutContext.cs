@@ -1,4 +1,4 @@
-namespace DotnetKit.MetricFlow.Tracker.Abstractions
+namespace DotnetKit.MetricFlow.Abstractions
 {
     public readonly ref struct OutContext
     {

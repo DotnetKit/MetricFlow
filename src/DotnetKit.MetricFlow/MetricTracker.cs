@@ -1,8 +1,8 @@
-using DotnetKit.MetricFlow.Tracker.Abstractions;
-using DotnetKit.MetricFlow.Tracker.Configuration;
-using DotnetKit.MetricFlow.Tracker.Counters;
+using DotnetKit.MetricFlow.Abstractions;
+using DotnetKit.MetricFlow.Configuration;
+using DotnetKit.MetricFlow.Counters;
 
-namespace DotnetKit.MetricFlow.Tracker
+namespace DotnetKit.MetricFlow
 {
     public class MetricTracker : MetricTrackerBase
     {

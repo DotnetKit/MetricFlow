@@ -1,6 +1,6 @@
-using DotnetKit.MetricFlow.Tracker;
-using DotnetKit.MetricFlow.Tracker.Counters;
-using DotnetKit.MetricFlow.Tracker.Extensions;
+using DotnetKit.MetricFlow;
+using DotnetKit.MetricFlow.Counters;
+using DotnetKit.MetricFlow.Extensions;
 using FluentAssertions;
 using Xunit;
 

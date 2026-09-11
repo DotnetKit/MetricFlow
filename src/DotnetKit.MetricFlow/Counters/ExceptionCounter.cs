@@ -1,8 +1,8 @@
 using System.Collections.Concurrent;
 using System.Text;
-using DotnetKit.MetricFlow.Tracker.Abstractions;
+using DotnetKit.MetricFlow.Abstractions;
 
-namespace DotnetKit.MetricFlow.Tracker.Counters
+namespace DotnetKit.MetricFlow.Counters
 {
     public class ExceptionCounter : ICounter
     {

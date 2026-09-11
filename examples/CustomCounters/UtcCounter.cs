@@ -1,5 +1,5 @@
-using DotnetKit.MetricFlow.Tracker.Abstractions;
-using DotnetKit.MetricFlow.Tracker.Counters;
+using DotnetKit.MetricFlow.Abstractions;
+using DotnetKit.MetricFlow.Counters;
 
 namespace CustomCounters
 {

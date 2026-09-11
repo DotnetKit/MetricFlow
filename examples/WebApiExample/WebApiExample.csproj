@@ -13,7 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\DotnetKit.MetricFlow.AspNetCore\DotnetKit.MetricFlow.AspNetCore.csproj" />
-    <ProjectReference Include="..\..\src\DotnetKit.MetricFlow.Tracker\DotnetKit.MetricFlow.Tracker.csproj" />
+    <ProjectReference Include="..\..\src\DotnetKit.MetricFlow\DotnetKit.MetricFlow.csproj" />
   </ItemGroup>
 
 </Project>

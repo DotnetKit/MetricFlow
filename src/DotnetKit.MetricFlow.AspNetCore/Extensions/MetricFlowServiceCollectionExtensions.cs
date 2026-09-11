@@ -1,5 +1,5 @@
-using DotnetKit.MetricFlow.Tracker;
-using DotnetKit.MetricFlow.Tracker.Abstractions;
+using DotnetKit.MetricFlow;
+using DotnetKit.MetricFlow.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 

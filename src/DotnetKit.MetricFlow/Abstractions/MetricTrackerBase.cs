@@ -1,10 +1,10 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text;
-using DotnetKit.MetricFlow.Tracker.Configuration;
-using DotnetKit.MetricFlow.Tracker.Extensions;
+using DotnetKit.MetricFlow.Configuration;
+using DotnetKit.MetricFlow.Extensions;
 
-namespace DotnetKit.MetricFlow.Tracker.Abstractions
+namespace DotnetKit.MetricFlow.Abstractions
 {
     public abstract class MetricTrackerBase : IMetricTracker
     {
