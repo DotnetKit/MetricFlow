@@ -1,4 +1,5 @@
 using DotnetKit.MetricFlow.Tracker;
+using DotnetKit.MetricFlow.Tracker.Abstractions;
 using DotnetKit.MetricFlow.Tracker.Configuration;
 using DotnetKit.MetricFlow.Tracker.Counters;
 using FluentAssertions;
@@ -6,7 +7,7 @@ using Xunit;
 
 namespace MetricFlow.Tests
 {
-    public class PatternACustomCountersTests
+    public class CustomCountersTests
     {
         [Fact]
         public async Task CompositeTracker_ShouldTrackDurationMemoryAndExceptionsSimultaneously()
@@ -178,6 +179,77 @@ namespace MetricFlow.Tests
             output.Should().Contain("Memory");
             output.Should().Contain("Exception");
             output.Should().Contain("TimeoutException");
+        }
+
+        [Fact]
+        public void StronglyTypedCounterBase_ShouldProvideTypeSafeStateHandling()
+        {
+            // Arrange
+            var customCounter = new TestTypedCounter("TestTyped");
+            var tracker = new MetricTracker("GenericCounterTopic", additionalCounters: [customCounter]);
+
+            // Act
+            using (tracker.Track("TypedOp"))
+            {
+                // In progress
+            }
+
+            // Assert
+            customCounter.LastReceivedState.Should().Be(42);
+            customCounter.TotalCalls.Should().Be(1);
+        }
+
+        [Fact]
+        public void UntypedCounterBase_ShouldPreserveBackwardCompatibility()
+        {
+            // Arrange
+            var legacyCounter = new TestUntypedCounter("LegacyUntyped");
+            var tracker = new MetricTracker("LegacyTopic", additionalCounters: [legacyCounter]);
+
+            // Act
+            using (tracker.Track("LegacyOp"))
+            {
+            }
+
+            // Assert
+            legacyCounter.LastReceivedState.Should().Be("LegacyState");
+            legacyCounter.TotalCalls.Should().Be(1);
+        }
+
+        private sealed class TestTypedCounter(string name) : CounterBase<int>(name)
+        {
+            public int LastReceivedState { get; private set; }
+            public int TotalCalls { get; private set; }
+
+            public override int OnIn(in InContext context) => 42;
+
+            public override void OnOut(int state, in OutContext context)
+            {
+                LastReceivedState = state;
+                TotalCalls++;
+            }
+
+            public override IMetricSnapshot? GetSnapshot(string metricName) => null;
+            public override IEnumerable<IMetricSnapshot> GetAllSnapshots() => [];
+            public override void Reset() { }
+        }
+
+        private sealed class TestUntypedCounter(string name) : CounterBase(name)
+        {
+            public object? LastReceivedState { get; private set; }
+            public int TotalCalls { get; private set; }
+
+            public override object? OnIn(in InContext context) => "LegacyState";
+
+            public override void OnOut(object? state, in OutContext context)
+            {
+                LastReceivedState = state;
+                TotalCalls++;
+            }
+
+            public override IMetricSnapshot? GetSnapshot(string metricName) => null;
+            public override IEnumerable<IMetricSnapshot> GetAllSnapshots() => [];
+            public override void Reset() { }
         }
     }
 }

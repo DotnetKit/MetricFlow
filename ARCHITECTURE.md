@@ -90,7 +90,7 @@ sequenceDiagram
 - **`InContext`**: Represents operation entry with `MetricName`, `Tags`, and `UtcTimestamp`.
 - **`OutContext`**: Represents operation exit with `MetricName`, `Failed`, `Exception?`, `Duration?`, `Tags`, and `UtcTimestamp`.
 
-### The Generic Counter Interface (`ICounter`)
+### The Counter Interface (`ICounter` and `ICounter<TState>`)
 ```csharp
 public interface ICounter
 {
@@ -111,6 +111,12 @@ public interface ICounter
 
     /// <summary>Resets accumulated state.</summary>
     void Reset();
+}
+
+public interface ICounter<TState> : ICounter
+{
+    new TState OnIn(in InContext context);
+    void OnOut(TState state, in OutContext context);
 }
 ```
 
@@ -204,25 +210,25 @@ MetricFlow guarantees complete thread safety across all layers:
 
 ## 8. Creating a Custom Counter
 
-To create a new custom counter, simply implement `ICounter` (or derive from `CounterBase`):
+To create a new custom counter, implement `ICounter` (or derive from the strongly-typed `CounterBase<TState>` / untyped `CounterBase`):
 
 ```csharp
 using DotnetKit.MetricFlow.Tracker.Abstractions;
 
-public class ThreadPoolQueueCounter : CounterBase
+public class ThreadPoolQueueCounter : CounterBase<long>
 {
     public ThreadPoolQueueCounter() : base("ThreadPoolQueue") { }
 
-    public override object? OnIn(in InContext context)
+    public override long OnIn(in InContext context)
     {
-        if (!IsEnabled) return null;
+        if (!IsEnabled) return 0;
         // Capture initial pending work items
         return ThreadPool.PendingWorkItemCount;
     }
 
-    public override void OnOut(object? state, in OutContext context)
+    public override void OnOut(long startQueue, in OutContext context)
     {
-        if (!IsEnabled || state is not long startQueue) return;
+        if (!IsEnabled || startQueue == 0) return;
 
         var delta = ThreadPool.PendingWorkItemCount - startQueue;
         // Atomically record delta into custom state...

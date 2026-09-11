@@ -10,4 +10,24 @@ namespace DotnetKit.MetricFlow.Tracker.Abstractions
         IEnumerable<IMetricSnapshot> GetAllSnapshots();
         void Reset();
     }
+
+    public interface ICounter<TState> : ICounter
+    {
+        new TState OnIn(in InContext context);
+        void OnOut(TState state, in OutContext context);
+
+        object? ICounter.OnIn(in InContext context) => OnIn(in context);
+
+        void ICounter.OnOut(object? state, in OutContext context)
+        {
+            if (state is TState typedState)
+            {
+                OnOut(typedState, in context);
+            }
+            else if (state is null)
+            {
+                OnOut(default!, in context);
+            }
+        }
+    }
 }

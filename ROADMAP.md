@@ -71,7 +71,7 @@ Focus on zero-allocation tracking, web framework integration, and tail-latency o
 | Area | Task | Priority | Status |
 | :--- | :--- | :---: | :---: |
 | **Allocations** | Implement zero-allocation `MetricScope` (ref struct or lightweight disposable struct) for `using (tracker.Track(...))` to eliminate heap allocation per tracked block. | 🔴 High | Planned |
-| **ASP.NET Core** | Create `DotnetKit.MetricFlow.AspNetCore` NuGet package with turnkey middleware, endpoint routing filters (`AddEndpointFilter`), and automatic HTTP request tracking (status codes, routes, exceptions). | 🔴 High | Planned |
+| **ASP.NET Core** | Create `DotnetKit.MetricFlow.AspNetCore` NuGet package with turnkey middleware, endpoint routing filters (`AddEndpointFilter`), and automatic HTTP request tracking (status codes, routes, exceptions). | 🔴 High | ✅ Completed |
 | **Histograms** | Introduce histogram and percentile metrics (P50, P75, P90, P99, P99.9) using HDR histogram or exponential bucket reservoirs to capture tail latency. | 🟡 Medium | Planned |
 | **Performance** | Optimize `ConcurrentDictionary.GetOrAdd` calls in `MetricTrackerBase` to use factory lambdas rather than evaluating factory delegates eagerly on existing keys. | 🟡 Medium | Planned |
 | **Tags** | Support `System.Diagnostics.TagList` and `ReadOnlySpan<KeyValuePair<string, object>>` to avoid dictionary allocations on hot-path tracking calls. | 🟡 Medium | Planned |

@@ -1,4 +1,4 @@
-using DotnetKit.MetricFlow.Tracker;
+using DotnetKit.MetricFlow.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -6,7 +6,19 @@ var builder = WebApplication.CreateBuilder(args);
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddSingleton(sp => new MetricTracker("WebApiExample"));
+
+// Register MetricFlow with custom tag enrichment (e.g. tenant_id)
+builder.Services.AddMetricFlow("WebApiExample", options =>
+{
+    options.EnrichTags = (tags, context) =>
+    {
+        if (context.Request.Headers.TryGetValue("X-Tenant-ID", out var tenantId))
+        {
+            tags["tenant_id"] = tenantId!;
+        }
+    };
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -14,33 +26,12 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
-
-    //add a middleware to track API calls
-    app.Use(async (context, next) =>
-    {
-        //skip tracking metrics for the metrics endpoint
-        if (context.Request.Path == "/metrics")
-        {
-            await next();
-            return;
-        }
-        var tracker = context.RequestServices.GetRequiredService<MetricTracker>();
-        tracker.In(context.Request.Path);
-        //tracking requests with errors
-        try
-        {
-            await next();
-        }
-        catch (Exception e)
-        {
-            tracker.Out(context.Request.Path, new Dictionary<string, string>() { ["error_message"] = e.Message }, failed: true);
-            throw;
-        }
-        tracker.Out(context.Request.Path);
-    });
 }
 
 app.UseHttpsRedirection();
+
+// Turnkey MetricFlow tracking middleware
+app.UseMetricFlow();
 
 var summaries = new[]
 {
@@ -69,13 +60,8 @@ app.MapGet("/throw_exception", () =>
 .WithName("Exception")
 .WithOpenApi();
 
-app.MapGet("/metrics", () =>
-{
-    var tracker = app.Services.GetRequiredService<MetricTracker>();
-    return tracker.ToString();
-
-})
-.WithName("Metrics")
+// Expose metrics endpoint
+app.MapMetricFlow("/metrics")
 .WithOpenApi();
 
 app.Run();

@@ -1,7 +1,6 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text;
-using DotnetKit.MetricFlow.Tracker.Abstractions;
 using DotnetKit.MetricFlow.Tracker.Configuration;
 using DotnetKit.MetricFlow.Tracker.Extensions;
 

@@ -6,23 +6,23 @@ namespace CustomCounters
     /// <summary>
     /// Counter based on UTC time using Pattern A state token.
     /// </summary>
-    public class UtcCounter(string name = "UtcDuration") : CounterBase(name)
+    public class UtcCounter(string name = "UtcDuration") : CounterBase<long>(name)
     {
         private readonly DurationCounter _inner = new(name);
 
-        public override object? OnIn(in InContext context)
+        public override long OnIn(in InContext context)
         {
-            if (!IsEnabled) return null;
+            if (!IsEnabled) return 0;
             return DateTimeOffset.UtcNow.Ticks;
         }
 
-        public override void OnOut(object? state, in OutContext context)
+        public override void OnOut(long state, in OutContext context)
         {
             if (!IsEnabled) return;
             TimeSpan elapsed = TimeSpan.Zero;
-            if (state is long startTicks && startTicks > 0)
+            if (state > 0)
             {
-                elapsed = TimeSpan.FromTicks(DateTimeOffset.UtcNow.Ticks - startTicks);
+                elapsed = TimeSpan.FromTicks(DateTimeOffset.UtcNow.Ticks - state);
             }
             _inner.OnOut(state, new OutContext(context.MetricName, context.Failed, context.Exception, elapsed, context.Tags));
         }
