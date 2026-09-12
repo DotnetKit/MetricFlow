@@ -1,55 +1,54 @@
-namespace DotnetKit.MetricFlow.Configuration
-{
-    public record CounterConfig(string CounterName, bool Enabled);
+namespace DotnetKit.MetricFlow.Configuration;
 
-    public interface ICounterConfigObservable
+public record CounterConfig(string CounterName, bool Enabled);
+
+public interface ICounterConfigObservable
+{
+    IDisposable Subscribe(Action<string, bool> onConfigChanged);
+}
+
+public class CounterConfigNotifier : ICounterConfigObservable
+{
+    private readonly List<Action<string, bool>> _subscribers = new();
+    private readonly object _lock = new();
+
+    public IDisposable Subscribe(Action<string, bool> onConfigChanged)
     {
-        IDisposable Subscribe(Action<string, bool> onConfigChanged);
+        lock (_lock)
+        {
+            _subscribers.Add(onConfigChanged);
+        }
+
+        return new Unsubscriber(() =>
+        {
+            lock (_lock)
+            {
+                _subscribers.Remove(onConfigChanged);
+            }
+        });
     }
 
-    public class CounterConfigNotifier : ICounterConfigObservable
+    public void NotifyChanged(string counterName, bool enabled)
     {
-        private readonly List<Action<string, bool>> _subscribers = new();
-        private readonly object _lock = new();
-
-        public IDisposable Subscribe(Action<string, bool> onConfigChanged)
+        Action<string, bool>[] snapshot;
+        lock (_lock)
         {
-            lock (_lock)
-            {
-                _subscribers.Add(onConfigChanged);
-            }
-
-            return new Unsubscriber(() =>
-            {
-                lock (_lock)
-                {
-                    _subscribers.Remove(onConfigChanged);
-                }
-            });
+            snapshot = _subscribers.ToArray();
         }
 
-        public void NotifyChanged(string counterName, bool enabled)
+        foreach (var subscriber in snapshot)
         {
-            Action<string, bool>[] snapshot;
-            lock (_lock)
-            {
-                snapshot = _subscribers.ToArray();
-            }
-
-            foreach (var subscriber in snapshot)
-            {
-                subscriber(counterName, enabled);
-            }
+            subscriber(counterName, enabled);
         }
+    }
 
-        private sealed class Unsubscriber(Action unsubscribe) : IDisposable
+    private sealed class Unsubscriber(Action unsubscribe) : IDisposable
+    {
+        private Action? _unsubscribe = unsubscribe;
+
+        public void Dispose()
         {
-            private Action? _unsubscribe = unsubscribe;
-
-            public void Dispose()
-            {
-                Interlocked.Exchange(ref _unsubscribe, null)?.Invoke();
-            }
+            Interlocked.Exchange(ref _unsubscribe, null)?.Invoke();
         }
     }
 }

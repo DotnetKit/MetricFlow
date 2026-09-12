@@ -1,10 +1,9 @@
-namespace DotnetKit.MetricFlow.Extensions
+namespace DotnetKit.MetricFlow.Extensions;
+
+internal static class DictionaryExtensions
 {
-    internal static class DictionaryExtensions
+    public static string ToFormattedString(this Dictionary<string, string> dict, string prefix)
     {
-        public static string ToFormattedString(this Dictionary<string, string> dict, string prefix)
-        {
-            return $"{prefix}:  {string.Join(", ", dict.Select(kvp => $"{kvp.Key}:{kvp.Value}"))}";
-        }
+        return $"{prefix}:  {string.Join(", ", dict.Select(kvp => $"{kvp.Key}:{kvp.Value}"))}";
     }
 }

@@ -1,10 +1,9 @@
-namespace DotnetKit.MetricFlow.Abstractions
+namespace DotnetKit.MetricFlow.Abstractions;
+
+public interface IMetricSnapshot
 {
-    public interface IMetricSnapshot
-    {
-        string MetricName { get; }
-        string CounterName { get; }
-        DateTime Timestamp { get; }
-        string ToFormattedString();
-    }
+    string MetricName { get; }
+    string CounterName { get; }
+    DateTime Timestamp { get; }
+    string ToFormattedString();
 }

@@ -1,10 +1,9 @@
-﻿namespace SimpleMetricCountersExample
+﻿namespace SimpleMetricCountersExample;
+
+internal class Program
 {
-    internal class Program
+    static Task Main(string[] args)
     {
-        static Task Main(string[] args)
-        {
-           return BenchRunner.RunExample();
-        }
+       return BenchRunner.RunExample();
     }
 }
