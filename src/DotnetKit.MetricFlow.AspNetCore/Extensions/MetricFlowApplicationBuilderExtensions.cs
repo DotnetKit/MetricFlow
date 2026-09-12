@@ -1,7 +1,7 @@
 using DotnetKit.MetricFlow.AspNetCore.Middleware;
 using Microsoft.AspNetCore.Builder;
 
-namespace DotnetKit.MetricFlow.AspNetCore
+namespace DotnetKit.MetricFlow.AspNetCore.Extensions
 {
     /// <summary>
     /// Application builder extensions for adding MetricFlow middleware.

@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace DotnetKit.MetricFlow.AspNetCore
+namespace DotnetKit.MetricFlow.AspNetCore.Extensions
 {
     /// <summary>
     /// Endpoint route builder extensions for exposing MetricFlow metrics endpoints.

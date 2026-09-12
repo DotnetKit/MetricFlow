@@ -7,23 +7,16 @@ namespace DotnetKit.MetricFlow.AspNetCore.Middleware
     /// <summary>
     /// Middleware for tracking HTTP request rate, duration, errors, and status codes using MetricFlow.
     /// </summary>
-    public class MetricFlowMiddleware
+    public class MetricFlowMiddleware(
+        RequestDelegate next,
+        MetricFlowAspNetCoreOptions options,
+        IMetricTracker tracker)
     {
         private const string MetricNameItemKey = "__MetricFlow_MetricName";
 
-        private readonly RequestDelegate _next;
-        private readonly MetricFlowAspNetCoreOptions _options;
-        private readonly IMetricTracker _tracker;
-
-        public MetricFlowMiddleware(
-            RequestDelegate next,
-            MetricFlowAspNetCoreOptions options,
-            IMetricTracker tracker)
-        {
-            _next = next ?? throw new ArgumentNullException(nameof(next));
-            _options = options ?? throw new ArgumentNullException(nameof(options));
-            _tracker = tracker ?? throw new ArgumentNullException(nameof(tracker));
-        }
+        private readonly RequestDelegate _next = next ?? throw new ArgumentNullException(nameof(next));
+        private readonly MetricFlowAspNetCoreOptions _options = options ?? throw new ArgumentNullException(nameof(options));
+        private readonly IMetricTracker _tracker = tracker ?? throw new ArgumentNullException(nameof(tracker));
 
         public async Task InvokeAsync(HttpContext context)
         {

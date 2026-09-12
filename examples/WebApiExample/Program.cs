@@ -1,4 +1,4 @@
-using DotnetKit.MetricFlow.AspNetCore;
+using DotnetKit.MetricFlow.AspNetCore.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 

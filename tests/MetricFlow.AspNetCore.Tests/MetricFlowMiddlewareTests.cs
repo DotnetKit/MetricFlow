@@ -1,6 +1,7 @@
 using System.Net;
 using DotnetKit.MetricFlow;
-using DotnetKit.MetricFlow.Abstractions;
+using DotnetKit.MetricFlow.AspNetCore;
+using DotnetKit.MetricFlow.AspNetCore.Extensions;
 using FluentAssertions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -10,7 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Xunit;
 
-namespace DotnetKit.MetricFlow.AspNetCore.Tests
+namespace MetricFlow.AspNetCore.Tests
 {
     public class MetricFlowMiddlewareTests
     {

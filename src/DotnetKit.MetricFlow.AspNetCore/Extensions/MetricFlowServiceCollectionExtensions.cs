@@ -1,9 +1,8 @@
-using DotnetKit.MetricFlow;
 using DotnetKit.MetricFlow.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace DotnetKit.MetricFlow.AspNetCore
+namespace DotnetKit.MetricFlow.AspNetCore.Extensions
 {
     /// <summary>
     /// Service collection extensions for configuring MetricFlow in ASP.NET Core.
