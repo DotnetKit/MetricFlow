@@ -241,4 +241,73 @@ public class MetricTrackerTests
         formatted.Should().Contain("Metric: SourceOp");
         formatted.Should().Contain("Duration");
     }
+
+    [Fact]
+    public void Track_WithNoMetricName_ShouldResolveCallingMethodName()
+    {
+        // Arrange
+        var tracker = new MetricTracker("CallerMemberTopic");
+
+        // Act
+        HelperCallingMethodForTrack(tracker);
+
+        // Assert
+        var snapshot = tracker.GetValues(nameof(HelperCallingMethodForTrack));
+        snapshot.Should().NotBeNull();
+        snapshot!.InCount.Should().Be(1);
+        snapshot.OutCount.Should().Be(1);
+    }
+
+    private static void HelperCallingMethodForTrack(MetricTracker tracker)
+    {
+        using (tracker.Track())
+        {
+        }
+    }
+
+    [Fact]
+    public void Track_WithTagsOnly_ShouldResolveCallingMethodName()
+    {
+        // Arrange
+        var tracker = new MetricTracker("CallerMemberTopic");
+        var tags = new Dictionary<string, string> { ["env"] = "test" };
+
+        // Act
+        HelperCallingMethodWithTags(tracker, tags);
+
+        // Assert
+        var snapshot = tracker.GetValues(nameof(HelperCallingMethodWithTags));
+        snapshot.Should().NotBeNull();
+        snapshot!.InCount.Should().Be(1);
+        snapshot.OutCount.Should().Be(1);
+    }
+
+    private static void HelperCallingMethodWithTags(MetricTracker tracker, Dictionary<string, string> tags)
+    {
+        using (tracker.Track(tags))
+        {
+        }
+    }
+
+    [Fact]
+    public void InAndOut_WithNoMetricName_ShouldResolveCallingMethodName()
+    {
+        // Arrange
+        var tracker = new MetricTracker("CallerMemberTopic");
+
+        // Act
+        HelperCallingMethodForInOut(tracker);
+
+        // Assert
+        var snapshot = tracker.GetValues(nameof(HelperCallingMethodForInOut));
+        snapshot.Should().NotBeNull();
+        snapshot!.InCount.Should().Be(1);
+        snapshot.OutCount.Should().Be(1);
+    }
+
+    private static void HelperCallingMethodForInOut(MetricTracker tracker)
+    {
+        tracker.In();
+        tracker.Out();
+    }
 }

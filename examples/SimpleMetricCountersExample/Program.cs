@@ -1,4 +1,4 @@
-﻿using DotnetKit.MetricFlow;
+using DotnetKit.MetricFlow;
 using DotnetKit.MetricFlow.Extensions;
 
 namespace SimpleMetricCountersExample;
@@ -32,9 +32,8 @@ internal class Program
   
     internal static async Task ExecuteOperation1Async(MetricTracker tracker, int i)
     {
-        // Operation1: tracks duration and memory allocation
-
-        using var op1 = tracker.Track("Operation1", new() { ["operation_id"] = $"{i}" });
+        // Operation1: tracks duration and memory allocation (metric name resolved dynamically via [CallerMemberName])
+        using var op1 = tracker.Track(tags: new() { ["operation_id"] = $"{i}" });
 
         await Task.Delay(2);
 
@@ -44,10 +43,10 @@ internal class Program
 
     internal static async Task ExecuteOperation2Async(MetricTracker tracker, int i)
     {
-        // Operation2: tracks duration, memory allocation, and throws modulo-based exceptions
+        // Operation2: tracks duration, memory allocation, and throws modulo-based exceptions (resolved via [CallerMemberName])
         try
         {
-            using var op2 = tracker.Track("Operation2", new() { ["operation_id"] = $"{OperationCount - i}" });
+            using var op2 = tracker.Track(tags: new() { ["operation_id"] = $"{OperationCount - i}" });
             try
             {
                 await Task.Delay(4);
@@ -56,12 +55,7 @@ internal class Program
                 _ = AllocateMemory((OperationCount - i) * 32, (byte)i);
 
                 // Throw exception based on modulo to exercise ExceptionCounter
-                if (i % 4 == 0)
-                {
-                    throw (i % 2 == 0)
-                        ? new TimeoutException($"Operation2 timeout at iteration {i}")
-                        : new TaskCanceledException($"Operation2 canceled at iteration {i}");
-                }
+                ThrowModuloException(i);
             }
             catch (Exception ex)
             {
@@ -84,5 +78,15 @@ internal class Program
         }
 
         return buffer;
+    }
+
+    internal static void ThrowModuloException(int i)
+    {
+        if (i % 4 == 0)
+        {
+            throw (i % 2 == 0)
+                ? new TimeoutException($"Operation2 timeout at iteration {i}")
+                : new TaskCanceledException($"Operation2 canceled at iteration {i}");
+        }
     }
 }

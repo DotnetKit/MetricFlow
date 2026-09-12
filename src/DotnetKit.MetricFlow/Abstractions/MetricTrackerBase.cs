@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Text;
 using DotnetKit.MetricFlow.Configuration;
 using DotnetKit.MetricFlow.Extensions;
@@ -85,6 +86,9 @@ public abstract class MetricTrackerBase : IMetricTracker
         return new CodeTracker(active, metricName, tags);
     }
 
+    public IDisposable Track(Dictionary<string, string>? tags = null, [CallerMemberName] string metricName = "")
+        => Track(metricName, tags);
+
     public void In(string metricName, Dictionary<string, string>? tags = null)
     {
         if (ShouldDrop(_samplingRate))
@@ -104,6 +108,9 @@ public abstract class MetricTrackerBase : IMetricTracker
 
         RecordInOperation(metricName, new InOperationState(Stopwatch.GetTimestamp(), active, states));
     }
+
+    public void In(Dictionary<string, string>? tags = null, [CallerMemberName] string metricName = "")
+        => In(metricName, tags);
 
     public void Out(
         string metricName,
@@ -149,6 +156,14 @@ public abstract class MetricTrackerBase : IMetricTracker
             }
         }
     }
+
+    public void Out(
+        Dictionary<string, string>? tags = null,
+        bool failed = false,
+        Exception? exception = null,
+        TimeSpan? duration = null,
+        [CallerMemberName] string metricName = "")
+        => Out(metricName, tags, failed, exception, duration);
 
     public IMetricSnapshot? GetSnapshot(string metricName, string counterName)
     {
