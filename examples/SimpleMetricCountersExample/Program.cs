@@ -1,5 +1,4 @@
 using DotnetKit.MetricFlow;
-using DotnetKit.MetricFlow.Extensions;
 
 namespace SimpleMetricCountersExample;
 
