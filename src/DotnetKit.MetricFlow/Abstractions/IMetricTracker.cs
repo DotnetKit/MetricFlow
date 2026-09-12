@@ -1,6 +1,6 @@
 namespace DotnetKit.MetricFlow.Abstractions;
 
-public interface IMetricTracker
+public interface IMetricTracker : IMetricSnapshotsSource
 {
     string Topic { get; }
     Dictionary<string, string>? TopicTags { get; }
@@ -21,7 +21,6 @@ public interface IMetricTracker
 
     IMetricSnapshot? GetSnapshot(string metricName, string counterName);
     IEnumerable<IMetricSnapshot> GetSnapshots(string metricName);
-    IEnumerable<IMetricSnapshot> GetAllSnapshots();
 
     void Clear();
 }

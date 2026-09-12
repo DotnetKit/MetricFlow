@@ -19,8 +19,7 @@ public abstract class MetricTrackerBase : IMetricTracker
     private readonly double? _samplingRate;
 
     public string Topic => _topic;
-    public Dictionary<string, string>? TopicTags => _topicTags;
-    public double? SamplingRate => _samplingRate;
+    public Dictionary<string, string>? TopicTags => _topicTags; 
 
     protected MetricTrackerBase(
         string topic,
@@ -197,17 +196,7 @@ public abstract class MetricTrackerBase : IMetricTracker
             sb.AppendLine(tagsDict.ToFormattedString("Topic Tags"));
         }
 
-        var snapshotsByOperation = GetAllSnapshots()
-            .GroupBy(s => s.MetricName, StringComparer.OrdinalIgnoreCase);
-
-        foreach (var group in snapshotsByOperation)
-        {
-            foreach (var snapshot in group)
-            {
-                sb.AppendLine(snapshot.ToFormattedString());
-            }
-        }
-
+        sb.Append(GetAllSnapshots().ToFormattedString());
         return sb.ToString();
     }
 

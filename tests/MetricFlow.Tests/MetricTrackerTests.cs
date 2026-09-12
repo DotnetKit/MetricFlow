@@ -1,4 +1,5 @@
 using DotnetKit.MetricFlow;
+using DotnetKit.MetricFlow.Abstractions;
 using DotnetKit.MetricFlow.Counters;
 using DotnetKit.MetricFlow.Extensions;
 using FluentAssertions;
@@ -220,5 +221,24 @@ public class MetricTrackerTests
         };
 
         act.Should().NotThrow();
+    }
+ 
+    [Fact]
+    public void Tracker_ShouldImplementIMetricSnapshotsSource()
+    {
+        // Arrange
+        var tracker = new MetricTracker("SourceTopic");
+        tracker.In("SourceOp");
+        tracker.Out("SourceOp");
+
+        // Act
+        IMetricSnapshotsSource source = tracker;
+        var snapshots = source.GetAllSnapshots();
+        var formatted = source.ToFormattedString();
+
+        // Assert
+        snapshots.Should().ContainSingle(s => s.MetricName == "SourceOp");
+        formatted.Should().Contain("Metric: SourceOp");
+        formatted.Should().Contain("Duration");
     }
 }
