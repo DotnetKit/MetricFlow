@@ -9,13 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Planned (Phase 2 & 3)
-- Zero-allocation `MetricScope` struct for `using (tracker.Track(...))`.
-- `DotnetKit.MetricFlow.AspNetCore` package with turnkey middleware and endpoint routing filters.
-- Histogram & latency percentiles (P50, P75, P90, P99, P99.9).
-- OpenTelemetry integration bridging to `System.Diagnostics.Metrics`.
-- Native Prometheus text exposition endpoint (`/metrics`).
-- Background metric collector and pusher (`DotnetKit.MetricFlow.Collector`).
+### Added
+- **ASP.NET Core Integration (`DotnetKit.MetricFlow.AspNetCore`)**:
+  - Middleware (`MetricFlowMiddleware`) and endpoint routing integration for automated request duration, memory, and failure tracking.
+  - Dependency injection extensions (`AddMetricFlow`, `UseMetricFlow`) with options support.
+- **Delegate Tracking Extensions (`TrackerActionExtensions`)**:
+  - `TrackAction` and `TrackActionAsync` overloads supporting synchronous actions, async tasks, and returning values with automatic exception and duration tracking.
+- **Caller Member Name Resolution**:
+  - Automatic metric name derivation via `[CallerMemberName]` across `Track()`, `TrackAction()`, and `TrackActionAsync()`.
+- **Pluggable Counter Architecture**:
+  - `DurationCounter`: Lock-free execution timing using high-precision stopwatch ticks and atomic aggregations.
+  - `MemoryCounter`: Async-safe heap allocation tracking using thread-allocated bytes and process-wide delta fallback.
+  - `ExceptionCounter`: Thread-safe failure tracking and exception type categorization.
+  - `ICounter<TState>` and state-token lifecycle pattern (`OnIn` / `OnOut`).
+  - Dynamic counter reconfiguration via `ICounterConfigObservable`.
+- **Metric Snapshots**:
+  - `IMetricSnapshotsSource` abstraction and formatting extensions grouping metrics cleanly by operation.
+- **Multi-Targeting**:
+  - Added support for `.NET 10.0` (`net10.0`) alongside `.NET 8.0` (`net8.0`).
+- **Documentation**:
+  - Added [ARCHITECTURE.md](ARCHITECTURE.md) documenting core design patterns, lock-free concurrency, and counter lifecycle.
+  - Created a simple [ROADMAP.md](ROADMAP.md) focused on OpenTelemetry and cloud provider integrations.
+- **CI/CD**:
+  - MinVer automated versioning and OIDC-based NuGet publishing workflow.
+
+### Changed
+- Consolidated core namespaces into `DotnetKit.MetricFlow` and converted all files to file-scoped namespaces.
+- Replaced legacy `StopWatchCounter` with the pluggable `DurationCounter` and atomic counter architecture.
+- Modernized examples (`SimpleMetricCountersExample` and `WebApiExample`) to demonstrate new delegate tracking, memory counters, and caller member name capabilities.
+- Simplified `README.md` with concise tracker capability examples.
 
 ---
 

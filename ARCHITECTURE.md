@@ -164,6 +164,26 @@ tracker.Out("AsyncJob", failed: false);
 ```
 * Correlates in-flight operations across async contexts using `AsyncLocal<Dictionary<string, Stack<InOperationState>>>`.
 
+### 3. Delegate Tracking (`TrackAction` / `TrackActionAsync`)
+For tracking synchronous delegates or asynchronous tasks with automatic duration measurement, return value passthrough, and exception capture:
+```csharp
+tracker.TrackAction("ProcessOrder", () => DoWork());
+var result = await tracker.TrackActionAsync("FetchData", async () => await FetchAsync());
+```
+* Wraps execution in a `CodeTracker` scope.
+* Intercepts unhandled exceptions to record failure state and exception type (`scope.SetException(ex)`) before rethrowing.
+
+### 4. Dynamic Metric Naming via `[CallerMemberName]`
+Zero-overhead compile-time metric name resolution:
+```csharp
+public async Task ProcessOrderAsync()
+{
+    using var _ = tracker.Track(); // Metric name is automatically "ProcessOrderAsync"
+    await tracker.TrackActionAsync(async () => await DoWorkAsync());
+}
+```
+* Resolves method names via compiler attribute injection without runtime reflection.
+
 ---
 
 ## 6. Real-Time Configuration & The Observable Pattern
@@ -246,3 +266,34 @@ var tracker = new MetricTracker("AppTopic");
 tracker.RegisterCounter(new ThreadPoolQueueCounter());
 ```
 When `tracker.Track("MyOperation")` executes, `ThreadPoolQueueCounter` is automatically invoked alongside `DurationCounter`, `MemoryCounter`, and `ExceptionCounter`.
+
+---
+
+## 9. ASP.NET Core Integration (`DotnetKit.MetricFlow.AspNetCore`)
+
+The `DotnetKit.MetricFlow.AspNetCore` library provides turnkey HTTP pipeline telemetry by integrating `MetricTracker` with ASP.NET Core middleware:
+
+```mermaid
+flowchart LR
+    Request["HTTP Request"] --> Middleware["MetricFlowMiddleware"]
+    Middleware -->|Resolve route / path| In["tracker.In(metricName, inTags)"]
+    In --> Next["Next Middleware / Endpoint"]
+    Next --> Catch["Status Code / Exception Check"]
+    Catch --> Out["tracker.Out(metricName, outTags, failed, exception)"]
+    Out --> Response["HTTP Response"]
+```
+
+- **Pipeline Middleware (`MetricFlowMiddleware`)**: Employs the decoupled `In` / `Out` pattern to bracket HTTP request executions across async pipeline stages.
+- **Route Pattern Resolution (`MetricRouteNamingStrategy`)**: Normalizes endpoint paths using route patterns (e.g. `api/orders/{id}`) instead of raw URL paths to prevent metric cardinality explosion.
+- **Tag Enrichment**: Automatically attaches HTTP status codes (`http_status`), error types (`error_type`), and optional user-defined tags (`EnrichTags`).
+- **Dependency Injection**: Seamless setup via `services.AddMetricFlow(...)` and `app.UseMetricFlow()`.
+
+---
+
+## 10. Snapshot Aggregation & Reporting
+
+All metric tracking data is accessible via the `IMetricSnapshotsSource` abstraction:
+
+- **`IMetricSnapshotsSource`**: Unified interface implemented by trackers to expose snapshots across all registered active counters (`GetAllSnapshots()`, `GetSnapshot(metricName)`).
+- **Operation-Grouped Formatting**: Snapshot formatting extensions group multidimensional measurements (`Duration`, `Memory`, `Exception`) by operation name to produce human-readable summaries (min/max/avg, failure rates, allocated memory deltas).
+

@@ -24,16 +24,16 @@ MetricFlow is a lightweight .NET library designed to help developers define and 
 
 1. Clone the repository:
 
-    ```sh
-    git clone https://github.com/yourusername/DotnetKit.git
-    cd DotnetKit/MetricFlow
-    ```
+   ```sh
+   git clone https://github.com/yourusername/DotnetKit.git
+   cd DotnetKit/MetricFlow
+   ```
 
 2. Restore dependencies:
 
-    ```sh
-    dotnet restore
-    ```
+   ```sh
+   dotnet restore
+   ```
 
 ### Usage
 
