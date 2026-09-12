@@ -1,11 +1,15 @@
-﻿namespace CustomCounters
+using DotnetKit.MetricFlow.Abstractions;
+
+namespace CustomCounters;
+
+/// <summary>
+/// UTC based MetricTracker implementation
+/// </summary>
+public class UtcCounters : MetricTrackerBase
 {
-
-    /// <summary>
-    ///  UTC based MetricCounter implementation
-    /// </summary>
-    public class UtcCounters(string contextName) : MetricCountersBase<UtcCounter>(contextName)
+    public UtcCounters(string topic, IReadOnlyDictionary<string, string>? topicTags = null, double? samplingRate = 1.0)
+        : base(topic, topicTags, samplingRate)
     {
-
+        RegisterCounter(new UtcCounter());
     }
 }

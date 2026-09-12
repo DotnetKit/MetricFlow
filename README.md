@@ -24,60 +24,86 @@ MetricFlow is a lightweight .NET library designed to help developers define and 
 
 1. Clone the repository:
 
-    ```sh
-    git clone https://github.com/yourusername/DotnetKit.git
-    cd DotnetKit/MetricFlow
-    ```
+   ```sh
+   git clone https://github.com/yourusername/DotnetKit.git
+   cd DotnetKit/MetricFlow
+   ```
 
 2. Restore dependencies:
 
-    ```sh
-    dotnet restore
-    ```
+   ```sh
+   dotnet restore
+   ```
 
 ### Usage
 
-To use MetricFlow in your project, follow these steps:
+#### 1. Initialize Tracker
 
-1. Define a metric tracker:
+```csharp
+using DotnetKit.MetricFlow;
 
-    ```csharp
-    var tracker = new MetricTracker("ExecutionTimeMetricsTopic", new()
-    {
-        ["tenant_id"] = "TenantId1",
-        ["session_id"] = Guid.NewGuid().ToString()
-    });
-    ```
+var tracker = new MetricTracker("OrderService", new()
+{
+    ["environment"] = "production"
+});
+```
 
-2. Track metrics in different ways:
+#### 2. Tracker Capabilities
 
-    ```csharp
-    tracker.In("GlobalOperation");
+##### Scope Tracking (`using`)
 
-    for (var i = 0; i < 10; i++)
-    {
-        using (var __ = tracker.Track("Operation1", new() { ["operation_id"] = $"{i}" }))
-        {
-            await Task.Delay(2);
-        }
-        using (var __ = tracker.Track("Operation2", new() { ["operation_id"] = $"{10 - i}" }))
-        {
-            await Task.Delay(4);
-        }
-    }
+Measures execution duration until the scope is disposed:
 
-    tracker.Out("GlobalOperation");
+```csharp
+// Explicit metric name (with optional tags)
+using (tracker.Track("ProcessOrder", new() { ["order_id"] = "123" }))
+{
+    // work here
+}
 
-    Console.WriteLine(tracker.ToString());
-    ```
+// Automatic metric name via [CallerMemberName]
+void ProcessOrder()
+{
+    using var _ = tracker.Track(); // Metric name is "ProcessOrder"
+}
+```
 
-### Example
+##### Delegate Tracking (`TrackAction` / `TrackActionAsync`)
 
-The `SimpleMetricCountersExample` demonstrates how to use the `MetricFlow` library to track and measure metrics in a .NET application. The example includes a `BenchRunner` class that simulates operations and tracks their execution times.
+Executes an action or task with automatic duration tracking and exception capture:
 
-### Running the Example
+```csharp
+// Explicit metric name (sync or async, with optional return value)
+tracker.TrackAction("ProcessOrder", () => DoWork());
+var order = await tracker.TrackActionAsync("FetchOrder", async () => await FetchOrderAsync());
 
-To run the example, execute the following command:
+// Automatic metric name via [CallerMemberName]
+void ProcessOrder()
+{
+    tracker.TrackAction(() => DoWork()); // Metric name is "ProcessOrder"
+}
+
+async Task ProcessOrderAsync()
+{
+    await tracker.TrackActionAsync(async () => await DoWorkAsync());
+}
+```
+
+### Examples
+
+- **[SimpleMetricCountersExample](examples/SimpleMetricCountersExample)**: Demonstrates scope tracking, `TrackActionAsync`, custom tags, memory, and exception counters.
+- **[WebApiExample](examples/WebApiExample)**: Demonstrates ASP.NET Core integration and metrics endpoints.
+
+Run the simple example:
 
 ```sh
 dotnet run --project examples/SimpleMetricCountersExample
+```
+
+## Roadmap
+
+See [ROADMAP.md](ROADMAP.md) for the development roadmap, upcoming milestones, and architectural improvements.
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for a detailed history of changes, releases, and fixes.
