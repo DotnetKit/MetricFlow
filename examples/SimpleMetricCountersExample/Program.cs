@@ -43,25 +43,21 @@ internal class Program
 
     internal static async Task ExecuteOperation2Async(MetricTracker tracker, int i)
     {
-        // Operation2: tracks duration, memory allocation, and throws modulo-based exceptions (resolved via [CallerMemberName])
+        // Operation2: uses TrackActionAsync for automatic duration, memory, and exception capture
         try
         {
-            using var op2 = tracker.Track(tags: new() { ["operation_id"] = $"{OperationCount - i}" });
-            try
-            {
-                await Task.Delay(4);
+            await tracker.TrackActionAsync(
+                async () =>
+                {
+                    await Task.Delay(4);
 
-                // Allocate memory to exercise MemoryCounter (32 KB - 320 KB)
-                _ = AllocateMemory((OperationCount - i) * 32, (byte)i);
+                    // Allocate memory to exercise MemoryCounter (32 KB - 320 KB)
+                    _ = AllocateMemory((OperationCount - i) * 32, (byte)i);
 
-                // Throw exception based on modulo to exercise ExceptionCounter
-                ThrowModuloException(i);
-            }
-            catch (Exception ex)
-            {
-                op2.SetException(ex);
-                throw;
-            }
+                    // Throw exception based on modulo to exercise ExceptionCounter
+                    ThrowModuloException(i);
+                },
+                tags: new() { ["operation_id"] = $"{OperationCount - i}" });
         }
         catch
         {
