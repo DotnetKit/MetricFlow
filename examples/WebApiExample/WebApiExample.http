@@ -4,3 +4,8 @@ GET {{WebApiExample_HostAddress}}/weatherforecast/
 Accept: application/json
 
 ###
+
+GET {{WebApiExample_HostAddress}}/weatherforecast?country=France
+Accept: application/json
+
+###

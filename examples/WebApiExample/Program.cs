@@ -1,3 +1,4 @@
+using DotnetKit.MetricFlow.Abstractions;
 using DotnetKit.MetricFlow.AspNetCore.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -38,14 +39,19 @@ var summaries = new[]
     "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
 };
 
-app.MapGet("/weatherforecast", () =>
+app.MapGet("/weatherforecast", (IMetricTracker tracker, string? country = null) =>
 {
+    using var scope = !string.IsNullOrWhiteSpace(country)
+        ? tracker.Track("QueryedByCountryWheather", new Dictionary<string, string> { { "country", country } })
+        : null;
+
     var forecast = Enumerable.Range(1, 5).Select(index =>
         new WeatherForecast
         (
             DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
             Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
+            summaries[Random.Shared.Next(summaries.Length)],
+            country
         ))
         .ToArray();
     return forecast;
@@ -66,7 +72,7 @@ app.MapMetricFlow("/metrics")
 
 app.Run();
 
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
+record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary, string? Country = null)
 {
     public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
 }
