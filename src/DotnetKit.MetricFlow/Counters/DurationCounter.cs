@@ -167,10 +167,8 @@ public record DurationSnapshot(
     public string ToFormattedString()
     {
         var sb = new StringBuilder();
-        sb.AppendLine($"[{CounterName}] Metric: {MetricName}");
-        sb.AppendLine($"Count (in, out, failed): {InCount} / {OutCount} / {FailedCount}");
-        sb.AppendLine($"Avg duration: {AverageDuration.TotalMilliseconds:F2} ms");
-        sb.AppendLine($"Duration (min, max): {MinDuration.TotalMilliseconds:F2} ms / {MaxDuration.TotalMilliseconds:F2} ms");
+        sb.AppendLine($"[{CounterName}] Metric: {MetricName}"); 
+        sb.AppendLine($"Duration (min, max, avg): {MinDuration.TotalMilliseconds:F2} ms / {MaxDuration.TotalMilliseconds:F2} ms / {AverageDuration.TotalMilliseconds:F2} ms");
         sb.AppendLine($"Total duration: {TotalDuration.TotalMilliseconds:F2} ms");
         return sb.ToString();
     }
