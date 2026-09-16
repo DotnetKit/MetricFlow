@@ -7,9 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [1.1.0] - 2026-09-17
 
 ### Added
+
 - **ASP.NET Core Integration (`DotnetKit.MetricFlow.AspNetCore`)**:
   - Middleware (`MetricFlowMiddleware`) and endpoint routing integration for automated request duration, memory, and failure tracking.
   - Dependency injection extensions (`AddMetricFlow`, `UseMetricFlow`) with options support.
@@ -34,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - MinVer automated versioning and OIDC-based NuGet publishing workflow.
 
 ### Changed
+
 - Consolidated core namespaces into `DotnetKit.MetricFlow` and converted all files to file-scoped namespaces.
 - Replaced legacy `StopWatchCounter` with the pluggable `DurationCounter` and atomic counter architecture.
 - Modernized examples (`SimpleMetricCountersExample` and `WebApiExample`) to demonstrate new delegate tracking, memory counters, and caller member name capabilities.
@@ -41,9 +43,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.1.0] - 2026-09-05
+## [1.0.1] - 2026-09-05
 
 ### Fixed
+
 - **Duration Unit Bug (10,000× Inflation)**: `StopWatchCounter.Stop()` returned raw Stopwatch ticks which were incorrectly passed into `TimeSpan.FromMilliseconds`, inflating reported durations by ~10,000× (e.g. 2ms was reported as ~30,000ms). Now tracked using `TimeSpan.Ticks` and `Stopwatch.GetElapsedTime(...)`.
 - **Thread Safety & Race Conditions**: Removed the shared mutable `Stopwatch` instance from `StopWatchCounter`. Timers are now measured per-operation via `Stopwatch.GetTimestamp()` in `CodeTracker`.
 - **Concurrent `In`/`Out` Tracking**: Added `AsyncLocal` context stack in `MetricTrackerBase` so concurrent asynchronous executions (e.g. ASP.NET Core requests) accurately correlate their own start/end timings without clobbering each other.
@@ -56,6 +59,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Example Code Compilation**: Fixed `UtcCounter.cs` and `UtcCounters.cs` to inherit from `MetricTrackerBase<UtcCounter>` and `CounterBase` with valid constructors.
 
 ### Added
+
 - `Dec(TimeSpan duration, bool? failed = false)` overload in `ICounter` and `CounterBase` to record precise duration directly.
 - Optional `TimeSpan? duration` parameter in `IMetricTracker.Out` and `MetricTrackerBase.Out`.
 - Automated tests in `MetricFlow.Tests`:
@@ -66,6 +70,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ROADMAP.md` tracking phased improvements and project vision.
 
 ### Changed
+
 - Cleaned up unreferenced empty folders `src/DotnetKit.MetricFlow.Core` and `src/DotnetKit.MetricFlow.Collector`.
 - Upgraded GitHub Actions deployment workflows from `@v1`/`@v2` to `@v4`.
 - Updated `SimpleMetricCountersExample/BenchRunner.cs` comments with accurate millisecond durations.
@@ -75,6 +80,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - 2024-05-15
 
 ### Added
+
 - Core `MetricTracker` and `MetricTrackerBase<T>` generic abstraction.
 - `StopWatchCounter` and `CounterBase` counter implementations.
 - `CodeTracker<T>` disposable pattern (`using (tracker.Track(...))`).
