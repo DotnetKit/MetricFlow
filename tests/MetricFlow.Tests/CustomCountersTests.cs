@@ -35,17 +35,15 @@ public class CustomCountersTests
 
         try
         {
-            using (var scope = (CodeTracker)tracker.Track("MultiMetricOp"))
+            using var scope = (CodeTracker)tracker.Track("MultiMetricOp");
+            try
             {
-                try
-                {
-                    throw new InvalidOperationException("Simulated error");
-                }
-                catch (Exception ex)
-                {
-                    scope.SetException(ex);
-                    throw;
-                }
+                throw new InvalidOperationException("Simulated error");
+            }
+            catch (Exception ex)
+            {
+                scope.SetException(ex);
+                throw;
             }
         }
         catch (InvalidOperationException)
@@ -56,19 +54,19 @@ public class CustomCountersTests
         // Assert
         var durationSnapshot = tracker.GetSnapshot("MultiMetricOp", DurationCounter.DefaultCounterName) as DurationSnapshot;
         durationSnapshot.Should().NotBeNull();
-        durationSnapshot!.InCount.Should().Be(3);
+        durationSnapshot.InCount.Should().Be(3);
         durationSnapshot.OutCount.Should().Be(3);
         durationSnapshot.FailedCount.Should().Be(1);
         durationSnapshot.TotalDuration.TotalMilliseconds.Should().BeGreaterThan(0);
 
         var memorySnapshot = tracker.GetSnapshot("MultiMetricOp", MemoryCounter.DefaultCounterName) as MemorySnapshot;
         memorySnapshot.Should().NotBeNull();
-        memorySnapshot!.OperationCount.Should().Be(3);
+        memorySnapshot.OperationCount.Should().Be(3);
         memorySnapshot.TotalAllocatedBytes.Should().BeGreaterThan(1024 * 50);
 
         var exceptionSnapshot = tracker.GetSnapshot("MultiMetricOp", ExceptionCounter.DefaultCounterName) as ExceptionSnapshot;
         exceptionSnapshot.Should().NotBeNull();
-        exceptionSnapshot!.TotalOperations.Should().Be(3);
+        exceptionSnapshot.TotalOperations.Should().Be(3);
         exceptionSnapshot.TotalFailures.Should().Be(1);
         exceptionSnapshot.ExceptionsByType.Should().ContainKey(nameof(InvalidOperationException));
         exceptionSnapshot.ExceptionsByType[nameof(InvalidOperationException)].Should().Be(1);
@@ -119,23 +117,23 @@ public class CustomCountersTests
         // Assert - All 4 counters captured metrics
         var durationSnapshot = tracker.GetValues("QuadMetricOp");
         durationSnapshot.Should().NotBeNull();
-        durationSnapshot!.InCount.Should().Be(3);
+        durationSnapshot.InCount.Should().Be(3);
         durationSnapshot.OutCount.Should().Be(3);
         durationSnapshot.FailedCount.Should().Be(1);
 
         var memorySnapshot = tracker.GetSnapshot("QuadMetricOp", MemoryCounter.DefaultCounterName) as MemorySnapshot;
         memorySnapshot.Should().NotBeNull();
-        memorySnapshot!.OperationCount.Should().Be(3);
+        memorySnapshot.OperationCount.Should().Be(3);
         memorySnapshot.TotalAllocatedBytes.Should().BeGreaterThan(1024 * 30);
 
         var exceptionSnapshot = tracker.GetSnapshot("QuadMetricOp", ExceptionCounter.DefaultCounterName) as ExceptionSnapshot;
         exceptionSnapshot.Should().NotBeNull();
-        exceptionSnapshot!.TotalOperations.Should().Be(3);
+        exceptionSnapshot.TotalOperations.Should().Be(3);
         exceptionSnapshot.TotalFailures.Should().Be(1);
 
         var throughputSnapshot = tracker.GetThroughputValues("QuadMetricOp");
         throughputSnapshot.Should().NotBeNull();
-        throughputSnapshot!.TotalOperations.Should().Be(3);
+        throughputSnapshot.TotalOperations.Should().Be(3);
         throughputSnapshot.TotalItems.Should().Be(175);
         throughputSnapshot.AverageItemsPerOperation.Should().BeApproximately(175.0 / 3.0, 0.01);
         throughputSnapshot.FailedOperations.Should().Be(1);
@@ -156,7 +154,7 @@ public class CustomCountersTests
 
         var exSnapshot1 = tracker.GetSnapshot("DynamicMetric", ExceptionCounter.DefaultCounterName) as ExceptionSnapshot;
         exSnapshot1.Should().NotBeNull();
-        exSnapshot1!.TotalFailures.Should().Be(1);
+        exSnapshot1.TotalFailures.Should().Be(1);
 
         // Act 2: Dynamically disable ExceptionCounter via observable notification
         configNotifier.NotifyChanged(ExceptionCounter.DefaultCounterName, enabled: false);
@@ -165,12 +163,13 @@ public class CustomCountersTests
         tracker.Out("DynamicMetric", failed: true);
 
         var exSnapshot2 = tracker.GetSnapshot("DynamicMetric", ExceptionCounter.DefaultCounterName) as ExceptionSnapshot;
-        exSnapshot2!.TotalFailures.Should().Be(1); // Should not increase because counter is disabled
+        exSnapshot2.Should().NotBeNull();
+        exSnapshot2.TotalFailures.Should().Be(1); // Should not increase because counter is disabled
 
         // DurationCounter is still enabled and should track
         var durationSnapshot = tracker.GetValues("DynamicMetric");
         durationSnapshot.Should().NotBeNull();
-        durationSnapshot!.InCount.Should().Be(2);
+        durationSnapshot.InCount.Should().Be(2);
 
         // Act 3: Dynamically re-enable ExceptionCounter
         configNotifier.NotifyChanged(ExceptionCounter.DefaultCounterName, enabled: true);
@@ -179,7 +178,8 @@ public class CustomCountersTests
         tracker.Out("DynamicMetric", failed: true);
 
         var exSnapshot3 = tracker.GetSnapshot("DynamicMetric", ExceptionCounter.DefaultCounterName) as ExceptionSnapshot;
-        exSnapshot3!.TotalFailures.Should().Be(2); // Resumed tracking!
+        exSnapshot3.Should().NotBeNull();
+        exSnapshot3.TotalFailures.Should().Be(2); // Resumed tracking!
     }
 
     [Fact]
@@ -195,16 +195,14 @@ public class CustomCountersTests
         // Act
         var tasks = Enumerable.Range(0, concurrency).Select(async i =>
         {
-            using (var scope = (CodeTracker)tracker.Track("ConcurrentMetric"))
-            {
-                var data = new byte[1024];
-                await Task.Delay(5);
-                _ = data.Length;
+            using var scope = (CodeTracker)tracker.Track("ConcurrentMetric");
+            var data = new byte[1024];
+            await Task.Delay(5);
+            _ = data.Length;
 
-                if (i % 3 == 0)
-                {
-                    scope.SetException(new HttpRequestException($"Error {i}"));
-                }
+            if (i % 3 == 0)
+            {
+                scope.SetException(new HttpRequestException($"Error {i}"));
             }
         });
 
@@ -213,18 +211,18 @@ public class CustomCountersTests
         // Assert
         var duration = tracker.GetValues("ConcurrentMetric");
         duration.Should().NotBeNull();
-        duration!.InCount.Should().Be(concurrency);
+        duration.InCount.Should().Be(concurrency);
         duration.OutCount.Should().Be(concurrency);
         duration.FailedCount.Should().Be(10); // 30 / 3
 
         var exceptions = tracker.GetSnapshot("ConcurrentMetric", ExceptionCounter.DefaultCounterName) as ExceptionSnapshot;
         exceptions.Should().NotBeNull();
-        exceptions!.TotalFailures.Should().Be(10);
+        exceptions.TotalFailures.Should().Be(10);
         exceptions.ExceptionsByType[nameof(HttpRequestException)].Should().Be(10);
 
         var memory = tracker.GetSnapshot("ConcurrentMetric", MemoryCounter.DefaultCounterName) as MemorySnapshot;
         memory.Should().NotBeNull();
-        memory!.OperationCount.Should().Be(concurrency);
+        memory.OperationCount.Should().Be(concurrency);
         memory.TotalAllocatedBytes.Should().BeGreaterThan(1024 * concurrency);
     }
 

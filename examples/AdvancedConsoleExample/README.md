@@ -1,6 +1,6 @@
-# Simple Metric Counters Example
+# Advanced Console Example
 
-This example demonstrates how to use the `MetricFlow` library to track and measure metrics in a .NET application. The example includes a `BenchRunner` class that simulates operations and tracks their execution times.
+This example demonstrates how to use the `MetricFlow` library with the full multi-counter telemetry pipeline: duration, throughput (items/sec and batch sizing), memory allocation, exceptions, and delegate tracking in a .NET application.
 
 ## Getting Started
 
@@ -13,8 +13,8 @@ This example demonstrates how to use the `MetricFlow` library to track and measu
 1. Clone the repository:
 
     ```sh
-    git clone https://github.com/yourusername/DotnetKit.git
-    cd DotnetKit/MetricFlow/examples/SimpleMetricCountersExample
+    git clone https://github.com/DotnetKit/MetricFlow.git
+    cd MetricFlow/examples/AdvancedConsoleExample
     ```
 
 2. Restore dependencies:

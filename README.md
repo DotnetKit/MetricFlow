@@ -204,7 +204,7 @@ app.Run();
 ### Examples
 
 - **[BasicConsoleExample](examples/BasicConsoleExample)**: Simplest implementation demonstrating minimal tracker setup and duration measurement with zero optional counters.
-- **[SimpleMetricCountersExample](examples/SimpleMetricCountersExample)**: Demonstrates scope tracking, `TrackActionAsync`, custom tags, memory, and exception counters.
+- **[AdvancedConsoleExample](examples/AdvancedConsoleExample)**: Full multi-counter demonstration including duration, throughput (items/sec and batch sizing), memory allocation, exceptions, and delegate tracking.
 - **[WebApiExample](examples/WebApiExample)**: Demonstrates ASP.NET Core integration, middleware, and `/metrics` endpoint.
 - **[CustomCounters](examples/CustomCounters)**: Demonstrates extension capabilities by implementing custom counters and trackers.
 
@@ -214,8 +214,8 @@ Run the examples:
 # Basic console example (minimal setup)
 dotnet run --project examples/BasicConsoleExample
 
-# Multi-counter console example
-dotnet run --project examples/SimpleMetricCountersExample
+# Multi-counter console example (advanced: duration, throughput, memory, exceptions)
+dotnet run --project examples/AdvancedConsoleExample
 
 # ASP.NET Core Web API example
 dotnet run --project examples/WebApiExample
