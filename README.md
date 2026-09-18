@@ -169,6 +169,34 @@ async Task ProcessOrderAsync()
 }
 ```
 
+##### Dependency Injection (Console Apps, Workers & Daemons)
+
+Register `MetricFlow` in any .NET application using `Microsoft.Extensions.DependencyInjection` without ASP.NET Core dependencies:
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using DotnetKit.MetricFlow;
+
+// Register MetricFlow with topic and optional configuration
+services.AddMetricFlow("WorkerDaemon", options =>
+{
+    options.SamplingRate = 1.0;
+    options.TopicTags = new() { ["env"] = "Production" };
+});
+
+// Inject IMetricTracker or MetricTracker anywhere in your application
+public class QueueWorker(IMetricTracker tracker)
+{
+    public async Task ProcessAsync()
+    {
+        using (tracker.Track("ProcessMessage"))
+        {
+            await HandleMessageAsync();
+        }
+    }
+}
+```
+
 ##### ASP.NET Core Integration
 
 Enable automated HTTP request duration, memory allocation, and failure tracking via middleware:
