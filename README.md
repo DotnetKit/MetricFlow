@@ -1,51 +1,66 @@
 # MetricFlow
 
-![internal](https://github.com/dotnetkit/metricflow/actions/workflows/publish-internal.yml/badge.svg)
-![public](https://github.com/dotnetkit/metricflow/actions/workflows/publish-public.yml/badge.svg)
-![Dotnetkit.MetricFlow](https://img.shields.io/nuget/v/Dotnetkit.MetricFlow)
+![internal](https://github.com/DotnetKit/MetricFlow/actions/workflows/publish-internal.yml/badge.svg)
+![public](https://github.com/DotnetKit/MetricFlow/actions/workflows/publish-public.yml/badge.svg)
+[![DotnetKit.MetricFlow](https://img.shields.io/nuget/v/DotnetKit.MetricFlow)](https://www.nuget.org/packages/DotnetKit.MetricFlow)
+[![DotnetKit.MetricFlow.AspNetCore](https://img.shields.io/nuget/v/DotnetKit.MetricFlow.AspNetCore)](https://www.nuget.org/packages/DotnetKit.MetricFlow.AspNetCore)
 
 MetricFlow is a lightweight .NET library designed to help developers define and track functional and domain-oriented metrics (such as counters, timers, and event-based measurements).
 
 ## Features
 
-- **Counters**: Track the number of occurrences of an event.
-- **Timers**: Measure the duration of operations.
-- **Event-based Measurements**: Capture and analyze specific events within your application.
-- **Metadata and Tags**: Add contextual information to your metrics for better analysis and filtering.
-- **Sampling**: Control the frequency of metric collection to manage performance and data volume.
+- **Counters**: Track execution counts and occurrences of events.
+- **Timers & Duration**: High-precision operation timing via lock-free stopwatch ticks.
+- **Memory Tracking**: Measure per-operation heap allocations with `MemoryCounter`.
+- **Exception & Failure Tracking**: Capture errors, exceptions, and failure counts with `ExceptionCounter`.
+- **Metadata and Tags**: Add contextual information to metrics for rich analysis and filtering.
+- **Sampling**: Thread-safe sampling control to balance performance and data volume.
+- **ASP.NET Core Integration**: Turnkey middleware, endpoint routing resolution, and metric exposition endpoints.
+- **Pluggable & Extensible**: Fully customizable counter lifecycle (`CounterBase<TState>`) and trackers (`MetricTrackerBase`).
+- **Multi-Targeting**: Native support for `.NET 8.0` and `.NET 10.0`.
 
 ## Getting Started
 
 ### Prerequisites
 
-- .NET SDK installed on your machine
+- .NET SDK (8.0 or 10.0) installed on your machine
 
 ### Installation
 
-1. Clone the repository:
+Install via NuGet package manager:
 
-   ```sh
-   git clone https://github.com/yourusername/DotnetKit.git
-   cd DotnetKit/MetricFlow
-   ```
+```sh
+# Core library
+dotnet add package DotnetKit.MetricFlow
 
-2. Restore dependencies:
+# ASP.NET Core integration (optional)
+dotnet add package DotnetKit.MetricFlow.AspNetCore
+```
 
-   ```sh
-   dotnet restore
-   ```
+Or clone and build locally:
+
+```sh
+git clone https://github.com/DotnetKit/MetricFlow.git
+cd MetricFlow
+dotnet restore
+dotnet build
+```
 
 ### Usage
 
 #### 1. Initialize Tracker
 
+Initialize a tracker and optionally chain memory and exception counters:
+
 ```csharp
 using DotnetKit.MetricFlow;
 
 var tracker = new MetricTracker("OrderService", new()
-{
-    ["environment"] = "production"
-});
+    {
+        ["environment"] = "production"
+    })
+    .AddMemoryCounter()
+    .AddExceptionCounter();
 ```
 
 #### 2. Tracker Capabilities
@@ -89,16 +104,52 @@ async Task ProcessOrderAsync()
 }
 ```
 
+##### ASP.NET Core Integration
+
+Enable automated HTTP request duration, memory allocation, and failure tracking via middleware:
+
+```csharp
+using DotnetKit.MetricFlow.AspNetCore.Extensions;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Register MetricFlow with optional tag enrichment
+builder.Services.AddMetricFlow("WebApiExample", options =>
+{
+    options.EnrichTags = (tags, context) =>
+    {
+        if (context.Request.Headers.TryGetValue("X-Tenant-ID", out var tenantId))
+        {
+            tags["tenant_id"] = tenantId!;
+        }
+    };
+});
+
+var app = builder.Build();
+
+// Automated request tracking middleware
+app.UseMetricFlow();
+
+// Expose metric snapshot endpoint
+app.MapMetricFlow("/metrics");
+
+app.Run();
+```
+
 ### Examples
 
 - **[SimpleMetricCountersExample](examples/SimpleMetricCountersExample)**: Demonstrates scope tracking, `TrackActionAsync`, custom tags, memory, and exception counters.
-- **[WebApiExample](examples/WebApiExample)**: Demonstrates ASP.NET Core integration and metrics endpoints.
+- **[WebApiExample](examples/WebApiExample)**: Demonstrates ASP.NET Core integration, middleware, and `/metrics` endpoint.
 - **[CustomCounters](examples/CustomCounters)**: Demonstrates extension capabilities by implementing custom counters and trackers.
 
-Run the simple example:
+Run the examples:
 
 ```sh
+# Simple console example
 dotnet run --project examples/SimpleMetricCountersExample
+
+# ASP.NET Core Web API example
+dotnet run --project examples/WebApiExample
 ```
 
 #### Extension Capabilities (Custom Counters & Trackers)
@@ -108,6 +159,7 @@ MetricFlow is designed to be extensible. You can implement custom counters by de
 See the examples in [`examples/CustomCounters`](examples/CustomCounters):
 
 ##### 1. Custom Counter (`UtcDurationCounter`)
+
 Inherit from `CounterBase<TState>` to track state during operation lifecycle (`OnIn` / `OnOut`):
 
 ```csharp
@@ -147,6 +199,7 @@ public class UtcDurationCounter(string name = "UtcDuration") : CounterBase<long>
 ```
 
 ##### 2. Custom Tracker (`CustomMetricTrackerWithUtcCounter`)
+
 Inherit from `MetricTrackerBase` to provide a domain-specific or pre-configured tracker with custom counters:
 
 ```csharp
