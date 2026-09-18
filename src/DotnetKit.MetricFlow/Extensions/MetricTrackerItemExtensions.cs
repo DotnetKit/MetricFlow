@@ -14,19 +14,21 @@ public static class MetricTrackerItemExtensions
     /// <param name="tracker">The metric tracker instance.</param>
     /// <param name="metricName">The name of the metric.</param>
     /// <param name="itemCount">The number of items or records processed in this operation.</param>
-    /// <param name="additionalTags">Optional additional tags.</param>
+    /// <param name="additionalTags">Optional additional business tags.</param>
+    /// <param name="additionalMetadata">Optional additional technical metadata.</param>
     /// <returns>A tracking scope disposable.</returns>
     public static IDisposable TrackItems(
         this IMetricTracker tracker,
         string metricName,
         long itemCount,
-        Dictionary<string, string>? additionalTags = null)
+        Dictionary<string, string>? additionalTags = null,
+        Dictionary<string, long>? additionalMetadata = null)
     {
         ArgumentNullException.ThrowIfNull(tracker);
 
-        var tags = additionalTags != null ? new Dictionary<string, string>(additionalTags) : new Dictionary<string, string>();
-        tags["items"] = itemCount.ToString();
-        return tracker.Track(metricName, tags);
+        var metadata = additionalMetadata != null ? new Dictionary<string, long>(additionalMetadata) : new Dictionary<string, long>();
+        metadata["items"] = itemCount;
+        return tracker.Track(metricName, additionalTags, metadata);
     }
 
     /// <summary>
@@ -34,15 +36,17 @@ public static class MetricTrackerItemExtensions
     /// </summary>
     /// <param name="tracker">The metric tracker instance.</param>
     /// <param name="itemCount">The number of items or records processed in this operation.</param>
-    /// <param name="additionalTags">Optional additional tags.</param>
+    /// <param name="additionalTags">Optional additional business tags.</param>
+    /// <param name="additionalMetadata">Optional additional technical metadata.</param>
     /// <param name="metricName">The calling member name.</param>
     /// <returns>A tracking scope disposable.</returns>
     public static IDisposable TrackItems(
         this IMetricTracker tracker,
         long itemCount,
         Dictionary<string, string>? additionalTags = null,
+        Dictionary<string, long>? additionalMetadata = null,
         [CallerMemberName] string metricName = "")
     {
-        return TrackItems(tracker, metricName, itemCount, additionalTags);
+        return TrackItems(tracker, metricName, itemCount, additionalTags, additionalMetadata);
     }
 }

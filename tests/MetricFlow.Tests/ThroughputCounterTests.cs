@@ -374,4 +374,120 @@ public class ThroughputCounterTests
         snapshot.TotalItems.Should().Be(123);
         snapshot.TotalOperations.Should().Be(1);
     }
+
+    [Fact]
+    public void TrackItems_ShouldPopulateMetadataAndNotPolluteTags()
+    {
+        // Arrange
+        IReadOnlyDictionary<string, string>? capturedTags = null;
+        IReadOnlyDictionary<string, long>? capturedMetadata = null;
+
+        var spy = new ContextSpyCounter("Spy");
+        var tracker = new MetricTracker("TagsIsolationTest")
+            .RegisterCounter(spy)
+            .AddThroughputCounter();
+
+        // Act
+        using (tracker.TrackItems("IsolatedOp", 250, new() { ["environment"] = "production" }))
+        {
+        }
+
+        capturedTags = spy.LastOutContextTags;
+        capturedMetadata = spy.LastOutContextMetadata;
+
+        // Assert
+        capturedTags.Should().NotBeNull();
+        capturedTags!.Should().ContainKey("environment").WhoseValue.Should().Be("production");
+        capturedTags.Should().NotContainKey("items");
+
+        capturedMetadata.Should().NotBeNull();
+        capturedMetadata!.Should().ContainKey("items").WhoseValue.Should().Be(250);
+
+        var snapshot = tracker.GetThroughputValues("IsolatedOp");
+        snapshot.Should().NotBeNull();
+        snapshot!.TotalItems.Should().Be(250);
+    }
+
+    [Fact]
+    public void ManualInOut_WithMetadata_ShouldRecordThroughput()
+    {
+        // Arrange
+        var tracker = new MetricTracker("ManualInOutMetadataTest")
+            .AddThroughputCounter();
+
+        // Act
+        tracker.In("ManualOp");
+        Thread.Sleep(5);
+        tracker.Out("ManualOp", metadata: new() { ["items"] = 750 });
+
+        // Assert
+        var snapshot = tracker.GetThroughputValues("ManualOp");
+        snapshot.Should().NotBeNull();
+        snapshot!.TotalOperations.Should().Be(1);
+        snapshot.TotalItems.Should().Be(750);
+        snapshot.TotalDuration.TotalMilliseconds.Should().BeGreaterThan(0);
+        snapshot.ItemsPerSecond.Should().BeGreaterThan(0);
+    }
+
+    [Fact]
+    public void Scope_SetMetadata_ShouldAllowDynamicNumericMetadata()
+    {
+        // Arrange
+        var tracker = new MetricTracker("DynamicMetadataTest")
+            .AddThroughputCounter();
+
+        // Act
+        using (var scope = tracker.Track("DynamicMetaOp"))
+        {
+            scope.SetMetadata("items", 333);
+        }
+
+        // Assert
+        var snapshot = tracker.GetThroughputValues("DynamicMetaOp");
+        snapshot.Should().NotBeNull();
+        snapshot!.TotalOperations.Should().Be(1);
+        snapshot.TotalItems.Should().Be(333);
+    }
+
+    [Theory]
+    [InlineData("items", 50)]
+    [InlineData("count", 75)]
+    [InlineData("batch_size", 120)]
+    [InlineData("ITEMS", 60)]
+    [InlineData("BATCH_SIZE", 200)]
+    public void BatchOperation_WithAlternativeMetadataKeys_ShouldExtractCorrectly(string metaKey, long expectedCount)
+    {
+        // Arrange
+        var tracker = new MetricTracker("MetadataKeyTest")
+            .AddThroughputCounter();
+
+        // Act
+        using (tracker.Track("AlternativeMetaOp", metadata: new() { [metaKey] = expectedCount }))
+        {
+        }
+
+        // Assert
+        var snapshot = tracker.GetThroughputValues("AlternativeMetaOp");
+        snapshot.Should().NotBeNull();
+        snapshot!.TotalItems.Should().Be(expectedCount);
+        snapshot.TotalOperations.Should().Be(1);
+    }
+
+    private sealed class ContextSpyCounter(string name) : CounterBase(name)
+    {
+        public IReadOnlyDictionary<string, string>? LastOutContextTags { get; private set; }
+        public IReadOnlyDictionary<string, long>? LastOutContextMetadata { get; private set; }
+
+        public override object? OnIn(in InContext context) => null;
+
+        public override void OnOut(object? state, in OutContext context)
+        {
+            LastOutContextTags = context.Tags;
+            LastOutContextMetadata = context.Metadata;
+        }
+
+        public override IMetricSnapshot? GetSnapshot(string metricName) => null;
+        public override IEnumerable<IMetricSnapshot> GetAllSnapshots() => [];
+        public override void Reset() { }
+    }
 }

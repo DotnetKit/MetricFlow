@@ -258,7 +258,7 @@ public class UtcDurationCounter(string name = "UtcDuration") : CounterBase<long>
         {
             elapsed = TimeSpan.FromTicks(DateTimeOffset.UtcNow.Ticks - state);
         }
-        _inner.OnOut(state, new OutContext(context.MetricName, context.Failed, context.Exception, elapsed, context.Tags));
+        _inner.OnOut(state, new OutContext(context.MetricName, context.Failed, context.Exception, elapsed, context.Tags, context.Metadata, context.UtcTimestamp));
     }
 
     public override IMetricSnapshot? GetSnapshot(string metricName) => _inner.GetSnapshot(metricName);

@@ -12,23 +12,25 @@ public interface IMetricTracker : IMetricSnapshotsSource
     void SetCounterEnabled(string counterName, bool enabled);
     IEnumerable<ICounter> GetCounters();
 
-    IDisposable Track(string metricName, Dictionary<string, string>? tags = null);
-    IDisposable Track(Dictionary<string, string>? tags = null, [CallerMemberName] string metricName = "");
+    IDisposable Track(string metricName, Dictionary<string, string>? tags = null, Dictionary<string, long>? metadata = null);
+    IDisposable Track(Dictionary<string, string>? tags = null, Dictionary<string, long>? metadata = null, [CallerMemberName] string metricName = "");
 
-    void In(string metricName, Dictionary<string, string>? tags = null);
-    void In(Dictionary<string, string>? tags = null, [CallerMemberName] string metricName = "");
+    void In(string metricName, Dictionary<string, string>? tags = null, Dictionary<string, long>? metadata = null);
+    void In(Dictionary<string, string>? tags = null, Dictionary<string, long>? metadata = null, [CallerMemberName] string metricName = "");
 
     void Out(
         string metricName,
         Dictionary<string, string>? tags = null,
         bool failed = false,
         Exception? exception = null,
-        TimeSpan? duration = null);
+        TimeSpan? duration = null,
+        Dictionary<string, long>? metadata = null);
     void Out(
         Dictionary<string, string>? tags = null,
         bool failed = false,
         Exception? exception = null,
         TimeSpan? duration = null,
+        Dictionary<string, long>? metadata = null,
         [CallerMemberName] string metricName = "");
 
     IMetricSnapshot? GetSnapshot(string metricName, string counterName);

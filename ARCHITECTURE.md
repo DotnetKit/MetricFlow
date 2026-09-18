@@ -88,8 +88,8 @@ sequenceDiagram
 ```
 
 ### Universal Context Contracts
-- **`InContext`**: Represents operation entry with `MetricName`, `Tags`, and `UtcTimestamp`.
-- **`OutContext`**: Represents operation exit with `MetricName`, `Failed`, `Exception?`, `Duration?`, `Tags`, and `UtcTimestamp`.
+- **`InContext`**: Represents operation entry with `MetricName`, `Tags` (`string -> string` business dimensions), `Metadata` (`string -> long` technical metrics), and `UtcTimestamp`.
+- **`OutContext`**: Represents operation exit with `MetricName`, `Failed`, `Exception?`, `Duration?`, `Tags`, `Metadata`, and `UtcTimestamp`.
 
 ### The Counter Interface (`ICounter` and `ICounter<TState>`)
 ```csharp
@@ -130,13 +130,13 @@ MetricFlow provides four built-in counters covering standard telemetry dimension
 | Counter | Metric Dimension | `OnIn` State Token | `OnOut` Behavior | Snapshot Output |
 | :--- | :--- | :--- | :--- | :--- |
 | **`DurationCounter`** | Execution latency | `long` (Stopwatch ticks) | Calculates elapsed time; updates total, min, max, avg durations and in/out/failed counts atomically. | `DurationSnapshot` |
-| **`ThroughputCounter`** | Processing throughput & items | `long` (Stopwatch ticks) | Extracts processed items from tags (`items`, `count`, `batch_size`) or default (1); updates total items, operations, duration, items/sec, and avg items/op atomically. | `ThroughputSnapshot` |
+| **`ThroughputCounter`** | Processing throughput & items | `long` (Stopwatch ticks) | Extracts processed items from technical metadata (`items`, `count`, `batch_size`) with tag fallback; updates total items, operations, duration, items/sec, and avg items/op atomically. | `ThroughputSnapshot` |
 | **`ExceptionCounter`** | Failures & errors | `null` (0 cost on entry) | Checks `Failed` and `Exception`. Categorizes by exception type in thread-safe dictionary. | `ExceptionSnapshot` |
 | **`MemoryCounter`** | Heap allocation | `MemoryTrackingToken` | Computes allocated byte delta. Automatically handles both thread-bound code and cross-thread async hops. | `MemorySnapshot` |
 
 ### High-Throughput Batch Tracking (`ThroughputCounter`)
 In high-volume streaming, ingestion, or batch jobs (e.g. database ETL, message queues, indexing pipelines), operations process variable-sized item payloads. `ThroughputCounter` (and its alias `ItemCounter`):
-- **Item volume**: Extracts item counts from tags (`"items"`, `"count"`, `"batch_size"` case-insensitively) or via `tracker.TrackItems("Op", count)` and `scope.SetItems(count)`. Defaults to `1` when no item tag is specified.
+- **Item volume**: Extracts item counts from technical `Metadata` (`"items"`, `"count"`, `"batch_size"`) with zero string parsing, or via `tracker.TrackItems("Op", count)` and `scope.SetItems(count)`. Falls back to `Tags` for backward compatibility. Defaults to `1` when no item metadata or tag is specified.
 - **Velocity calculation**: Atomically calculates `ItemsPerSecond` (`TotalItems / TotalDuration.TotalSeconds`) and `AverageItemsPerOperation`.
 - **Zero-allocation entry**: Captures timestamp via `Stopwatch.GetTimestamp()` as a 64-bit value state token with zero heap allocations.
 

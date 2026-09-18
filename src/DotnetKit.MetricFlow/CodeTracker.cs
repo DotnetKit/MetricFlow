@@ -9,6 +9,7 @@ public class CodeTracker : IDisposable
     private readonly object?[] _states;
     private readonly string _metricName;
     private Dictionary<string, string>? _tags;
+    private Dictionary<string, long>? _metadata;
     private readonly long _startTimestamp;
 
     private bool _failed;
@@ -20,15 +21,17 @@ public class CodeTracker : IDisposable
     public CodeTracker(
         ICounter[] counters,
         string metricName,
-        Dictionary<string, string>? tags = null)
+        Dictionary<string, string>? tags = null,
+        Dictionary<string, long>? metadata = null)
     {
         _counters = counters;
         _metricName = metricName;
         _tags = tags != null ? new Dictionary<string, string>(tags) : null;
+        _metadata = metadata != null ? new Dictionary<string, long>(metadata) : null;
         _startTimestamp = Stopwatch.GetTimestamp();
         _states = new object?[counters.Length];
 
-        var inContext = new InContext(metricName, tags);
+        var inContext = new InContext(metricName, _tags, _metadata);
         for (int i = 0; i < counters.Length; i++)
         {
             if (counters[i].IsEnabled)
@@ -62,7 +65,15 @@ public class CodeTracker : IDisposable
         return this;
     }
 
-    public CodeTracker SetItems(long count) => SetTag("items", count.ToString());
+    public CodeTracker SetMetadata(string key, long value)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        _metadata ??= new Dictionary<string, long>();
+        _metadata[key] = value;
+        return this;
+    }
+
+    public CodeTracker SetItems(long count) => SetMetadata("items", count);
 
     public CodeTracker SetItemCount(long count) => SetItems(count);
 
@@ -76,7 +87,7 @@ public class CodeTracker : IDisposable
         if (disposing)
         {
             var duration = Stopwatch.GetElapsedTime(_startTimestamp);
-            var outContext = new OutContext(_metricName, _failed, _exception, duration, _tags);
+            var outContext = new OutContext(_metricName, _failed, _exception, duration, _tags, _metadata);
 
             for (int i = 0; i < _counters.Length; i++)
             {

@@ -29,7 +29,11 @@ public class ThroughputCounter(string name = ThroughputCounter.DefaultCounterNam
         var throughputState = _states.GetOrAdd(context.MetricName, static name => new MetricThroughputState(name));
 
         long items = 1;
-        if (context.Tags != null && TryExtractItemCount(context.Tags, out var parsedItems))
+        if (context.Metadata != null && TryExtractItemCountFromMetadata(context.Metadata, out var parsedItems))
+        {
+            items = parsedItems;
+        }
+        else if (context.Tags != null && TryExtractItemCountFromTags(context.Tags, out parsedItems))
         {
             items = parsedItems;
         }
@@ -38,7 +42,28 @@ public class ThroughputCounter(string name = ThroughputCounter.DefaultCounterNam
         throughputState.Record(items, duration, context.Failed);
     }
 
-    private static bool TryExtractItemCount(IReadOnlyDictionary<string, string> tags, out long items)
+    private static bool TryExtractItemCountFromMetadata(IReadOnlyDictionary<string, long> metadata, out long items)
+    {
+        if (metadata.TryGetValue("items", out items)) return true;
+        if (metadata.TryGetValue("count", out items)) return true;
+        if (metadata.TryGetValue("batch_size", out items)) return true;
+
+        foreach (var (key, value) in metadata)
+        {
+            if (string.Equals(key, "items", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(key, "count", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(key, "batch_size", StringComparison.OrdinalIgnoreCase))
+            {
+                items = value;
+                return true;
+            }
+        }
+
+        items = 1;
+        return false;
+    }
+
+    private static bool TryExtractItemCountFromTags(IReadOnlyDictionary<string, string> tags, out long items)
     {
         if (tags.TryGetValue("items", out var itemsStr) && long.TryParse(itemsStr, out items)) return true;
         if (tags.TryGetValue("count", out var countStr) && long.TryParse(countStr, out items)) return true;

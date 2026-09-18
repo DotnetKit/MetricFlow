@@ -52,6 +52,22 @@ public static class TrackerScopeExtensions
     }
 
     /// <summary>
+    /// Adds or updates a numeric metadata entry on the active tracking scope for technical telemetry and counter consumption.
+    /// </summary>
+    /// <param name="scope">The tracking scope disposable.</param>
+    /// <param name="key">The metadata key.</param>
+    /// <param name="value">The numeric metadata value.</param>
+    /// <returns>The same tracking scope for chaining.</returns>
+    public static IDisposable SetMetadata(this IDisposable scope, string key, long value)
+    {
+        if (scope is CodeTracker codeTracker)
+        {
+            codeTracker.SetMetadata(key, value);
+        }
+        return scope;
+    }
+
+    /// <summary>
     /// Records the number of processed items/entities on the active tracking scope for throughput tracking.
     /// </summary>
     /// <param name="scope">The tracking scope disposable.</param>
