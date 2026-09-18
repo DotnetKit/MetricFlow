@@ -6,7 +6,7 @@ namespace CustomCounters;
 /// <summary>
 /// Counter based on UTC time using Pattern A state token.
 /// </summary>
-public class UtcCounter(string name = "UtcDuration") : CounterBase<long>(name)
+public class UtcDurationCounter(string name = "UtcDuration") : CounterBase<long>(name)
 {
     private readonly DurationCounter _inner = new(name);
 

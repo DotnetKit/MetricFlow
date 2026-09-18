@@ -93,11 +93,81 @@ async Task ProcessOrderAsync()
 
 - **[SimpleMetricCountersExample](examples/SimpleMetricCountersExample)**: Demonstrates scope tracking, `TrackActionAsync`, custom tags, memory, and exception counters.
 - **[WebApiExample](examples/WebApiExample)**: Demonstrates ASP.NET Core integration and metrics endpoints.
+- **[CustomCounters](examples/CustomCounters)**: Demonstrates extension capabilities by implementing custom counters and trackers.
 
 Run the simple example:
 
 ```sh
 dotnet run --project examples/SimpleMetricCountersExample
+```
+
+#### Extension Capabilities (Custom Counters & Trackers)
+
+MetricFlow is designed to be extensible. You can implement custom counters by deriving from `CounterBase<TState>` and pre-configure trackers by inheriting from `MetricTrackerBase`.
+
+See the examples in [`examples/CustomCounters`](examples/CustomCounters):
+
+##### 1. Custom Counter (`UtcDurationCounter`)
+Inherit from `CounterBase<TState>` to track state during operation lifecycle (`OnIn` / `OnOut`):
+
+```csharp
+using DotnetKit.MetricFlow.Abstractions;
+using DotnetKit.MetricFlow.Counters;
+
+namespace CustomCounters;
+
+/// <summary>
+/// Counter based on UTC time using state token.
+/// </summary>
+public class UtcDurationCounter(string name = "UtcDuration") : CounterBase<long>(name)
+{
+    private readonly DurationCounter _inner = new(name);
+
+    public override long OnIn(in InContext context)
+    {
+        if (!IsEnabled) return 0;
+        return DateTimeOffset.UtcNow.Ticks;
+    }
+
+    public override void OnOut(long state, in OutContext context)
+    {
+        if (!IsEnabled) return;
+        TimeSpan elapsed = TimeSpan.Zero;
+        if (state > 0)
+        {
+            elapsed = TimeSpan.FromTicks(DateTimeOffset.UtcNow.Ticks - state);
+        }
+        _inner.OnOut(state, new OutContext(context.MetricName, context.Failed, context.Exception, elapsed, context.Tags));
+    }
+
+    public override IMetricSnapshot? GetSnapshot(string metricName) => _inner.GetSnapshot(metricName);
+    public override IEnumerable<IMetricSnapshot> GetAllSnapshots() => _inner.GetAllSnapshots();
+    public override void Reset() => _inner.Reset();
+}
+```
+
+##### 2. Custom Tracker (`CustomMetricTrackerWithUtcCounter`)
+Inherit from `MetricTrackerBase` to provide a domain-specific or pre-configured tracker with custom counters:
+
+```csharp
+using DotnetKit.MetricFlow.Abstractions;
+
+namespace CustomCounters;
+
+/// <summary>
+/// Custom metric tracker implementation with default UtcDurationCounter
+/// </summary>
+public class CustomMetricTrackerWithUtcCounter : MetricTrackerBase
+{
+    public CustomMetricTrackerWithUtcCounter(
+        string topic,
+        IReadOnlyDictionary<string, string>? topicTags = null,
+        double? samplingRate = 1.0)
+        : base(topic, topicTags, samplingRate)
+    {
+        RegisterCounter(new UtcDurationCounter());
+    }
+}
 ```
 
 ## Roadmap
