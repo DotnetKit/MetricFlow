@@ -44,4 +44,21 @@ public class MetricTracker : MetricTrackerBase
         RegisterCounter(new MemoryCounter(name));
         return this;
     }
+
+    public MetricTracker AddThroughputCounter(string name = ThroughputCounter.DefaultCounterName)
+    {
+        RegisterCounter(new ThroughputCounter(name));
+        return this;
+    }
+
+    public MetricTracker AddItemCounter(string name = ItemCounter.DefaultCounterName)
+    {
+        RegisterCounter(new ItemCounter(name));
+        return this;
+    }
+
+    public ThroughputSnapshot? GetThroughputValues(string metricName, string counterName = ThroughputCounter.DefaultCounterName)
+    {
+        return GetSnapshot(metricName, counterName) as ThroughputSnapshot;
+    }
 }

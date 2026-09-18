@@ -318,6 +318,58 @@ public class MetricSnapshotTests
 
     #endregion
 
+    #region ThroughputSnapshot Tests
+
+    [Fact]
+    public void ThroughputSnapshot_ShouldImplementIMetricSnapshot_AndExposeProperties()
+    {
+        // Arrange
+        var now = DateTime.UtcNow;
+        var duration = TimeSpan.FromSeconds(4);
+        var snapshot = new ThroughputSnapshot(
+            MetricName: "BatchIndexer",
+            CounterName: "Throughput",
+            TotalItems: 20000,
+            TotalOperations: 100,
+            TotalDuration: duration,
+            ItemsPerSecond: 5000.0,
+            AverageItemsPerOperation: 200.0,
+            Timestamp: now,
+            FailedOperations: 2
+        );
+
+        // Assert interface implementation
+        IMetricSnapshot metricSnapshot = snapshot;
+        metricSnapshot.MetricName.Should().Be("BatchIndexer");
+        metricSnapshot.CounterName.Should().Be("Throughput");
+        metricSnapshot.Timestamp.Should().Be(now);
+
+        // Assert properties
+        snapshot.TotalItems.Should().Be(20000);
+        snapshot.TotalOperations.Should().Be(100);
+        snapshot.TotalDuration.Should().Be(duration);
+        snapshot.ItemsPerSecond.Should().Be(5000.0);
+        snapshot.AverageItemsPerOperation.Should().Be(200.0);
+        snapshot.FailedOperations.Should().Be(2);
+    }
+
+    [Fact]
+    public void ThroughputSnapshot_RecordEquality_ShouldWorkAsExpected()
+    {
+        // Arrange
+        var timestamp = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var snapshot1 = new ThroughputSnapshot("Op", "Throughput", 100, 2, TimeSpan.FromSeconds(1), 100, 50, timestamp);
+        var snapshot2 = new ThroughputSnapshot("Op", "Throughput", 100, 2, TimeSpan.FromSeconds(1), 100, 50, timestamp);
+        var different = new ThroughputSnapshot("Op", "Throughput", 200, 4, TimeSpan.FromSeconds(2), 100, 50, timestamp);
+
+        // Assert
+        snapshot1.Should().Be(snapshot2);
+        snapshot1.GetHashCode().Should().Be(snapshot2.GetHashCode());
+        snapshot1.Should().NotBe(different);
+    }
+
+    #endregion
+
     #region MetricSnapshotExtensions Tests
 
     [Fact]

@@ -2,6 +2,7 @@ using DotnetKit.MetricFlow;
 using DotnetKit.MetricFlow.Abstractions;
 using DotnetKit.MetricFlow.Configuration;
 using DotnetKit.MetricFlow.Counters;
+using DotnetKit.MetricFlow.Extensions;
 using FluentAssertions;
 using Xunit;
 
@@ -71,6 +72,74 @@ public class CustomCountersTests
         exceptionSnapshot.TotalFailures.Should().Be(1);
         exceptionSnapshot.ExceptionsByType.Should().ContainKey(nameof(InvalidOperationException));
         exceptionSnapshot.ExceptionsByType[nameof(InvalidOperationException)].Should().Be(1);
+    }
+
+    [Fact]
+    public async Task CompositeTracker_ShouldTrackDurationMemoryExceptionsAndThroughputSimultaneously()
+    {
+        // Arrange
+        var tracker = new MetricTracker("QuadCompositeTest")
+            .AddMemoryCounter()
+            .AddExceptionCounter()
+            .AddThroughputCounter();
+
+        // Act - 2 successful operations (50 and 100 items), 1 failed operation (25 items)
+        using (var scope = tracker.TrackItems("QuadMetricOp", 50))
+        {
+            var dummyBuffer = new byte[1024 * 30]; // 30 KB
+            _ = dummyBuffer.Length;
+        }
+
+        using (var scope = tracker.TrackItems("QuadMetricOp", 100))
+        {
+            var dummyBuffer = new byte[1024 * 20]; // 20 KB
+            _ = dummyBuffer.Length;
+        }
+
+        try
+        {
+            using (var scope = tracker.TrackItems("QuadMetricOp", 25))
+            {
+                try
+                {
+                    throw new InvalidOperationException("Simulated error in throughput pipeline");
+                }
+                catch (Exception ex)
+                {
+                    scope.SetException(ex);
+                    throw;
+                }
+            }
+        }
+        catch (InvalidOperationException)
+        {
+            // Expected
+        }
+
+        // Assert - All 4 counters captured metrics
+        var durationSnapshot = tracker.GetValues("QuadMetricOp");
+        durationSnapshot.Should().NotBeNull();
+        durationSnapshot!.InCount.Should().Be(3);
+        durationSnapshot.OutCount.Should().Be(3);
+        durationSnapshot.FailedCount.Should().Be(1);
+
+        var memorySnapshot = tracker.GetSnapshot("QuadMetricOp", MemoryCounter.DefaultCounterName) as MemorySnapshot;
+        memorySnapshot.Should().NotBeNull();
+        memorySnapshot!.OperationCount.Should().Be(3);
+        memorySnapshot.TotalAllocatedBytes.Should().BeGreaterThan(1024 * 30);
+
+        var exceptionSnapshot = tracker.GetSnapshot("QuadMetricOp", ExceptionCounter.DefaultCounterName) as ExceptionSnapshot;
+        exceptionSnapshot.Should().NotBeNull();
+        exceptionSnapshot!.TotalOperations.Should().Be(3);
+        exceptionSnapshot.TotalFailures.Should().Be(1);
+
+        var throughputSnapshot = tracker.GetThroughputValues("QuadMetricOp");
+        throughputSnapshot.Should().NotBeNull();
+        throughputSnapshot!.TotalOperations.Should().Be(3);
+        throughputSnapshot.TotalItems.Should().Be(175);
+        throughputSnapshot.AverageItemsPerOperation.Should().BeApproximately(175.0 / 3.0, 0.01);
+        throughputSnapshot.FailedOperations.Should().Be(1);
+        throughputSnapshot.ItemsPerSecond.Should().BeGreaterThan(0);
     }
 
     [Fact]

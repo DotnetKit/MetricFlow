@@ -8,7 +8,7 @@ public class CodeTracker : IDisposable
     private readonly ICounter[] _counters;
     private readonly object?[] _states;
     private readonly string _metricName;
-    private readonly Dictionary<string, string>? _tags;
+    private Dictionary<string, string>? _tags;
     private readonly long _startTimestamp;
 
     private bool _failed;
@@ -24,7 +24,7 @@ public class CodeTracker : IDisposable
     {
         _counters = counters;
         _metricName = metricName;
-        _tags = tags;
+        _tags = tags != null ? new Dictionary<string, string>(tags) : null;
         _startTimestamp = Stopwatch.GetTimestamp();
         _states = new object?[counters.Length];
 
@@ -53,6 +53,18 @@ public class CodeTracker : IDisposable
         }
         return this;
     }
+
+    public CodeTracker SetTag(string key, string value)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        _tags ??= new Dictionary<string, string>();
+        _tags[key] = value;
+        return this;
+    }
+
+    public CodeTracker SetItems(long count) => SetTag("items", count.ToString());
+
+    public CodeTracker SetItemCount(long count) => SetItems(count);
 
     protected virtual void Dispose(bool disposing)
     {

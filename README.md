@@ -11,6 +11,7 @@ MetricFlow is a lightweight .NET library designed to help developers define and 
 
 - **Counters**: Track execution counts and occurrences of events.
 - **Timers & Duration**: High-precision operation timing via lock-free stopwatch ticks.
+- **Throughput & Item Tracking**: Measure batch sizes, entity counts, and processing rates (items/sec) with `ThroughputCounter`.
 - **Memory Tracking**: Measure per-operation heap allocations with `MemoryCounter`.
 - **Exception & Failure Tracking**: Capture errors, exceptions, and failure counts with `ExceptionCounter`.
 - **Metadata and Tags**: Add contextual information to metrics for rich analysis and filtering.
@@ -50,7 +51,7 @@ dotnet build
 
 #### 1. Initialize Tracker
 
-Initialize a tracker and optionally chain memory and exception counters:
+Initialize a tracker and optionally chain throughput, memory, and exception counters:
 
 ```csharp
 using DotnetKit.MetricFlow;
@@ -59,6 +60,7 @@ var tracker = new MetricTracker("OrderService", new()
     {
         ["environment"] = "production"
     })
+    .AddThroughputCounter()
     .AddMemoryCounter()
     .AddExceptionCounter();
 ```
@@ -81,6 +83,30 @@ void ProcessOrder()
 {
     using var _ = tracker.Track(); // Metric name is "ProcessOrder"
 }
+```
+
+##### Throughput & Batch Tracking (`TrackItems` / `scope.SetItems`)
+
+Track batch or entity processing volume and calculate velocity (`items/sec`):
+
+```csharp
+// 1. Specify item count upfront via TrackItems
+using (tracker.TrackItems("ImportChannels", 500))
+{
+    // Process 500 channels...
+}
+
+// 2. Or set dynamic count during / at completion of the operation
+using (var scope = tracker.Track("IngestMessages"))
+{
+    var count = await ReadAndProcessBatchAsync();
+    scope.SetItems(count); // Records processed count for ThroughputCounter
+}
+
+// Inspect results
+var throughput = tracker.GetThroughputValues("ImportChannels");
+// throughput.TotalItems -> 500
+// throughput.ItemsPerSecond -> e.g. 2,500 items/sec
 ```
 
 ##### Delegate Tracking (`TrackAction` / `TrackActionAsync`)

@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- **Throughput & Item Counter (`ThroughputCounter` / `ItemCounter`)**:
+  - Built-in counter tracking processed item count, batch operations, and calculating processing throughput (`items/sec`).
+  - Native tag recognition (`"items"`, `"count"`, `"batch_size"`) with case-insensitive parsing and default to 1 item/operation.
+  - `ThroughputSnapshot` providing rich formatted output matching production telemetry.
+  - `TrackItems` extension methods for upfront item count tracking on `IMetricTracker`.
+  - `scope.SetItems()` and `scope.SetTag()` methods on tracking scopes for dynamic batch sizing during or upon completion of an operation.
+  - `MetricTracker.AddThroughputCounter()`, `AddItemCounter()`, and `GetThroughputValues()` convenience builder and snapshot methods.
+
+---
+
 ## [1.0.2] - 2026-09-17
 
 ### Added
