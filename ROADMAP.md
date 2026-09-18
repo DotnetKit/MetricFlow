@@ -1,29 +1,41 @@
 # MetricFlow Roadmap
 
-The primary focus for upcoming MetricFlow development is seamless integration with **OpenTelemetry** and major **Cloud Providers**, allowing MetricFlow metrics and snapshots to flow directly into modern observability pipelines.
+The roadmap outlines the upcoming development milestones for MetricFlow, prioritized to establish reliable metric persistence and export pipelines before integrating external observability platforms.
 
 ---
 
-## 1. OpenTelemetry Integration
+## 1. Metric Persistence
 
-- **OpenTelemetry Metrics (`DotnetKit.MetricFlow.OpenTelemetry`)**:
-  - Map MetricFlow counters and snapshots to `System.Diagnostics.Metrics` (`Meter`, `Counter`, `Histogram`).
-  - OTLP export support to send telemetry to collectors, Prometheus, Grafana, and Jaeger.
-- **Distributed Tracing Alignment**:
-  - Correlate MetricFlow tracking scopes (`Track`, `TrackAction`) with OpenTelemetry `Activity` and trace contexts.
+- **Local & Durable Storage**:
+  - Buffer and persist raw metric points and aggregated snapshots locally (file-based, SQLite, or embedded stores) to prevent data loss during network interruptions or service restarts.
+- **Resilient Buffering & WAL (Write-Ahead Log)**:
+  - High-throughput circular memory buffer with fallback to disk for resilient, non-blocking telemetry collection.
+- **Snapshot History & Querying**:
+  - In-process or persisted time-series snapshot storage enabling historical trend queries and offline analysis.
 
-## 2. Cloud Provider Integrations
+---
 
-- **Azure Monitor / Application Insights**:
-  - Exporter package for Azure Monitor metrics and telemetry.
-- **AWS CloudWatch**:
-  - Integration supporting CloudWatch metrics and Embedded Metric Format (EMF).
-- **Google Cloud Monitoring**:
-  - Exporter for Google Cloud Operations suite (formerly Stackdriver).
+## 2. Push Exporter & Sinks
 
-## 3. Push Exporter & Sinks
-
-- **Periodic Push Exporter**:
-  - Background worker to automatically harvest snapshots and dispatch to sinks at defined intervals.
 - **Pluggable Sink Abstraction (`IMetricSink`)**:
-  - Unified interface to stream metrics to custom endpoints and APM vendors (Datadog, New Relic, etc.).
+  - Core interfaces and pipelines for dispatching formatted snapshots and metrics to various destinations.
+  - Support for batching, retry policies, backoff strategies, and dead-letter queues.
+- **Periodic Push Exporter**:
+  - Configurable background worker to periodically harvest active snapshots and flush them to registered sinks.
+- **Custom Destination Extensions**:
+  - Extension points for streaming metrics to custom endpoints, webhooks, or log-based sinks.
+
+---
+
+## 3. Sinks and Adapters for OpenTelemetry & Cloud Providers
+
+- **OpenTelemetry Integration (`DotnetKit.MetricFlow.OpenTelemetry`)**:
+  - Map MetricFlow counters and snapshots to `System.Diagnostics.Metrics` (`Meter`, `Counter`, `Histogram`).
+  - Native OTLP exporter to send telemetry to OpenTelemetry Collectors, Prometheus, Grafana, and Jaeger.
+  - Trace context correlation: align MetricFlow tracking scopes (`Track`, `TrackAction`) with OpenTelemetry `Activity`.
+- **Cloud Provider Sinks & Adapters**:
+  - **Azure Monitor / Application Insights**: Dedicated exporter for Azure Monitor metrics and Application Insights custom metrics.
+  - **AWS CloudWatch**: Exporter supporting CloudWatch metrics and Embedded Metric Format (EMF).
+  - **Google Cloud Monitoring**: Exporter for Google Cloud Operations suite (Cloud Monitoring).
+  - **APM Vendors**: Adapters for Datadog, New Relic, and other industry APMs.
+
