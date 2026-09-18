@@ -65,7 +65,46 @@ var tracker = new MetricTracker("OrderService", new()
     .AddExceptionCounter();
 ```
 
-#### 2. Tracker Capabilities
+#### 2. Basic Example (Minimal Setup)
+
+The simplest usage requires zero additional counters or complex configuration—by default, `MetricTracker` records high-precision execution duration:
+
+```csharp
+using DotnetKit.MetricFlow;
+
+// Initialize tracker (DurationCounter is included by default)
+var tracker = new MetricTracker("BasicConsoleTopic", new()
+{
+    ["environment"] = "Development"
+});
+
+// 1. Scoped tracking with using statement
+using (tracker.Track("ProcessOrder"))
+{
+    await Task.Delay(10);
+}
+
+// 2. Delegate tracking with TrackAction
+tracker.TrackAction("ValidatePayment", () => Thread.Sleep(5));
+
+// 3. Print formatted telemetry
+Console.WriteLine(tracker.ToString());
+```
+
+**Output:**
+```text
+BasicConsoleTopic
+Topic Tags:  environment:Development
+[Duration] Metric: ProcessOrder
+Duration (min, max, avg): 10.50 ms / 12.25 ms / 11.17 ms
+Total duration: 55.86 ms
+
+[Duration] Metric: ValidatePayment
+Duration (min, max, avg): 5.64 ms / 5.83 ms / 5.70 ms
+Total duration: 17.11 ms
+```
+
+#### 3. Tracker Capabilities
 
 ##### Scope Tracking (`using`)
 
@@ -164,6 +203,7 @@ app.Run();
 
 ### Examples
 
+- **[BasicConsoleExample](examples/BasicConsoleExample)**: Simplest implementation demonstrating minimal tracker setup and duration measurement with zero optional counters.
 - **[SimpleMetricCountersExample](examples/SimpleMetricCountersExample)**: Demonstrates scope tracking, `TrackActionAsync`, custom tags, memory, and exception counters.
 - **[WebApiExample](examples/WebApiExample)**: Demonstrates ASP.NET Core integration, middleware, and `/metrics` endpoint.
 - **[CustomCounters](examples/CustomCounters)**: Demonstrates extension capabilities by implementing custom counters and trackers.
@@ -171,7 +211,10 @@ app.Run();
 Run the examples:
 
 ```sh
-# Simple console example
+# Basic console example (minimal setup)
+dotnet run --project examples/BasicConsoleExample
+
+# Multi-counter console example
 dotnet run --project examples/SimpleMetricCountersExample
 
 # ASP.NET Core Web API example
