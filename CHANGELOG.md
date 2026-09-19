@@ -7,17 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [1.0.3] - 2026-09-19
 
 ### Added
 
 - **Throughput & Item Counter (`ThroughputCounter` / `ItemCounter`)**:
   - Built-in counter tracking processed item count, batch operations, and calculating processing throughput (`items/sec`).
   - Native tag recognition (`"items"`, `"count"`, `"batch_size"`) with case-insensitive parsing and default to 1 item/operation.
-  - `ThroughputSnapshot` providing rich formatted output matching production telemetry.
+  - `ThroughputSnapshot` providing rich formatted output matching production telemetry (`TotalItems`, `ItemsPerSecond`, `AverageItemsPerOperation`, etc.).
   - `TrackItems` extension methods for upfront item count tracking on `IMetricTracker`.
-  - `scope.SetItems()` and `scope.SetTag()` methods on tracking scopes for dynamic batch sizing during or upon completion of an operation.
-  - `MetricTracker.AddThroughputCounter()`, `AddItemCounter()`, and `GetThroughputValues()` convenience builder and snapshot methods.
+  - `scope.SetItems()` and `scope.SetItemCount()` methods on tracking scopes for dynamic batch sizing during or upon completion of an operation.
+  - Builder and snapshot querying extensions: `AddThroughputCounter()`, `AddItemCounter()`, and `GetThroughputValues()` on `IMetricTracker`.
+- **Dependency Injection for Core Applications (`DotnetKit.MetricFlow`)**:
+  - `services.AddMetricFlow(topic, configure)` extension method for registering `MetricTracker`, `IMetricTracker`, and `IMetricSnapshotsSource` in standard Microsoft DI containers (`IServiceCollection`) without requiring ASP.NET Core dependencies.
+  - Extracted shared `MetricFlowOptions` base configuration model.
+- **Technical Metadata Telemetry (`Metadata`)**:
+  - Added `Dictionary<string, long>? metadata` across `InContext`, `OutContext`, `CodeTracker`, and `IMetricTracker` (`Track`, `In`, `Out`).
+  - Added `scope.SetMetadata(key, value)` extension method for non-string technical measurements.
+  - High-performance numeric metadata ingestion for batch sizes, avoiding string conversions and allocations.
+- **Console Examples**:
+  - Added `BasicConsoleExample`: Clean, minimal zero-config starter demonstrating default `DurationCounter` tracking and `TrackAction`.
+  - Added `AdvancedConsoleExample`: Multi-counter telemetry pipeline demonstrating duration, throughput (velocity & items/sec), memory, exception handling, and dynamic batch ingestion.
+
+### Changed
+
+- Extracted counter registration and snapshot querying methods from `MetricTracker` into reusable `TrackerCounterExtensions`.
+- Extended `OutContext` constructor to support `metadata` and `utcTimestamp`.
+- Updated `README.md` with throughput tracking, batch measurement, dependency injection, and updated console runners.
 
 ---
 
