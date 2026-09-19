@@ -176,12 +176,28 @@ public sealed class PeriodicMetricExporter : IAsyncDisposable, IDisposable
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _disposed, 1) == 1) return;
-        StopAsync().GetAwaiter().GetResult();
+
+        Interlocked.Exchange(ref _isRunning, 0);
+
+        try
+        {
+            _cts?.Cancel();
+        }
+        catch (ObjectDisposedException) { }
+
+        _timer?.Dispose();
+        _cts?.Dispose();
+        _timer = null;
+        _cts = null;
+
+        GC.SuppressFinalize(this);
     }
 
     public async ValueTask DisposeAsync()
     {
         if (Interlocked.Exchange(ref _disposed, 1) == 1) return;
+
         await StopAsync().ConfigureAwait(false);
+        GC.SuppressFinalize(this);
     }
 }

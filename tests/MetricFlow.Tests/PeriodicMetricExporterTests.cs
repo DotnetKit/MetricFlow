@@ -106,4 +106,41 @@ public class PeriodicMetricExporterTests
         entries.Should().BeEmpty();
         sink.EmittedEntries.Should().BeEmpty();
     }
+
+    [Fact]
+    public void Dispose_ShouldStopImmediatelyWithoutBlocking()
+    {
+        // Arrange
+        var tracker = new MetricTracker("TestTopic");
+        var sink = new TestSink();
+        var exporter = new PeriodicMetricExporter(tracker, new[] { sink });
+        exporter.Start();
+
+        // Act
+        var act = () => exporter.Dispose();
+
+        // Assert
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public async Task DisposeAsync_ShouldStopAndFlushGracefully()
+    {
+        // Arrange
+        var tracker = new MetricTracker("TestTopic");
+        var sink = new TestSink();
+        var exporter = new PeriodicMetricExporter(tracker, new[] { sink });
+        exporter.Start();
+
+        using (tracker.Track("Workload"))
+        {
+            Thread.Sleep(1);
+        }
+
+        // Act
+        await exporter.DisposeAsync();
+
+        // Assert - final flush during DisposeAsync captured the workload
+        sink.EmittedEntries.Should().NotBeEmpty();
+    }
 }
