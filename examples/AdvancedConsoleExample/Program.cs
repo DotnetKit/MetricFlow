@@ -1,18 +1,25 @@
 using DotnetKit.MetricFlow;
 
-namespace SimpleMetricCountersExample;
+namespace AdvancedConsoleExample;
 
 internal class Program
 {
+    private const int OperationCount = 10;
+
     private static async Task Main(string[] args)
     {
-        var tracker = new MetricTracker("ExecutionTimeMetricsTopic", new()
+        // Initialize tracker with full multi-counter telemetry pipeline:
+        // DurationCounter (default) + ThroughputCounter + ExceptionCounter + MemoryCounter
+        var tracker = new MetricTracker("AdvancedConsoleTopic", new()
             {
                 ["tenant_id"] = "TenantId1",
                 ["session_id"] = Guid.NewGuid().ToString()
             })
+            .AddThroughputCounter()
             .AddExceptionCounter()
             .AddMemoryCounter();
+
+        Console.WriteLine("Executing advanced operations with MetricFlow...\n");
 
         tracker.In("GlobalOperation");
 
@@ -20,15 +27,26 @@ internal class Program
         {
             await ExecuteOperation1Async(tracker, i);
             await ExecuteOperation2Async(tracker, i);
+            await ExecuteBatchIngestionAsync(tracker, i);
+            await ExecuteDynamicBatchAsync(tracker, i);
         }
 
         tracker.Out("GlobalOperation");
 
+        // 1. Output comprehensive telemetry breakdown for all counters
         Console.WriteLine(tracker.ToString());
+
+        // 2. Direct programmatic access to throughput metrics
+        var throughput = tracker.GetThroughputValues("BatchIngestion");
+        if (throughput != null)
+        {
+            Console.WriteLine("=== Throughput Summary ===");
+            Console.WriteLine($"BatchIngestion Rate : {throughput.ItemsPerSecond:N0} items/sec");
+            Console.WriteLine($"Total Items Processed: {throughput.TotalItems:N0}");
+            Console.WriteLine($"Average Batch Size   : {throughput.AverageItemsPerOperation:N1} items/op");
+        }
     }
 
-    private const int OperationCount = 10; 
-  
     internal static async Task ExecuteOperation1Async(MetricTracker tracker, int i)
     {
         // Operation1: tracks duration and memory allocation (metric name resolved dynamically via [CallerMemberName])
@@ -62,6 +80,30 @@ internal class Program
         {
             // Handled to allow benchmark loop to continue
         }
+    }
+
+    internal static async Task ExecuteBatchIngestionAsync(MetricTracker tracker, int i)
+    {
+        // Batch operation: tracks batch throughput upfront via TrackItems
+        var batchSize = (i + 1) * 250; // 250 to 2,500 items per batch
+        using var scope = tracker.TrackItems("BatchIngestion", batchSize, new() { ["batch_id"] = $"{i}" });
+
+        await Task.Delay(5);
+
+        // Allocate buffer proportional to batch
+        _ = AllocateMemory(16, (byte)i);
+    }
+
+    internal static async Task ExecuteDynamicBatchAsync(MetricTracker tracker, int i)
+    {
+        // Dynamic batch operation: item count determined during execution and recorded via scope.SetItems()
+        using var scope = tracker.Track("DynamicProcessor");
+
+        await Task.Delay(3);
+
+        // Dynamically compute processed message count
+        long processedCount = (i + 1) * 100;
+        scope.SetItems(processedCount);
     }
 
     internal static byte[] AllocateMemory(int sizeInKilobytes, byte touchByte = 1)

@@ -70,7 +70,7 @@ public abstract class MetricTrackerBase : IMetricTracker
         return counter;
     }
 
-    public IDisposable Track(string metricName, Dictionary<string, string>? tags = null)
+    public IDisposable Track(string metricName, Dictionary<string, string>? tags = null, Dictionary<string, long>? metadata = null)
     {
         if (ShouldDrop(_samplingRate))
         {
@@ -83,13 +83,13 @@ public abstract class MetricTrackerBase : IMetricTracker
             return NoOpDisposable.Instance;
         }
 
-        return new CodeTracker(active, metricName, tags);
+        return new CodeTracker(active, metricName, tags, metadata);
     }
 
-    public IDisposable Track(Dictionary<string, string>? tags = null, [CallerMemberName] string metricName = "")
-        => Track(metricName, tags);
+    public IDisposable Track(Dictionary<string, string>? tags = null, Dictionary<string, long>? metadata = null, [CallerMemberName] string metricName = "")
+        => Track(metricName, tags, metadata);
 
-    public void In(string metricName, Dictionary<string, string>? tags = null)
+    public void In(string metricName, Dictionary<string, string>? tags = null, Dictionary<string, long>? metadata = null)
     {
         if (ShouldDrop(_samplingRate))
         {
@@ -99,7 +99,7 @@ public abstract class MetricTrackerBase : IMetricTracker
 
         var active = _activeCounters;
         var states = new object?[active.Length];
-        var inContext = new InContext(metricName, tags);
+        var inContext = new InContext(metricName, tags, metadata);
 
         for (int i = 0; i < active.Length; i++)
         {
@@ -109,15 +109,16 @@ public abstract class MetricTrackerBase : IMetricTracker
         RecordInOperation(metricName, new InOperationState(Stopwatch.GetTimestamp(), active, states));
     }
 
-    public void In(Dictionary<string, string>? tags = null, [CallerMemberName] string metricName = "")
-        => In(metricName, tags);
+    public void In(Dictionary<string, string>? tags = null, Dictionary<string, long>? metadata = null, [CallerMemberName] string metricName = "")
+        => In(metricName, tags, metadata);
 
     public void Out(
         string metricName,
         Dictionary<string, string>? tags = null,
         bool failed = false,
         Exception? exception = null,
-        TimeSpan? duration = null)
+        TimeSpan? duration = null,
+        Dictionary<string, long>? metadata = null)
     {
         if (TryConsumeDropped(metricName))
         {
@@ -131,7 +132,7 @@ public abstract class MetricTrackerBase : IMetricTracker
             duration = Stopwatch.GetElapsedTime(opState.StartTimestamp);
         }
 
-        var outContext = new OutContext(metricName, failed, exception, duration, tags);
+        var outContext = new OutContext(metricName, failed, exception, duration, tags, metadata);
 
         if (opState != null)
         {
@@ -162,8 +163,9 @@ public abstract class MetricTrackerBase : IMetricTracker
         bool failed = false,
         Exception? exception = null,
         TimeSpan? duration = null,
+        Dictionary<string, long>? metadata = null,
         [CallerMemberName] string metricName = "")
-        => Out(metricName, tags, failed, exception, duration);
+        => Out(metricName, tags, failed, exception, duration, metadata);
 
     public IMetricSnapshot? GetSnapshot(string metricName, string counterName)
     {

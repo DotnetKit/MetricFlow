@@ -21,7 +21,7 @@ public class TrackerActionExtensionsTests
         executed.Should().BeTrue();
         var snapshot = tracker.GetValues("SyncOp");
         snapshot.Should().NotBeNull();
-        snapshot!.InCount.Should().Be(1);
+        snapshot.InCount.Should().Be(1);
         snapshot.OutCount.Should().Be(1);
         snapshot.FailedCount.Should().Be(0);
     }
@@ -42,11 +42,11 @@ public class TrackerActionExtensionsTests
         act.Should().Throw<InvalidOperationException>().WithMessage("Sync error");
         var snapshot = tracker.GetValues("FailingOp");
         snapshot.Should().NotBeNull();
-        snapshot!.FailedCount.Should().Be(1);
+        snapshot.FailedCount.Should().Be(1);
 
         var excSnapshot = tracker.GetSnapshot("FailingOp", "Exception") as ExceptionSnapshot;
         excSnapshot.Should().NotBeNull();
-        excSnapshot!.ExceptionsByType.Should().ContainKey(nameof(InvalidOperationException));
+        excSnapshot.ExceptionsByType.Should().ContainKey(nameof(InvalidOperationException));
     }
 
     [Fact]
@@ -62,7 +62,7 @@ public class TrackerActionExtensionsTests
         result.Should().Be(42);
         var snapshot = tracker.GetValues("ReturnOp");
         snapshot.Should().NotBeNull();
-        snapshot!.OutCount.Should().Be(1);
+        snapshot.OutCount.Should().Be(1);
     }
 
     [Fact]
@@ -83,7 +83,7 @@ public class TrackerActionExtensionsTests
         executed.Should().BeTrue();
         var snapshot = tracker.GetValues("AsyncOp");
         snapshot.Should().NotBeNull();
-        snapshot!.InCount.Should().Be(1);
+        snapshot.InCount.Should().Be(1);
         snapshot.OutCount.Should().Be(1);
         snapshot.FailedCount.Should().Be(0);
     }
@@ -105,11 +105,11 @@ public class TrackerActionExtensionsTests
         await act.Should().ThrowAsync<TimeoutException>().WithMessage("Async timeout");
         var snapshot = tracker.GetValues("FailingAsyncOp");
         snapshot.Should().NotBeNull();
-        snapshot!.FailedCount.Should().Be(1);
+        snapshot.FailedCount.Should().Be(1);
 
         var excSnapshot = tracker.GetSnapshot("FailingAsyncOp", "Exception") as ExceptionSnapshot;
         excSnapshot.Should().NotBeNull();
-        excSnapshot!.ExceptionsByType.Should().ContainKey(nameof(TimeoutException));
+        excSnapshot.ExceptionsByType.Should().ContainKey(nameof(TimeoutException));
     }
 
     [Fact]
@@ -129,7 +129,7 @@ public class TrackerActionExtensionsTests
         result.Should().Be("hello world");
         var snapshot = tracker.GetValues("AsyncReturnOp");
         snapshot.Should().NotBeNull();
-        snapshot!.OutCount.Should().Be(1);
+        snapshot.OutCount.Should().Be(1);
     }
 
     [Fact]

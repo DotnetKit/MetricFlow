@@ -11,6 +11,7 @@ MetricFlow is a lightweight .NET library designed to help developers define and 
 
 - **Counters**: Track execution counts and occurrences of events.
 - **Timers & Duration**: High-precision operation timing via lock-free stopwatch ticks.
+- **Throughput & Item Tracking**: Measure batch sizes, entity counts, and processing rates (items/sec) with `ThroughputCounter`.
 - **Memory Tracking**: Measure per-operation heap allocations with `MemoryCounter`.
 - **Exception & Failure Tracking**: Capture errors, exceptions, and failure counts with `ExceptionCounter`.
 - **Metadata and Tags**: Add contextual information to metrics for rich analysis and filtering.
@@ -50,7 +51,7 @@ dotnet build
 
 #### 1. Initialize Tracker
 
-Initialize a tracker and optionally chain memory and exception counters:
+Initialize a tracker and optionally chain throughput, memory, and exception counters:
 
 ```csharp
 using DotnetKit.MetricFlow;
@@ -59,11 +60,51 @@ var tracker = new MetricTracker("OrderService", new()
     {
         ["environment"] = "production"
     })
+    .AddThroughputCounter()
     .AddMemoryCounter()
     .AddExceptionCounter();
 ```
 
-#### 2. Tracker Capabilities
+#### 2. Basic Example (Minimal Setup)
+
+The simplest usage requires zero additional counters or complex configuration—by default, `MetricTracker` records high-precision execution duration:
+
+```csharp
+using DotnetKit.MetricFlow;
+
+// Initialize tracker (DurationCounter is included by default)
+var tracker = new MetricTracker("BasicConsoleTopic", new()
+{
+    ["environment"] = "Development"
+});
+
+// 1. Scoped tracking with using statement
+using (tracker.Track("ProcessOrder"))
+{
+    await Task.Delay(10);
+}
+
+// 2. Delegate tracking with TrackAction
+tracker.TrackAction("ValidatePayment", () => Thread.Sleep(5));
+
+// 3. Print formatted telemetry
+Console.WriteLine(tracker.ToString());
+```
+
+**Output:**
+```text
+BasicConsoleTopic
+Topic Tags:  environment:Development
+[Duration] Metric: ProcessOrder
+Duration (min, max, avg): 10.50 ms / 12.25 ms / 11.17 ms
+Total duration: 55.86 ms
+
+[Duration] Metric: ValidatePayment
+Duration (min, max, avg): 5.64 ms / 5.83 ms / 5.70 ms
+Total duration: 17.11 ms
+```
+
+#### 3. Tracker Capabilities
 
 ##### Scope Tracking (`using`)
 
@@ -81,6 +122,30 @@ void ProcessOrder()
 {
     using var _ = tracker.Track(); // Metric name is "ProcessOrder"
 }
+```
+
+##### Throughput & Batch Tracking (`TrackItems` / `scope.SetItems`)
+
+Track batch or entity processing volume and calculate velocity (`items/sec`):
+
+```csharp
+// 1. Specify item count upfront via TrackItems
+using (tracker.TrackItems("ImportChannels", 500))
+{
+    // Process 500 channels...
+}
+
+// 2. Or set dynamic count during / at completion of the operation
+using (var scope = tracker.Track("IngestMessages"))
+{
+    var count = await ReadAndProcessBatchAsync();
+    scope.SetItems(count); // Records processed count for ThroughputCounter
+}
+
+// Inspect results
+var throughput = tracker.GetThroughputValues("ImportChannels");
+// throughput.TotalItems -> 500
+// throughput.ItemsPerSecond -> e.g. 2,500 items/sec
 ```
 
 ##### Delegate Tracking (`TrackAction` / `TrackActionAsync`)
@@ -101,6 +166,34 @@ void ProcessOrder()
 async Task ProcessOrderAsync()
 {
     await tracker.TrackActionAsync(async () => await DoWorkAsync());
+}
+```
+
+##### Dependency Injection (Console Apps, Workers & Daemons)
+
+Register `MetricFlow` in any .NET application using `Microsoft.Extensions.DependencyInjection` without ASP.NET Core dependencies:
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using DotnetKit.MetricFlow;
+
+// Register MetricFlow with topic and optional configuration
+services.AddMetricFlow("WorkerDaemon", options =>
+{
+    options.SamplingRate = 1.0;
+    options.TopicTags = new() { ["env"] = "Production" };
+});
+
+// Inject IMetricTracker or MetricTracker anywhere in your application
+public class QueueWorker(IMetricTracker tracker)
+{
+    public async Task ProcessAsync()
+    {
+        using (tracker.Track("ProcessMessage"))
+        {
+            await HandleMessageAsync();
+        }
+    }
 }
 ```
 
@@ -138,15 +231,19 @@ app.Run();
 
 ### Examples
 
-- **[SimpleMetricCountersExample](examples/SimpleMetricCountersExample)**: Demonstrates scope tracking, `TrackActionAsync`, custom tags, memory, and exception counters.
+- **[BasicConsoleExample](examples/BasicConsoleExample)**: Simplest implementation demonstrating minimal tracker setup and duration measurement with zero optional counters.
+- **[AdvancedConsoleExample](examples/AdvancedConsoleExample)**: Full multi-counter demonstration including duration, throughput (items/sec and batch sizing), memory allocation, exceptions, and delegate tracking.
 - **[WebApiExample](examples/WebApiExample)**: Demonstrates ASP.NET Core integration, middleware, and `/metrics` endpoint.
 - **[CustomCounters](examples/CustomCounters)**: Demonstrates extension capabilities by implementing custom counters and trackers.
 
 Run the examples:
 
 ```sh
-# Simple console example
-dotnet run --project examples/SimpleMetricCountersExample
+# Basic console example (minimal setup)
+dotnet run --project examples/BasicConsoleExample
+
+# Multi-counter console example (advanced: duration, throughput, memory, exceptions)
+dotnet run --project examples/AdvancedConsoleExample
 
 # ASP.NET Core Web API example
 dotnet run --project examples/WebApiExample
@@ -189,7 +286,7 @@ public class UtcDurationCounter(string name = "UtcDuration") : CounterBase<long>
         {
             elapsed = TimeSpan.FromTicks(DateTimeOffset.UtcNow.Ticks - state);
         }
-        _inner.OnOut(state, new OutContext(context.MetricName, context.Failed, context.Exception, elapsed, context.Tags));
+        _inner.OnOut(state, new OutContext(context.MetricName, context.Failed, context.Exception, elapsed, context.Tags, context.Metadata, context.UtcTimestamp));
     }
 
     public override IMetricSnapshot? GetSnapshot(string metricName) => _inner.GetSnapshot(metricName);

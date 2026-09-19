@@ -1,36 +1,34 @@
+using DotnetKit.MetricFlow;
 using DotnetKit.MetricFlow.Abstractions;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-
-namespace DotnetKit.MetricFlow.AspNetCore.Extensions;
+// ReSharper disable once CheckNamespace
+namespace Microsoft.Extensions.DependencyInjection;
 
 /// <summary>
-/// Service collection extensions for configuring MetricFlow in ASP.NET Core.
+/// Service collection extensions for configuring MetricFlow in dependency injection.
 /// </summary>
 public static class MetricFlowServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers MetricFlow and its ASP.NET Core services in the dependency injection container.
+    /// Registers MetricFlow and its services in the dependency injection container.
     /// </summary>
     /// <param name="services">The service collection.</param>
     /// <param name="configure">Optional configuration action.</param>
     /// <returns>The service collection for chaining.</returns>
     public static IServiceCollection AddMetricFlow(
         this IServiceCollection services,
-        Action<MetricFlowAspNetCoreOptions> configure)
+        Action<MetricFlowOptions>? configure = null)
     {
         ArgumentNullException.ThrowIfNull(services);
-        ArgumentNullException.ThrowIfNull(configure);
 
-        var options = new MetricFlowAspNetCoreOptions();
-        configure(options);
+        var options = new MetricFlowOptions();
+        configure?.Invoke(options);
 
         services.TryAddSingleton(options);
-        services.TryAddSingleton<MetricFlowOptions>(sp => sp.GetRequiredService<MetricFlowAspNetCoreOptions>());
 
         services.TryAddSingleton<MetricTracker>(sp =>
         {
-            var opt = sp.GetRequiredService<MetricFlowAspNetCoreOptions>();
+            var opt = sp.GetRequiredService<MetricFlowOptions>();
             var tracker = new MetricTracker(
                 topic: opt.Topic,
                 topicTags: opt.TopicTags,
@@ -62,16 +60,15 @@ public static class MetricFlowServiceCollectionExtensions
     public static IServiceCollection AddMetricFlow(
         this IServiceCollection services,
         string topic,
-        Action<MetricFlowAspNetCoreOptions> configure)
+        Action<MetricFlowOptions>? configure = null)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentException.ThrowIfNullOrWhiteSpace(topic);
-        ArgumentNullException.ThrowIfNull(configure);
 
         return services.AddMetricFlow(options =>
         {
             options.Topic = topic;
-            configure(options);
+            configure?.Invoke(options);
         });
     }
 }

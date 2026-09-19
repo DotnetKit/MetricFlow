@@ -43,9 +43,10 @@ flowchart TD
     subgraph Counters["Pluggable Counters (Pattern A)"]
         direction TB
         C1["DurationCounter\n(Captures: Stopwatch ticks)"]
-        C2["MemoryCounter\n(Captures: Allocated bytes)"]
-        C3["ExceptionCounter\n(Captures: Exceptions)"]
-        C4["CustomCounter\n(Captures: Arbitrary state)"]
+        C2["ThroughputCounter\n(Captures: Stopwatch ticks & Items)"]
+        C3["MemoryCounter\n(Captures: Allocated bytes)"]
+        C4["ExceptionCounter\n(Captures: Exceptions)"]
+        C5["CustomCounter\n(Captures: Arbitrary state)"]
     end
 
     Call --> Scope
@@ -87,8 +88,8 @@ sequenceDiagram
 ```
 
 ### Universal Context Contracts
-- **`InContext`**: Represents operation entry with `MetricName`, `Tags`, and `UtcTimestamp`.
-- **`OutContext`**: Represents operation exit with `MetricName`, `Failed`, `Exception?`, `Duration?`, `Tags`, and `UtcTimestamp`.
+- **`InContext`**: Represents operation entry with `MetricName`, `Tags` (`string -> string` business dimensions), `Metadata` (`string -> long` technical metrics), and `UtcTimestamp`.
+- **`OutContext`**: Represents operation exit with `MetricName`, `Failed`, `Exception?`, `Duration?`, `Tags`, `Metadata`, and `UtcTimestamp`.
 
 ### The Counter Interface (`ICounter` and `ICounter<TState>`)
 ```csharp
@@ -124,13 +125,20 @@ public interface ICounter<TState> : ICounter
 
 ## 4. Built-in Counters
 
-MetricFlow provides three built-in counters covering standard telemetry dimensions:
+MetricFlow provides four built-in counters covering standard telemetry dimensions:
 
 | Counter | Metric Dimension | `OnIn` State Token | `OnOut` Behavior | Snapshot Output |
 | :--- | :--- | :--- | :--- | :--- |
 | **`DurationCounter`** | Execution latency | `long` (Stopwatch ticks) | Calculates elapsed time; updates total, min, max, avg durations and in/out/failed counts atomically. | `DurationSnapshot` |
+| **`ThroughputCounter`** | Processing throughput & items | `long` (Stopwatch ticks) | Extracts processed items from technical metadata (`items`, `count`, `batch_size`) with tag fallback; updates total items, operations, duration, items/sec, and avg items/op atomically. | `ThroughputSnapshot` |
 | **`ExceptionCounter`** | Failures & errors | `null` (0 cost on entry) | Checks `Failed` and `Exception`. Categorizes by exception type in thread-safe dictionary. | `ExceptionSnapshot` |
 | **`MemoryCounter`** | Heap allocation | `MemoryTrackingToken` | Computes allocated byte delta. Automatically handles both thread-bound code and cross-thread async hops. | `MemorySnapshot` |
+
+### High-Throughput Batch Tracking (`ThroughputCounter`)
+In high-volume streaming, ingestion, or batch jobs (e.g. database ETL, message queues, indexing pipelines), operations process variable-sized item payloads. `ThroughputCounter` (and its alias `ItemCounter`):
+- **Item volume**: Extracts item counts from technical `Metadata` (`"items"`, `"count"`, `"batch_size"`) with zero string parsing, or via `tracker.TrackItems("Op", count)` and `scope.SetItems(count)`. Falls back to `Tags` for backward compatibility. Defaults to `1` when no item metadata or tag is specified.
+- **Velocity calculation**: Atomically calculates `ItemsPerSecond` (`TotalItems / TotalDuration.TotalSeconds`) and `AverageItemsPerOperation`.
+- **Zero-allocation entry**: Captures timestamp via `Stopwatch.GetTimestamp()` as a 64-bit value state token with zero heap allocations.
 
 ### Async-Safe Memory Tracking
 When tracking async methods (`await Task.Yield()`), continuations may resume on different thread pool threads. `MemoryCounter` addresses this by capturing both the thread ID and a process-wide baseline:
@@ -221,7 +229,7 @@ MetricFlow guarantees complete thread safety across all layers:
 1. **Per-Operation Isolation**:
    - Each `CodeTracker` scope maintains its own isolated state array `object?[] _states`. No cross-request or cross-thread data sharing occurs within a scope.
 2. **Lock-Free Aggregation**:
-   - `DurationCounter` and `MemoryCounter` use 64-bit atomic operations (`Interlocked.Add`, `Interlocked.Increment`, `Interlocked.Read`, and `CompareExchange` CAS loops for min/max).
+   - `DurationCounter`, `ThroughputCounter`, and `MemoryCounter` use 64-bit atomic operations (`Interlocked.Add`, `Interlocked.Increment`, `Interlocked.Read`, and `CompareExchange` CAS loops for min/max).
    - `ExceptionCounter` uses `ConcurrentDictionary<string, long>` for thread-safe breakdown categorization.
 3. **Atomic Disposal Guard**:
    - Scope completion is protected by `Interlocked.Exchange(ref _disposed, 1)`, guaranteeing strictly one-time execution even under concurrent `Dispose()` invocations.

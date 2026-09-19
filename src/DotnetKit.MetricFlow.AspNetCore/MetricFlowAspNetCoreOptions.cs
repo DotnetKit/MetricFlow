@@ -1,3 +1,4 @@
+using DotnetKit.MetricFlow;
 using Microsoft.AspNetCore.Http;
 
 namespace DotnetKit.MetricFlow.AspNetCore;
@@ -5,22 +6,15 @@ namespace DotnetKit.MetricFlow.AspNetCore;
 /// <summary>
 /// Configuration options for ASP.NET Core integration with MetricFlow.
 /// </summary>
-public class MetricFlowAspNetCoreOptions
+public class MetricFlowAspNetCoreOptions : MetricFlowOptions
 {
     /// <summary>
-    /// The topic name assigned to the MetricTracker. Defaults to "AspNetCore".
+    /// Initializes a new instance of the <see cref="MetricFlowAspNetCoreOptions"/> class.
     /// </summary>
-    public string Topic { get; set; } = "AspNetCore";
-
-    /// <summary>
-    /// Optional static tags attached at the Topic level (e.g. environment, service name).
-    /// </summary>
-    public Dictionary<string, string>? TopicTags { get; set; }
-
-    /// <summary>
-    /// Sampling rate between 0.0 and 1.0 (or null to track 100%). Defaults to 1.0.
-    /// </summary>
-    public double? SamplingRate { get; set; } = 1.0;
+    public MetricFlowAspNetCoreOptions()
+    {
+        Topic = "AspNetCore";
+    }
 
     /// <summary>
     /// Strategy used to resolve the metric name from incoming requests.

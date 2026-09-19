@@ -58,7 +58,7 @@ public class MetricFlowMiddlewareTests
 
         var snapshot = tracker.GetValues("/items/{id}");
         snapshot.Should().NotBeNull();
-        snapshot!.InCount.Should().Be(2);
+        snapshot.InCount.Should().Be(2);
         snapshot.OutCount.Should().Be(2);
         snapshot.FailedCount.Should().Be(0);
     }
@@ -104,7 +104,7 @@ public class MetricFlowMiddlewareTests
 
         var snapshot = tracker.GetValues("GetWeatherForecast");
         snapshot.Should().NotBeNull();
-        snapshot!.InCount.Should().Be(1);
+        snapshot.InCount.Should().Be(1);
         snapshot.OutCount.Should().Be(1);
     }
 
@@ -148,11 +148,11 @@ public class MetricFlowMiddlewareTests
 
         var badSnapshot = tracker.GetValues("/bad");
         badSnapshot.Should().NotBeNull();
-        badSnapshot!.FailedCount.Should().Be(1);
+        badSnapshot.FailedCount.Should().Be(1);
 
         var notFoundSnapshot = tracker.GetValues("/notfound");
         notFoundSnapshot.Should().NotBeNull();
-        notFoundSnapshot!.FailedCount.Should().Be(1);
+        notFoundSnapshot.FailedCount.Should().Be(1);
     }
 
     [Fact]
@@ -193,7 +193,7 @@ public class MetricFlowMiddlewareTests
 
         var snapshot = tracker.GetValues("/crash");
         snapshot.Should().NotBeNull();
-        snapshot!.FailedCount.Should().Be(1);
+        snapshot.FailedCount.Should().Be(1);
         snapshot.InCount.Should().Be(1);
         snapshot.OutCount.Should().Be(1);
     }
@@ -379,7 +379,7 @@ public class MetricFlowMiddlewareTests
         // Assert
         var snapshot = tracker.GetValues("POST /orders");
         snapshot.Should().NotBeNull();
-        snapshot!.InCount.Should().Be(1);
+        snapshot.InCount.Should().Be(1);
     }
 
     [Fact]
@@ -421,7 +421,7 @@ public class MetricFlowMiddlewareTests
         // Controller route pattern should be tracked (normalized with leading /)
         var snapshot = tracker.GetValues("/api/TestProducts/{id}");
         snapshot.Should().NotBeNull();
-        snapshot!.InCount.Should().Be(1);
+        snapshot.InCount.Should().Be(1);
         snapshot.OutCount.Should().Be(1);
         snapshot.FailedCount.Should().Be(0);
     }

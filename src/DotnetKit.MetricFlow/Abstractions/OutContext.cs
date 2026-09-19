@@ -7,6 +7,7 @@ public readonly ref struct OutContext
     public Exception? Exception { get; }
     public TimeSpan? Duration { get; }
     public IReadOnlyDictionary<string, string>? Tags { get; }
+    public IReadOnlyDictionary<string, long>? Metadata { get; }
     public DateTime UtcTimestamp { get; }
 
     public OutContext(
@@ -15,6 +16,7 @@ public readonly ref struct OutContext
         Exception? exception = null,
         TimeSpan? duration = null,
         IReadOnlyDictionary<string, string>? tags = null,
+        IReadOnlyDictionary<string, long>? metadata = null,
         DateTime? utcTimestamp = null)
     {
         MetricName = metricName;
@@ -22,6 +24,7 @@ public readonly ref struct OutContext
         Exception = exception;
         Duration = duration;
         Tags = tags;
+        Metadata = metadata;
         UtcTimestamp = utcTimestamp ?? DateTime.UtcNow;
     }
 }

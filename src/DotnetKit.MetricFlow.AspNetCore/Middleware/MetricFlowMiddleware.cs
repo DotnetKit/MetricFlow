@@ -7,16 +7,37 @@ namespace DotnetKit.MetricFlow.AspNetCore.Middleware;
 /// <summary>
 /// Middleware for tracking HTTP request rate, duration, errors, and status codes using MetricFlow.
 /// </summary>
-public class MetricFlowMiddleware(
-    RequestDelegate next,
-    MetricFlowAspNetCoreOptions options,
-    IMetricTracker tracker)
+public class MetricFlowMiddleware
 {
     private const string MetricNameItemKey = "__MetricFlow_MetricName";
 
-    private readonly RequestDelegate _next = next ?? throw new ArgumentNullException(nameof(next));
-    private readonly MetricFlowAspNetCoreOptions _options = options ?? throw new ArgumentNullException(nameof(options));
-    private readonly IMetricTracker _tracker = tracker ?? throw new ArgumentNullException(nameof(tracker));
+    private readonly RequestDelegate _next;
+    private readonly MetricFlowAspNetCoreOptions _options;
+    private readonly IMetricTracker _tracker;
+
+    public MetricFlowMiddleware(
+        RequestDelegate next,
+        IMetricTracker tracker,
+        MetricFlowAspNetCoreOptions? options = null,
+        MetricFlowOptions? coreOptions = null)
+    {
+        _next = next ?? throw new ArgumentNullException(nameof(next));
+        _tracker = tracker ?? throw new ArgumentNullException(nameof(tracker));
+        _options = options ?? new MetricFlowAspNetCoreOptions
+        {
+            Topic = coreOptions?.Topic ?? tracker.Topic,
+            TopicTags = coreOptions?.TopicTags,
+            SamplingRate = coreOptions?.SamplingRate ?? 1.0
+        };
+    }
+
+    public MetricFlowMiddleware(
+        RequestDelegate next,
+        MetricFlowAspNetCoreOptions options,
+        IMetricTracker tracker)
+        : this(next, tracker, options, options)
+    {
+    }
 
     public async Task InvokeAsync(HttpContext context)
     {

@@ -32,16 +32,4 @@ public class MetricTracker : MetricTrackerBase
     {
         return DurationCounter.GetSnapshot(metricName) as DurationSnapshot;
     }
-
-    public MetricTracker AddExceptionCounter(string name = ExceptionCounter.DefaultCounterName)
-    {
-        RegisterCounter(new ExceptionCounter(name));
-        return this;
-    }
-
-    public MetricTracker AddMemoryCounter(string name = MemoryCounter.DefaultCounterName)
-    {
-        RegisterCounter(new MemoryCounter(name));
-        return this;
-    }
 }
