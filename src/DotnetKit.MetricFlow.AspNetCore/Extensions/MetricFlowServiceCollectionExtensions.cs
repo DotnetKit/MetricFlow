@@ -1,4 +1,6 @@
 using DotnetKit.MetricFlow.Abstractions;
+using DotnetKit.MetricFlow.Abstractions.Sinks;
+using DotnetKit.MetricFlow.Sinks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -73,5 +75,46 @@ public static class MetricFlowServiceCollectionExtensions
             options.Topic = topic;
             configure(options);
         });
+    }
+
+    /// <summary>
+    /// Registers a <see cref="HybridTimelineStore"/> as both <see cref="IMetricTimelineStore"/> and <see cref="IMetricSink"/>.
+    /// </summary>
+    public static IServiceCollection AddHybridTimelineStore(
+        this IServiceCollection services,
+        Action<HybridTimelineStoreOptions>? configure = null)
+    {
+        var options = new HybridTimelineStoreOptions();
+        configure?.Invoke(options);
+
+        var store = new HybridTimelineStore(options);
+        services.AddSingleton<HybridTimelineStore>(store);
+        services.AddSingleton<IMetricTimelineStore>(store);
+        services.AddSingleton<IMetricSink>(store);
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers the <see cref="PeriodicMetricExporter"/> and hooks its lifecycle into ASP.NET Core hosted background services.
+    /// </summary>
+    public static IServiceCollection AddPeriodicExporter(
+        this IServiceCollection services,
+        Action<PeriodicMetricExporterOptions>? configure = null)
+    {
+        var options = new PeriodicMetricExporterOptions();
+        configure?.Invoke(options);
+
+        services.TryAddSingleton(options);
+        services.TryAddSingleton<PeriodicMetricExporter>(sp =>
+        {
+            var source = sp.GetRequiredService<IMetricSnapshotsSource>();
+            var sinks = sp.GetServices<IMetricSink>();
+            var opt = sp.GetRequiredService<PeriodicMetricExporterOptions>();
+            return new PeriodicMetricExporter(source, sinks, opt);
+        });
+
+        services.AddHostedService<MetricFlowExporterHostedService>();
+        return services;
     }
 }

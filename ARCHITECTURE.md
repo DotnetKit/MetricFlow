@@ -305,3 +305,33 @@ All metric tracking data is accessible via the `IMetricSnapshotsSource` abstract
 - **`IMetricSnapshotsSource`**: Unified interface implemented by trackers to expose snapshots across all registered active counters (`GetAllSnapshots()`, `GetSnapshot(metricName)`).
 - **Operation-Grouped Formatting**: Snapshot formatting extensions group multidimensional measurements (`Duration`, `Memory`, `Exception`) by operation name to produce human-readable summaries (min/max/avg, failure rates, allocated memory deltas).
 
+---
+
+## 11. Push Exporter, Sinks & Timeline Persistence
+
+To support metric persistence over time, arbitrary range queries `[start, end]`, and integrations with OpenTelemetry, CloudWatch, and CloudEvents, MetricFlow provides a pluggable push pipeline and hybrid store:
+
+```mermaid
+flowchart TD
+    subgraph HotPath["Hot Path (Lock-Free)"]
+        Track["tracker.Track()"] --> Counters["Monotonic Counters\n(Duration, Memory, Exception)"]
+    end
+
+    subgraph Harvester["Periodic Push Exporter (Background)"]
+        Timer["PeriodicTimer"] --> Harvest["Harvest Snapshots\nCompute Delta (S_now - S_prev)"]
+        Counters -.->|Sample| Harvest
+        Harvest --> Entry["MetricTimelineEntry\n[PeriodStart, PeriodEnd, Cumulative, Delta, Resource]"]
+    end
+
+    subgraph Sinks["Pluggable Sinks & Stores (IMetricSink)"]
+        Entry --> Memory["MemoryRingBufferTimelineStore\n(In-memory circular buffer for fast recent queries)"]
+        Entry --> File["FileTimelineStore\n(NDJSON partitioned by instance for multi-pod K8s/ECS)"]
+        Entry --> Custom["OpenTelemetry / CloudWatch / CloudEvents"]
+    end
+```
+
+- **Dual-Temporality Model**: Cumulative totals remain undisturbed on the hot path; the `PeriodicMetricExporter` calculates window deltas on the cold path.
+- **Multi-Instance (Kubernetes / ECS)**: Every entry includes `ResourceMetadata` (`ServiceName`, `InstanceId`, `PodName`, `Environment`). File storage is partitioned per instance to eliminate cross-pod file locking.
+- **Range Queries & Cluster Rollups**: `IMetricTimelineStore.GetTimelineAsync(...)` and `GetAggregatedSnapshotsAsync(...)` query and roll up deltas across any requested time window or cluster replicas.
+
+
