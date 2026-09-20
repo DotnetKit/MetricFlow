@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.4] - 2026-09-20
+
+### Added
+
+- **Tag Breakdown Counter (`TagBreakdownCounter`)**:
+  - Built-in dimensional counter that aggregates operation counts categorized by a user-specified tag or numeric metadata key (e.g. `country`, `status`, `tenant_id`).
+  - Native cardinality protection with configurable `maxUniqueValues` (defaults to 250) and automatic overflow rollup into `[Other]` to prevent memory leaks from high-cardinality tags.
+  - Tracking of tagged vs. untagged operations, failed operations, and percentage distributions.
+  - `TagBreakdownSnapshot` implementing `IMetricSnapshot` with formatted output showing total operations, tagged percentages, and tag distributions sorted descending by volume.
+  - Fluent registration and querying extensions on `IMetricTracker`: `AddTagBreakdownCounter(...)` and `GetTagBreakdownValues(...)`.
+  - Fluent configuration on `MetricFlowOptions`: `options.AddTagBreakdownCounter(...)`, `options.AddThroughputCounter(...)`, and `options.AddMemoryCounter(...)`.
+- **Advanced Console Example**:
+  - Added multi-counter regional tag breakdown demonstration (`region`: US, EU, APAC) and summary output to `AdvancedConsoleExample`.
+- **Automated Tests**:
+  - Comprehensive unit and concurrency tests in `TagBreakdownCounterTests` validating tag matching, casing, dynamic scope tags, metadata fallback, cardinality overflow protection, and multi-threaded tracking.
+
+---
+
 ## [1.0.3] - 2026-09-19
 
 ### Added

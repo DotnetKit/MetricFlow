@@ -9,7 +9,7 @@ internal class Program
     private static async Task Main(string[] args)
     {
         // Initialize tracker with full multi-counter telemetry pipeline:
-        // DurationCounter (default) + ThroughputCounter + ExceptionCounter + MemoryCounter
+        // DurationCounter (default) + ThroughputCounter + ExceptionCounter + MemoryCounter + TagBreakdownCounter
         var tracker = new MetricTracker("AdvancedConsoleTopic", new()
             {
                 ["tenant_id"] = "TenantId1",
@@ -17,7 +17,8 @@ internal class Program
             })
             .AddThroughputCounter()
             .AddExceptionCounter()
-            .AddMemoryCounter();
+            .AddMemoryCounter()
+            .AddTagBreakdownCounter("region");
 
         Console.WriteLine("Executing advanced operations with MetricFlow...\n");
 
@@ -43,7 +44,20 @@ internal class Program
             Console.WriteLine("=== Throughput Summary ===");
             Console.WriteLine($"BatchIngestion Rate : {throughput.ItemsPerSecond:N0} items/sec");
             Console.WriteLine($"Total Items Processed: {throughput.TotalItems:N0}");
-            Console.WriteLine($"Average Batch Size   : {throughput.AverageItemsPerOperation:N1} items/op");
+            Console.WriteLine($"Average Batch Size   : {throughput.AverageItemsPerOperation:N1} items/op\n");
+        }
+
+        // 3. Direct programmatic access to tag breakdown metrics
+        var tagBreakdown = tracker.GetTagBreakdownValues("DynamicProcessor", "region");
+        if (tagBreakdown != null)
+        {
+            Console.WriteLine("=== Tag Breakdown Summary ===");
+            Console.WriteLine($"Dimension : {tagBreakdown.TagKey}");
+            Console.WriteLine($"Tagged Operations: {tagBreakdown.TaggedOperations:N0} ({tagBreakdown.TaggedPercentage * 100:F1}%)");
+            foreach (var (region, count) in tagBreakdown.Breakdown)
+            {
+                Console.WriteLine($"  - {region}: {count}");
+            }
         }
     }
 
@@ -96,8 +110,9 @@ internal class Program
 
     internal static async Task ExecuteDynamicBatchAsync(MetricTracker tracker, int i)
     {
-        // Dynamic batch operation: item count determined during execution and recorded via scope.SetItems()
-        using var scope = tracker.Track("DynamicProcessor");
+        // Dynamic batch operation: item count determined during execution and tagged with regional dimension
+        var regions = new[] { "US", "EU", "APAC" };
+        using var scope = tracker.Track("DynamicProcessor", new() { ["region"] = regions[i % regions.Length] });
 
         await Task.Delay(3);
 

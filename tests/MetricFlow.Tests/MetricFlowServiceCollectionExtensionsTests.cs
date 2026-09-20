@@ -178,4 +178,31 @@ public class MetricFlowServiceCollectionExtensionsTests
         act3.Should().Throw<ArgumentNullException>();
         act4.Should().Throw<ArgumentNullException>();
     }
+
+    [Fact]
+    public void AddMetricFlow_WithOptions_ConfiguresThroughputMemoryAndTagBreakdownCounters()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+
+        // Act
+        services.AddMetricFlow("OrderService", opt =>
+        {
+            opt.AddThroughputCounter()
+               .AddMemoryCounter()
+               .AddTagBreakdownCounter("country");
+        });
+
+        using var provider = services.BuildServiceProvider();
+        var tracker = provider.GetRequiredService<IMetricTracker>();
+
+        using (tracker.Track("OrderCreated", new() { ["country"] = "US" }))
+        {
+        }
+
+        // Assert
+        tracker.GetThroughputValues("OrderCreated").Should().NotBeNull();
+        tracker.GetSnapshot("OrderCreated", MemoryCounter.DefaultCounterName).Should().NotBeNull();
+        tracker.GetTagBreakdownValues("OrderCreated", "country").Should().NotBeNull();
+    }
 }

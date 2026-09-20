@@ -12,6 +12,7 @@ MetricFlow is a lightweight .NET library designed to help developers define and 
 - **Counters**: Track execution counts and occurrences of events.
 - **Timers & Duration**: High-precision operation timing via lock-free stopwatch ticks.
 - **Throughput & Item Tracking**: Measure batch sizes, entity counts, and processing rates (items/sec) with `ThroughputCounter`.
+- **Tag & Dimensional Breakdown**: Slice and compute operation distributions by business tags with `TagBreakdownCounter` and built-in cardinality safeguards.
 - **Memory Tracking**: Measure per-operation heap allocations with `MemoryCounter`.
 - **Exception & Failure Tracking**: Capture errors, exceptions, and failure counts with `ExceptionCounter`.
 - **Metadata and Tags**: Add contextual information to metrics for rich analysis and filtering.
@@ -51,7 +52,7 @@ dotnet build
 
 #### 1. Initialize Tracker
 
-Initialize a tracker and optionally chain throughput, memory, and exception counters:
+Initialize a tracker and optionally chain throughput, memory, exception, and tag breakdown counters:
 
 ```csharp
 using DotnetKit.MetricFlow;
@@ -62,7 +63,8 @@ var tracker = new MetricTracker("OrderService", new()
     })
     .AddThroughputCounter()
     .AddMemoryCounter()
-    .AddExceptionCounter();
+    .AddExceptionCounter()
+    .AddTagBreakdownCounter("country");
 ```
 
 #### 2. Basic Example (Minimal Setup)
@@ -146,6 +148,35 @@ using (var scope = tracker.Track("IngestMessages"))
 var throughput = tracker.GetThroughputValues("ImportChannels");
 // throughput.TotalItems -> 500
 // throughput.ItemsPerSecond -> e.g. 2,500 items/sec
+```
+
+##### Tag & Dimensional Breakdown (`AddTagBreakdownCounter` / `scope.SetTag`)
+
+Slice and categorize operation counts by business tags (e.g. `country`, `tenant_id`, `status`) with built-in cardinality safeguards:
+
+```csharp
+// 1. Register counter for a specific tag key with optional cardinality limit (defaults to 250)
+tracker.AddTagBreakdownCounter("country", maxUniqueValues: 100);
+
+// 2. Track with tag dictionary
+using (tracker.Track("ProcessOrder", new() { ["country"] = "US" }))
+{
+    // ...
+}
+
+// 3. Or set tag dynamically on the active scope
+using (var scope = tracker.Track("ProcessOrder"))
+{
+    var country = ResolveCustomerCountry();
+    scope.SetTag("country", country);
+}
+
+// 4. Inspect snapshot breakdown
+var breakdown = tracker.GetTagBreakdownValues("ProcessOrder", "country");
+// breakdown.TotalOperations  -> 100
+// breakdown.TaggedOperations -> 95 (95.0%)
+// breakdown.Breakdown["US"]  -> 60
+// breakdown.Breakdown["DE"]  -> 35
 ```
 
 ##### Delegate Tracking (`TrackAction` / `TrackActionAsync`)

@@ -83,4 +83,46 @@ public static class TrackerCounterExtensions
         ArgumentNullException.ThrowIfNull(tracker);
         return tracker.GetSnapshot(metricName, counterName) as ThroughputSnapshot;
     }
+
+    /// <summary>
+    /// Registers a <see cref="TagBreakdownCounter"/> on the metric tracker to aggregate operation counts by tag.
+    /// </summary>
+    /// <typeparam name="T">The metric tracker type.</typeparam>
+    /// <param name="tracker">The tracker instance.</param>
+    /// <param name="tagKey">The target tag or metadata key to aggregate on (e.g. "country", "status").</param>
+    /// <param name="name">Optional custom counter name. Defaults to "TagBreakdown:{tagKey}".</param>
+    /// <param name="maxUniqueValues">Maximum number of unique tag values tracked before overflow rollup. Defaults to 250.</param>
+    /// <param name="overflowBucket">The bucket name for distinct values exceeding <paramref name="maxUniqueValues"/>. Defaults to "[Other]".</param>
+    /// <returns>The same tracker instance for method chaining.</returns>
+    public static T AddTagBreakdownCounter<T>(
+        this T tracker,
+        string tagKey,
+        string? name = null,
+        int maxUniqueValues = 250,
+        string overflowBucket = "[Other]")
+        where T : IMetricTracker
+    {
+        ArgumentNullException.ThrowIfNull(tracker);
+        tracker.RegisterCounter(new TagBreakdownCounter(tagKey, name, maxUniqueValues, overflowBucket));
+        return tracker;
+    }
+
+    /// <summary>
+    /// Retrieves the <see cref="TagBreakdownSnapshot"/> for a specific metric name and counter, or <c>null</c> if not tracked.
+    /// </summary>
+    /// <param name="tracker">The tracker instance.</param>
+    /// <param name="metricName">The name of the metric.</param>
+    /// <param name="tagKey">The tag key that was tracked, used to derive the default counter name "TagBreakdown:{tagKey}".</param>
+    /// <param name="counterName">Optional explicit counter name. If null, defaults to "TagBreakdown:{tagKey}".</param>
+    /// <returns>The tag breakdown snapshot or null.</returns>
+    public static TagBreakdownSnapshot? GetTagBreakdownValues(
+        this IMetricTracker tracker,
+        string metricName,
+        string tagKey,
+        string? counterName = null)
+    {
+        ArgumentNullException.ThrowIfNull(tracker);
+        var resolvedCounterName = counterName ?? $"TagBreakdown:{tagKey}";
+        return tracker.GetSnapshot(metricName, resolvedCounterName) as TagBreakdownSnapshot;
+    }
 }
