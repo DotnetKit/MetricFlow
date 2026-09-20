@@ -63,45 +63,45 @@ public class MetricFlowOptions
     }
 
     /// <summary>
-    /// Adds a <see cref="TagBreakdownCounter"/> to the configured counters.
+    /// Adds a <see cref="DimensionCounter"/> to the configured counters.
     /// </summary>
-    /// <param name="tagKey">The target tag or metadata key to aggregate on.</param>
+    /// <param name="dimensionKey">The target tag or metadata key to aggregate on.</param>
     /// <param name="name">Optional custom counter name.</param>
     /// <param name="maxUniqueValues">Maximum unique values before overflow bucket.</param>
     /// <param name="overflowBucket">Overflow bucket name.</param>
     /// <returns>The options instance for chaining.</returns>
-    public MetricFlowOptions AddTagBreakdownCounter(
-        string tagKey,
+    public MetricFlowOptions AddDimensionCounter(
+        string dimensionKey,
         string? name = null,
         int maxUniqueValues = 250,
         string overflowBucket = "[Other]")
     {
-        Counters.Add(new TagBreakdownCounter(tagKey, name, maxUniqueValues, overflowBucket));
+        Counters.Add(new DimensionCounter(dimensionKey, name, maxUniqueValues, overflowBucket));
         return this;
     }
 
     /// <summary>
-    /// Adds a composite multi-tag <see cref="TagBreakdownCounter"/> to the configured counters.
+    /// Adds a composite multi-tag <see cref="DimensionCounter"/> to the configured counters.
     /// </summary>
     /// <param name="name">The counter name.</param>
-    /// <param name="tagKeys">The list of tag keys to combine.</param>
+    /// <param name="dimensionKeys">The list of tag keys to combine.</param>
     /// <param name="delimiter">Delimiter used to join tag values.</param>
     /// <param name="maxUniqueValues">Maximum unique combinations before overflow.</param>
     /// <param name="overflowBucket">Overflow bucket name.</param>
     /// <returns>The options instance for chaining.</returns>
-    public MetricFlowOptions AddTagBreakdownCounter(
+    public MetricFlowOptions AddDimensionCounter(
         string name,
-        IEnumerable<string> tagKeys,
+        IEnumerable<string> dimensionKeys,
         string delimiter = " / ",
         int maxUniqueValues = 250,
         string overflowBucket = "[Other]")
     {
-        Counters.Add(new TagBreakdownCounter(name, tagKeys, delimiter, maxUniqueValues, overflowBucket));
+        Counters.Add(new DimensionCounter(name, dimensionKeys, delimiter, maxUniqueValues, overflowBucket));
         return this;
     }
 
     /// <summary>
-    /// Adds a computed lambda <see cref="TagBreakdownCounter"/> to the configured counters.
+    /// Adds a computed lambda <see cref="DimensionCounter"/> to the configured counters.
     /// </summary>
     /// <param name="name">The counter name.</param>
     /// <param name="selector">Function computing the dimension key from tags and metadata.</param>
@@ -109,14 +109,46 @@ public class MetricFlowOptions
     /// <param name="overflowBucket">Overflow bucket name.</param>
     /// <param name="dimensionName">Optional dimension label.</param>
     /// <returns>The options instance for chaining.</returns>
-    public MetricFlowOptions AddComputedBreakdownCounter(
+    public MetricFlowOptions AddDimensionCounter(
         string name,
         Func<IReadOnlyDictionary<string, string>?, IReadOnlyDictionary<string, long>?, string?> selector,
         int maxUniqueValues = 250,
         string overflowBucket = "[Other]",
         string? dimensionName = null)
     {
-        Counters.Add(new TagBreakdownCounter(name, selector, maxUniqueValues, overflowBucket, dimensionName));
+        Counters.Add(new DimensionCounter(name, selector, maxUniqueValues, overflowBucket, dimensionName));
         return this;
     }
+
+    /// <summary>
+    /// Alias for <see cref="AddDimensionCounter(string, string?, int, string)"/>.
+    /// </summary>
+    public MetricFlowOptions AddTagBreakdownCounter(
+        string tagKey,
+        string? name = null,
+        int maxUniqueValues = 250,
+        string overflowBucket = "[Other]")
+        => AddDimensionCounter(tagKey, name ?? $"TagBreakdown:{tagKey}", maxUniqueValues, overflowBucket);
+
+    /// <summary>
+    /// Alias for <see cref="AddDimensionCounter(string, IEnumerable{string}, string, int, string)"/>.
+    /// </summary>
+    public MetricFlowOptions AddTagBreakdownCounter(
+        string name,
+        IEnumerable<string> tagKeys,
+        string delimiter = " / ",
+        int maxUniqueValues = 250,
+        string overflowBucket = "[Other]")
+        => AddDimensionCounter(name, tagKeys, delimiter, maxUniqueValues, overflowBucket);
+
+    /// <summary>
+    /// Alias for <see cref="AddDimensionCounter(string, Func{IReadOnlyDictionary{string, string}?, IReadOnlyDictionary{string, long}?, string?}, int, string, string?)"/>.
+    /// </summary>
+    public MetricFlowOptions AddComputedBreakdownCounter(
+        string name,
+        Func<IReadOnlyDictionary<string, string>?, IReadOnlyDictionary<string, long>?, string?> selector,
+        int maxUniqueValues = 250,
+        string overflowBucket = "[Other]",
+        string? dimensionName = null)
+        => AddDimensionCounter(name, selector, maxUniqueValues, overflowBucket, dimensionName);
 }

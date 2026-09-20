@@ -5,8 +5,31 @@ using Xunit;
 
 namespace MetricFlow.Tests;
 
-public class TagBreakdownCounterTests
+public class DimensionCounterTests
 {
+    [Fact]
+    public void DimensionCounter_PrimaryApi_ShouldTrackAndProduceDimensionSnapshot()
+    {
+        // Arrange
+        var tracker = new MetricTracker("DimensionTopic")
+            .AddDimensionCounter("tenant");
+
+        // Act
+        using (tracker.Track("ProcessJob", new() { ["tenant"] = "TenantA" })) { }
+        using (tracker.Track("ProcessJob", new() { ["tenant"] = "TenantB" })) { }
+        using (tracker.Track("ProcessJob", new() { ["tenant"] = "TenantA" })) { }
+
+        // Assert
+        var snapshot = tracker.GetDimensionValues("ProcessJob", "tenant");
+        snapshot.Should().NotBeNull();
+        snapshot!.TotalOperations.Should().Be(3);
+        snapshot.TrackedOperations.Should().Be(3);
+        snapshot.TaggedOperations.Should().Be(3);
+        snapshot.UntrackedOperations.Should().Be(0);
+        snapshot.Breakdown["TenantA"].Should().Be(2);
+        snapshot.Breakdown["TenantB"].Should().Be(1);
+    }
+
     [Fact]
     public void TagBreakdownCounter_ShouldTrackTaggedAndUntaggedOperations()
     {

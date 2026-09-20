@@ -143,12 +143,12 @@ public class CustomCountersTests
     [Fact]
     public void CompositeTracker_ShouldTrackAllFiveCountersSimultaneously()
     {
-        // Arrange - Register Duration (default), Memory, Exception, Throughput, and TagBreakdown
+        // Arrange - Register Duration (default), Memory, Exception, Throughput, and Dimension
         var tracker = new MetricTracker("PentaCompositeTest")
             .AddMemoryCounter()
             .AddExceptionCounter()
             .AddThroughputCounter()
-            .AddTagBreakdownCounter("country");
+            .AddDimensionCounter("country");
 
         // Act
         using (var scope = tracker.TrackItems("PentaMetricOp", 100, new() { ["country"] = "US" }))
@@ -181,12 +181,12 @@ public class CustomCountersTests
         exceptions!.TotalOperations.Should().Be(2);
         exceptions.TotalFailures.Should().Be(0);
 
-        var tagBreakdown = tracker.GetTagBreakdownValues("PentaMetricOp", "country");
-        tagBreakdown.Should().NotBeNull();
-        tagBreakdown!.TotalOperations.Should().Be(2);
-        tagBreakdown.TaggedOperations.Should().Be(2);
-        tagBreakdown.Breakdown["US"].Should().Be(1);
-        tagBreakdown.Breakdown["DE"].Should().Be(1);
+        var dimensionSnapshot = tracker.GetDimensionValues("PentaMetricOp", "country");
+        dimensionSnapshot.Should().NotBeNull();
+        dimensionSnapshot!.TotalOperations.Should().Be(2);
+        dimensionSnapshot.TrackedOperations.Should().Be(2);
+        dimensionSnapshot.Breakdown["US"].Should().Be(1);
+        dimensionSnapshot.Breakdown["DE"].Should().Be(1);
     }
 
     [Fact]

@@ -9,9 +9,9 @@ namespace DotnetKit.MetricFlow.Counters;
 /// multi-tag combination, or custom computed dimension selector lambda,
 /// with built-in cardinality safeguards against memory leaks.
 /// </summary>
-public class TagBreakdownCounter : CounterBase<object?>
+public class DimensionCounter : CounterBase<object?>
 {
-    private readonly ConcurrentDictionary<string, MetricTagBreakdownState> _states = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, MetricDimensionState> _states = new(StringComparer.OrdinalIgnoreCase);
     private readonly Func<IReadOnlyDictionary<string, string>?, IReadOnlyDictionary<string, long>?, string?> _dimensionSelector;
 
     public string DimensionName { get; }
@@ -20,53 +20,53 @@ public class TagBreakdownCounter : CounterBase<object?>
     public string OverflowBucket { get; }
 
     /// <summary>
-    /// Initializes a new instance of <see cref="TagBreakdownCounter"/> targeting a single tag or metadata key.
+    /// Initializes a new instance of <see cref="DimensionCounter"/> targeting a single tag or metadata key.
     /// </summary>
-    /// <param name="tagKey">The target tag or metadata key to aggregate on (e.g. "country", "status", "category").</param>
-    /// <param name="name">Optional custom counter name. Defaults to "TagBreakdown:{tagKey}".</param>
+    /// <param name="dimensionKey">The target tag or metadata key to aggregate on (e.g. "country", "status", "category").</param>
+    /// <param name="name">Optional custom counter name. Defaults to "Dimension:{dimensionKey}".</param>
     /// <param name="maxUniqueValues">Maximum number of unique tag values tracked before overflow rollup. Defaults to 250.</param>
     /// <param name="overflowBucket">The bucket name for distinct values exceeding <paramref name="maxUniqueValues"/>. Defaults to "[Other]".</param>
-    public TagBreakdownCounter(
-        string tagKey,
+    public DimensionCounter(
+        string dimensionKey,
         string? name = null,
         int maxUniqueValues = 250,
         string overflowBucket = "[Other]")
         : this(
-            name: name ?? $"TagBreakdown:{tagKey}",
-            selector: (tags, meta) => ExtractSingleTag(tags, meta, tagKey),
-            dimensionName: tagKey,
+            name: name ?? $"Dimension:{dimensionKey}",
+            selector: (tags, meta) => ExtractSingleTag(tags, meta, dimensionKey),
+            dimensionName: dimensionKey,
             maxUniqueValues: maxUniqueValues,
             overflowBucket: overflowBucket)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(tagKey);
+        ArgumentException.ThrowIfNullOrWhiteSpace(dimensionKey);
     }
 
     /// <summary>
-    /// Initializes a new instance of <see cref="TagBreakdownCounter"/> targeting a combination of multiple tags.
+    /// Initializes a new instance of <see cref="DimensionCounter"/> targeting a combination of multiple tags.
     /// </summary>
     /// <param name="name">The counter name.</param>
-    /// <param name="tagKeys">The list of tag keys to combine (e.g. ["country", "payment_method"]).</param>
+    /// <param name="dimensionKeys">The list of tag keys to combine (e.g. ["country", "payment_method"]).</param>
     /// <param name="delimiter">Delimiter used to join tag values. Defaults to " / ".</param>
     /// <param name="maxUniqueValues">Maximum number of unique tag combinations tracked before overflow rollup. Defaults to 250.</param>
     /// <param name="overflowBucket">The bucket name for distinct combinations exceeding <paramref name="maxUniqueValues"/>. Defaults to "[Other]".</param>
-    public TagBreakdownCounter(
+    public DimensionCounter(
         string name,
-        IEnumerable<string> tagKeys,
+        IEnumerable<string> dimensionKeys,
         string delimiter = " / ",
         int maxUniqueValues = 250,
         string overflowBucket = "[Other]")
         : this(
             name: name,
-            selector: (tags, meta) => ExtractMultiTags(tags, meta, tagKeys.ToArray(), delimiter),
-            dimensionName: string.Join(delimiter, tagKeys),
+            selector: (tags, meta) => ExtractMultiTags(tags, meta, dimensionKeys.ToArray(), delimiter),
+            dimensionName: string.Join(delimiter, dimensionKeys),
             maxUniqueValues: maxUniqueValues,
             overflowBucket: overflowBucket)
     {
-        ArgumentNullException.ThrowIfNull(tagKeys);
+        ArgumentNullException.ThrowIfNull(dimensionKeys);
     }
 
     /// <summary>
-    /// Initializes a new instance of <see cref="TagBreakdownCounter"/> with a custom computed key selector lambda.
+    /// Initializes a new instance of <see cref="DimensionCounter"/> with a custom computed key selector lambda.
     /// Enables conditional business counters, classification rules, or dynamic multi-attribute aggregations.
     /// </summary>
     /// <param name="name">The counter name.</param>
@@ -74,7 +74,7 @@ public class TagBreakdownCounter : CounterBase<object?>
     /// <param name="maxUniqueValues">Maximum number of unique values tracked before overflow rollup. Defaults to 250.</param>
     /// <param name="overflowBucket">The bucket name for distinct values exceeding <paramref name="maxUniqueValues"/>. Defaults to "[Other]".</param>
     /// <param name="dimensionName">Optional descriptive dimension label. Defaults to <paramref name="name"/>.</param>
-    public TagBreakdownCounter(
+    public DimensionCounter(
         string name,
         Func<IReadOnlyDictionary<string, string>?, IReadOnlyDictionary<string, long>?, string?> selector,
         int maxUniqueValues = 250,
@@ -104,7 +104,7 @@ public class TagBreakdownCounter : CounterBase<object?>
 
         var breakdownState = _states.GetOrAdd(
             context.MetricName,
-            static (name, arg) => new MetricTagBreakdownState(name, arg.DimensionName, arg.MaxUniqueValues, arg.OverflowBucket),
+            static (name, arg) => new MetricDimensionState(name, arg.DimensionName, arg.MaxUniqueValues, arg.OverflowBucket),
             (DimensionName, MaxUniqueValues, OverflowBucket));
 
         string? dimensionValue;
@@ -136,7 +136,7 @@ public class TagBreakdownCounter : CounterBase<object?>
 
     public override void Reset() => _states.Clear();
 
-    public MetricTagBreakdownState? GetState(string metricName)
+    public MetricDimensionState? GetState(string metricName)
     {
         _states.TryGetValue(metricName, out var state);
         return state;
@@ -210,7 +210,7 @@ public class TagBreakdownCounter : CounterBase<object?>
         return anyPresent ? string.Join(delimiter, values) : null;
     }
 
-    public class MetricTagBreakdownState(string metricName, string dimensionName, int maxUniqueValues, string overflowBucket)
+    public class MetricDimensionState(string metricName, string dimensionName, int maxUniqueValues, string overflowBucket)
     {
         private long _totalOperations;
         private long _taggedOperations;
@@ -226,7 +226,9 @@ public class TagBreakdownCounter : CounterBase<object?>
 
         public long TotalOperations => Interlocked.Read(ref _totalOperations);
         public long TaggedOperations => Interlocked.Read(ref _taggedOperations);
+        public long TrackedOperations => TaggedOperations;
         public long UntaggedOperations => Interlocked.Read(ref _untaggedOperations);
+        public long UntrackedOperations => UntaggedOperations;
         public long FailedOperations => Interlocked.Read(ref _failedOperations);
 
         public IReadOnlyDictionary<string, long> Breakdown => new Dictionary<string, long>(_breakdown, StringComparer.OrdinalIgnoreCase);
@@ -265,9 +267,9 @@ public class TagBreakdownCounter : CounterBase<object?>
             }
         }
 
-        public TagBreakdownSnapshot ToSnapshot(string counterName)
+        public DimensionSnapshot ToSnapshot(string counterName)
         {
-            return new TagBreakdownSnapshot(
+            return new DimensionSnapshot(
                 MetricName: metricName,
                 CounterName: counterName,
                 DimensionName: dimensionName,
@@ -282,7 +284,42 @@ public class TagBreakdownCounter : CounterBase<object?>
     }
 }
 
-public record TagBreakdownSnapshot(
+/// <summary>
+/// Alias for <see cref="DimensionCounter"/> with tag-oriented naming.
+/// </summary>
+public class TagBreakdownCounter : DimensionCounter
+{
+    public TagBreakdownCounter(
+        string tagKey,
+        string? name = null,
+        int maxUniqueValues = 250,
+        string overflowBucket = "[Other]")
+        : base(tagKey, name ?? $"TagBreakdown:{tagKey}", maxUniqueValues, overflowBucket)
+    {
+    }
+
+    public TagBreakdownCounter(
+        string name,
+        IEnumerable<string> tagKeys,
+        string delimiter = " / ",
+        int maxUniqueValues = 250,
+        string overflowBucket = "[Other]")
+        : base(name, tagKeys, delimiter, maxUniqueValues, overflowBucket)
+    {
+    }
+
+    public TagBreakdownCounter(
+        string name,
+        Func<IReadOnlyDictionary<string, string>?, IReadOnlyDictionary<string, long>?, string?> selector,
+        int maxUniqueValues = 250,
+        string overflowBucket = "[Other]",
+        string? dimensionName = null)
+        : base(name, selector, maxUniqueValues, overflowBucket, dimensionName)
+    {
+    }
+}
+
+public record DimensionSnapshot(
     string MetricName,
     string CounterName,
     string DimensionName,
@@ -298,7 +335,10 @@ public record TagBreakdownSnapshot(
     /// </summary>
     public string TagKey => DimensionName;
 
+    public long TrackedOperations => TaggedOperations;
+    public long UntrackedOperations => UntaggedOperations;
     public double TaggedPercentage => TotalOperations > 0 ? (double)TaggedOperations / TotalOperations : 0.0;
+    public double TrackedPercentage => TaggedPercentage;
 
     public string ToFormattedString()
     {
@@ -330,3 +370,17 @@ public record TagBreakdownSnapshot(
 
     public override string ToString() => ToFormattedString();
 }
+
+/// <summary>
+/// Alias for <see cref="DimensionSnapshot"/>.
+/// </summary>
+public record TagBreakdownSnapshot(
+    string MetricName,
+    string CounterName,
+    string DimensionName,
+    long TotalOperations,
+    long TaggedOperations,
+    long UntaggedOperations,
+    long FailedOperations,
+    IReadOnlyDictionary<string, long> Breakdown,
+    DateTime Timestamp) : DimensionSnapshot(MetricName, CounterName, DimensionName, TotalOperations, TaggedOperations, UntaggedOperations, FailedOperations, Breakdown, Timestamp);

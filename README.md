@@ -12,7 +12,7 @@ MetricFlow is a lightweight .NET library designed to help developers define and 
 - **Counters**: Track execution counts and occurrences of events.
 - **Timers & Duration**: High-precision operation timing via lock-free stopwatch ticks.
 - **Throughput & Item Tracking**: Measure batch sizes, entity counts, and processing rates (items/sec) with `ThroughputCounter`.
-- **Tag & Dimensional Breakdown**: Slice and compute operation distributions by business tags with `TagBreakdownCounter` and built-in cardinality safeguards.
+- **Dimensional Breakdown & Slicing**: Slice and compute operation distributions by business dimensions, tags, or computed rules with `DimensionCounter` and built-in cardinality safeguards.
 - **Memory Tracking**: Measure per-operation heap allocations with `MemoryCounter`.
 - **Exception & Failure Tracking**: Capture errors, exceptions, and failure counts with `ExceptionCounter`.
 - **Metadata and Tags**: Add contextual information to metrics for rich analysis and filtering.
@@ -52,7 +52,7 @@ dotnet build
 
 #### 1. Initialize Tracker
 
-Initialize a tracker and optionally chain throughput, memory, exception, and tag breakdown counters:
+Initialize a tracker and optionally chain throughput, memory, exception, and dimension counters:
 
 ```csharp
 using DotnetKit.MetricFlow;
@@ -64,7 +64,7 @@ var tracker = new MetricTracker("OrderService", new()
     .AddThroughputCounter()
     .AddMemoryCounter()
     .AddExceptionCounter()
-    .AddTagBreakdownCounter("country");
+    .AddDimensionCounter("country");
 ```
 
 #### 2. Basic Example (Minimal Setup)
@@ -150,28 +150,28 @@ var throughput = tracker.GetThroughputValues("ImportChannels");
 // throughput.ItemsPerSecond -> e.g. 2,500 items/sec
 ```
 
-##### Tag & Dimensional Breakdown (`TagBreakdownCounter` / `AddComputedBreakdownCounter`)
+##### Dimensional Breakdown (`DimensionCounter` / `AddDimensionCounter`)
 
-Slice and categorize operation counts by business tags, multi-tag combinations, or custom computed business rules with built-in cardinality safeguards:
+Slice and categorize operation counts by business dimensions, tags, composite keys, or custom computed business rules with built-in cardinality safeguards:
 
 ```csharp
-// 1. Single tag breakdown with cardinality limit (defaults to 250, overflow into [Other])
-tracker.AddTagBreakdownCounter("country", maxUniqueValues: 100);
+// 1. Single dimension tag breakdown with cardinality limit (defaults to 250, overflow into [Other])
+tracker.AddDimensionCounter("country", maxUniqueValues: 100);
 
-// 2. Composite multi-tag breakdown (e.g. "US / CreditCard", "DE / PayPal")
-tracker.AddTagBreakdownCounter(
+// 2. Composite multi-tag dimension (e.g. "US / CreditCard", "DE / PayPal")
+tracker.AddDimensionCounter(
     name: "PaymentChannels",
-    tagKeys: ["country", "payment_method"]);
+    dimensionKeys: ["country", "payment_method"]);
 
-// 3. Computed business selector / conditional counters (zero custom metric classes needed)
-tracker.AddComputedBreakdownCounter("CustomerTier", (tags, metadata) =>
+// 3. Computed business selector / conditional rules (zero custom metric classes needed)
+tracker.AddDimensionCounter("CustomerTier", (tags, metadata) =>
 {
     var amount = metadata?.GetValueOrDefault("amount") ?? 0;
     var country = tags?.GetValueOrDefault("country") ?? "Unknown";
 
     if (amount >= 1000) return $"VIP_{country}";
     if (amount >= 100) return $"Standard_{country}";
-    return null; // Return null to skip or mark untagged
+    return null; // Return null to skip or mark untracked
 });
 
 // Tracking with tags and metadata
@@ -181,9 +181,9 @@ using (var scope = tracker.Track("ProcessOrder", new() { ["country"] = "US", ["p
 }
 
 // Inspect snapshots
-var countryBreakdown = tracker.GetTagBreakdownValues("ProcessOrder", "country");
-var paymentBreakdown = tracker.GetComputedBreakdownValues("ProcessOrder", "PaymentChannels");
-var tierBreakdown = tracker.GetComputedBreakdownValues("ProcessOrder", "CustomerTier");
+var countryDim = tracker.GetDimensionValues("ProcessOrder", "country");
+var paymentDim = tracker.GetDimensionValues("ProcessOrder", "PaymentChannels");
+var tierDim = tracker.GetDimensionValues("ProcessOrder", "CustomerTier");
 ```
 
 ##### Delegate Tracking (`TrackAction` / `TrackActionAsync`)

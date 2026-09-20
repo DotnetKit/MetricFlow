@@ -18,7 +18,7 @@ internal class Program
             .AddThroughputCounter()
             .AddExceptionCounter()
             .AddMemoryCounter()
-            .AddTagBreakdownCounter("region");
+            .AddDimensionCounter("region");
 
         Console.WriteLine("Executing advanced operations with MetricFlow...\n");
 
@@ -47,14 +47,14 @@ internal class Program
             Console.WriteLine($"Average Batch Size   : {throughput.AverageItemsPerOperation:N1} items/op\n");
         }
 
-        // 3. Direct programmatic access to tag breakdown metrics
-        var tagBreakdown = tracker.GetTagBreakdownValues("DynamicProcessor", "region");
-        if (tagBreakdown != null)
+        // 3. Direct programmatic access to dimension breakdown metrics
+        var dimension = tracker.GetDimensionValues("DynamicProcessor", "region");
+        if (dimension != null)
         {
-            Console.WriteLine("=== Tag Breakdown Summary ===");
-            Console.WriteLine($"Dimension : {tagBreakdown.TagKey}");
-            Console.WriteLine($"Tagged Operations: {tagBreakdown.TaggedOperations:N0} ({tagBreakdown.TaggedPercentage * 100:F1}%)");
-            foreach (var (region, count) in tagBreakdown.Breakdown)
+            Console.WriteLine("=== Dimension Summary ===");
+            Console.WriteLine($"Dimension : {dimension.DimensionName}");
+            Console.WriteLine($"Tracked Operations: {dimension.TrackedOperations:N0} ({dimension.TrackedPercentage * 100:F1}%)");
+            foreach (var (region, count) in dimension.Breakdown)
             {
                 Console.WriteLine($"  - {region}: {count}");
             }
