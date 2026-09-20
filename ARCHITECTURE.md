@@ -145,6 +145,8 @@ In high-volume streaming, ingestion, or batch jobs (e.g. database ETL, message q
 ### Dimensional Breakdown & Cardinality Safeguards (`TagBreakdownCounter`)
 Telemetry often requires slicing operations by business dimensions (e.g. country, tenant, order status, HTTP route). `TagBreakdownCounter`:
 - **Targeted Key Focus**: Instances focus on a specific dimension key (e.g. `tracker.AddTagBreakdownCounter("country")`), avoiding accidental indexing of unrelated data.
+- **Composite Multi-Tag Dimensions**: Combines multiple tags into unified compound keys (e.g. `["region", "payment_method"]` -> `"US / CreditCard"`).
+- **Computed Dimension Selectors**: Accepts a `Func<tags, metadata, string?>` lambda to compute dynamic business categories or conditional filters on the fly without writing custom counter classes.
 - **Bounded Cardinality**: High-cardinality values (e.g., `guid`, `order_id`) can rapidly exhaust memory in long-running applications. `TagBreakdownCounter` enforces a configurable ceiling (`maxUniqueValues`, default `250`). Once reached, subsequent distinct values roll into an overflow bucket (`[Other]`).
 - **Zero-Allocation Entry**: State token is `null`, incurring zero cost or allocation on operation start (`OnIn`).
 - **Fallback Hierarchy**: Inspects `context.Tags` (case-insensitive), and falls back to stringified `context.Metadata` if present.

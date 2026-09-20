@@ -261,4 +261,158 @@ public class TagBreakdownCounterTests
         FluentActions.Invoking(() => new TagBreakdownCounter("country", overflowBucket: ""))
             .Should().Throw<ArgumentException>();
     }
+
+    [Fact]
+    public void TagBreakdownCounter_CompositeMultiTags_ShouldJoinValuesWithDelimiter()
+    {
+        // Arrange
+        var tracker = new MetricTracker("MultiTagTopic")
+            .AddTagBreakdownCounter("CountryAndPayment", ["country", "payment_method"]);
+
+        // Act
+        // 1. Both tags present
+        using (tracker.Track("Checkout", new() { ["country"] = "US", ["payment_method"] = "CreditCard" })) { }
+        using (tracker.Track("Checkout", new() { ["country"] = "US", ["payment_method"] = "CreditCard" })) { }
+
+        // 2. Different combination
+        using (tracker.Track("Checkout", new() { ["country"] = "DE", ["payment_method"] = "PayPal" })) { }
+
+        // 3. Partial tag present (one missing)
+        using (tracker.Track("Checkout", new() { ["country"] = "FR" })) { }
+
+        // 4. Neither tag present
+        using (tracker.Track("Checkout")) { }
+
+        // Assert
+        var snapshot = tracker.GetComputedBreakdownValues("Checkout", "CountryAndPayment");
+        snapshot.Should().NotBeNull();
+        snapshot!.TotalOperations.Should().Be(5);
+        snapshot.TaggedOperations.Should().Be(4);
+        snapshot.UntaggedOperations.Should().Be(1);
+
+        snapshot.Breakdown.Should().ContainKey("US / CreditCard");
+        snapshot.Breakdown["US / CreditCard"].Should().Be(2);
+
+        snapshot.Breakdown.Should().ContainKey("DE / PayPal");
+        snapshot.Breakdown["DE / PayPal"].Should().Be(1);
+
+        snapshot.Breakdown.Should().ContainKey("FR / -");
+        snapshot.Breakdown["FR / -"].Should().Be(1);
+    }
+
+    [Fact]
+    public void TagBreakdownCounter_ComputedSelector_ShouldComputeCustomCategories()
+    {
+        // Arrange - compute tier based on metadata and tags
+        var tracker = new MetricTracker("ComputedTopic")
+            .AddComputedBreakdownCounter("CustomerTier", (tags, metadata) =>
+            {
+                var country = tags?.GetValueOrDefault("country") ?? "Unknown";
+                var amount = metadata?.GetValueOrDefault("amount") ?? 0;
+
+                if (amount >= 1000) return $"VIP_{country}";
+                if (amount >= 100) return $"Standard_{country}";
+                return $"Economy_{country}";
+            });
+
+        // Act
+        using (var scope = tracker.Track("ProcessOrder", new() { ["country"] = "US" }))
+        {
+            scope.SetMetadata("amount", 2000);
+        }
+
+        using (var scope = tracker.Track("ProcessOrder", new() { ["country"] = "US" }))
+        {
+            scope.SetMetadata("amount", 500);
+        }
+
+        using (var scope = tracker.Track("ProcessOrder", new() { ["country"] = "DE" }))
+        {
+            scope.SetMetadata("amount", 20);
+        }
+
+        // Assert
+        var snapshot = tracker.GetComputedBreakdownValues("ProcessOrder", "CustomerTier");
+        snapshot.Should().NotBeNull();
+        snapshot!.TotalOperations.Should().Be(3);
+        snapshot.TaggedOperations.Should().Be(3);
+        snapshot.UntaggedOperations.Should().Be(0);
+
+        snapshot.Breakdown.Should().ContainKey("VIP_US");
+        snapshot.Breakdown["VIP_US"].Should().Be(1);
+
+        snapshot.Breakdown.Should().ContainKey("Standard_US");
+        snapshot.Breakdown["Standard_US"].Should().Be(1);
+
+        snapshot.Breakdown.Should().ContainKey("Economy_DE");
+        snapshot.Breakdown["Economy_DE"].Should().Be(1);
+    }
+
+    [Fact]
+    public void TagBreakdownCounter_ComputedSelector_ConditionalFilter_ShouldTrackMatchingOnly()
+    {
+        // Arrange - only count operations satisfying a business predicate (return null otherwise)
+        var tracker = new MetricTracker("ConditionalTopic")
+            .AddComputedBreakdownCounter("HighValueOrders", (tags, metadata) =>
+            {
+                var isHighValue = metadata?.GetValueOrDefault("amount") > 500;
+                return isHighValue ? "HighValue" : null;
+            });
+
+        // Act
+        // Matched operation
+        using (var scope = tracker.Track("PlaceOrder"))
+        {
+            scope.SetMetadata("amount", 1000);
+        }
+
+        // Unmatched operation
+        using (var scope = tracker.Track("PlaceOrder"))
+        {
+            scope.SetMetadata("amount", 100);
+        }
+
+        // Unmatched operation
+        using (var scope = tracker.Track("PlaceOrder"))
+        {
+            scope.SetMetadata("amount", 250);
+        }
+
+        // Assert
+        var snapshot = tracker.GetComputedBreakdownValues("PlaceOrder", "HighValueOrders");
+        snapshot.Should().NotBeNull();
+        snapshot!.TotalOperations.Should().Be(3);
+        snapshot.TaggedOperations.Should().Be(1);
+        snapshot.UntaggedOperations.Should().Be(2);
+
+        snapshot.Breakdown.Should().ContainKey("HighValue");
+        snapshot.Breakdown["HighValue"].Should().Be(1);
+    }
+
+    [Fact]
+    public void TagBreakdownCounter_ComputedSelector_WhenLambdaThrows_ShouldNotCrashScope()
+    {
+        // Arrange - lambda that deliberately throws an exception
+        var tracker = new MetricTracker("FaultySelectorTopic")
+            .AddComputedBreakdownCounter("FaultySelector", (tags, metadata) =>
+            {
+                throw new InvalidOperationException("Simulation error in user lambda");
+            });
+
+        // Act - should execute and dispose smoothly without throwing
+        FluentActions.Invoking(() =>
+        {
+            using (tracker.Track("FaultyOp"))
+            {
+                // Work
+            }
+        }).Should().NotThrow();
+
+        // Assert - operation recorded safely as untagged
+        var snapshot = tracker.GetComputedBreakdownValues("FaultyOp", "FaultySelector");
+        snapshot.Should().NotBeNull();
+        snapshot!.TotalOperations.Should().Be(1);
+        snapshot.TaggedOperations.Should().Be(0);
+        snapshot.UntaggedOperations.Should().Be(1);
+    }
 }

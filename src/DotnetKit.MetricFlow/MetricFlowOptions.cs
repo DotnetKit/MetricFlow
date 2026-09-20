@@ -79,4 +79,44 @@ public class MetricFlowOptions
         Counters.Add(new TagBreakdownCounter(tagKey, name, maxUniqueValues, overflowBucket));
         return this;
     }
+
+    /// <summary>
+    /// Adds a composite multi-tag <see cref="TagBreakdownCounter"/> to the configured counters.
+    /// </summary>
+    /// <param name="name">The counter name.</param>
+    /// <param name="tagKeys">The list of tag keys to combine.</param>
+    /// <param name="delimiter">Delimiter used to join tag values.</param>
+    /// <param name="maxUniqueValues">Maximum unique combinations before overflow.</param>
+    /// <param name="overflowBucket">Overflow bucket name.</param>
+    /// <returns>The options instance for chaining.</returns>
+    public MetricFlowOptions AddTagBreakdownCounter(
+        string name,
+        IEnumerable<string> tagKeys,
+        string delimiter = " / ",
+        int maxUniqueValues = 250,
+        string overflowBucket = "[Other]")
+    {
+        Counters.Add(new TagBreakdownCounter(name, tagKeys, delimiter, maxUniqueValues, overflowBucket));
+        return this;
+    }
+
+    /// <summary>
+    /// Adds a computed lambda <see cref="TagBreakdownCounter"/> to the configured counters.
+    /// </summary>
+    /// <param name="name">The counter name.</param>
+    /// <param name="selector">Function computing the dimension key from tags and metadata.</param>
+    /// <param name="maxUniqueValues">Maximum unique values before overflow.</param>
+    /// <param name="overflowBucket">Overflow bucket name.</param>
+    /// <param name="dimensionName">Optional dimension label.</param>
+    /// <returns>The options instance for chaining.</returns>
+    public MetricFlowOptions AddComputedBreakdownCounter(
+        string name,
+        Func<IReadOnlyDictionary<string, string>?, IReadOnlyDictionary<string, long>?, string?> selector,
+        int maxUniqueValues = 250,
+        string overflowBucket = "[Other]",
+        string? dimensionName = null)
+    {
+        Counters.Add(new TagBreakdownCounter(name, selector, maxUniqueValues, overflowBucket, dimensionName));
+        return this;
+    }
 }

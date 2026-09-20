@@ -5,19 +5,22 @@ using DotnetKit.MetricFlow.Abstractions;
 namespace DotnetKit.MetricFlow.Counters;
 
 /// <summary>
-/// Metric counter that aggregates operation counts categorized by a user-specified tag or metadata dimension,
+/// Metric counter that aggregates operation counts categorized by a user-specified tag,
+/// multi-tag combination, or custom computed dimension selector lambda,
 /// with built-in cardinality safeguards against memory leaks.
 /// </summary>
 public class TagBreakdownCounter : CounterBase<object?>
 {
     private readonly ConcurrentDictionary<string, MetricTagBreakdownState> _states = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Func<IReadOnlyDictionary<string, string>?, IReadOnlyDictionary<string, long>?, string?> _dimensionSelector;
 
-    public string TagKey { get; }
+    public string DimensionName { get; }
+    public string TagKey => DimensionName;
     public int MaxUniqueValues { get; }
     public string OverflowBucket { get; }
 
     /// <summary>
-    /// Initializes a new instance of <see cref="TagBreakdownCounter"/>.
+    /// Initializes a new instance of <see cref="TagBreakdownCounter"/> targeting a single tag or metadata key.
     /// </summary>
     /// <param name="tagKey">The target tag or metadata key to aggregate on (e.g. "country", "status", "category").</param>
     /// <param name="name">Optional custom counter name. Defaults to "TagBreakdown:{tagKey}".</param>
@@ -28,16 +31,67 @@ public class TagBreakdownCounter : CounterBase<object?>
         string? name = null,
         int maxUniqueValues = 250,
         string overflowBucket = "[Other]")
-        : base(name ?? $"TagBreakdown:{tagKey}")
+        : this(
+            name: name ?? $"TagBreakdown:{tagKey}",
+            selector: (tags, meta) => ExtractSingleTag(tags, meta, tagKey),
+            dimensionName: tagKey,
+            maxUniqueValues: maxUniqueValues,
+            overflowBucket: overflowBucket)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(tagKey);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of <see cref="TagBreakdownCounter"/> targeting a combination of multiple tags.
+    /// </summary>
+    /// <param name="name">The counter name.</param>
+    /// <param name="tagKeys">The list of tag keys to combine (e.g. ["country", "payment_method"]).</param>
+    /// <param name="delimiter">Delimiter used to join tag values. Defaults to " / ".</param>
+    /// <param name="maxUniqueValues">Maximum number of unique tag combinations tracked before overflow rollup. Defaults to 250.</param>
+    /// <param name="overflowBucket">The bucket name for distinct combinations exceeding <paramref name="maxUniqueValues"/>. Defaults to "[Other]".</param>
+    public TagBreakdownCounter(
+        string name,
+        IEnumerable<string> tagKeys,
+        string delimiter = " / ",
+        int maxUniqueValues = 250,
+        string overflowBucket = "[Other]")
+        : this(
+            name: name,
+            selector: (tags, meta) => ExtractMultiTags(tags, meta, tagKeys.ToArray(), delimiter),
+            dimensionName: string.Join(delimiter, tagKeys),
+            maxUniqueValues: maxUniqueValues,
+            overflowBucket: overflowBucket)
+    {
+        ArgumentNullException.ThrowIfNull(tagKeys);
+    }
+
+    /// <summary>
+    /// Initializes a new instance of <see cref="TagBreakdownCounter"/> with a custom computed key selector lambda.
+    /// Enables conditional business counters, classification rules, or dynamic multi-attribute aggregations.
+    /// </summary>
+    /// <param name="name">The counter name.</param>
+    /// <param name="selector">Function computing the dimension key from tags and metadata. Return null to skip or mark untagged.</param>
+    /// <param name="maxUniqueValues">Maximum number of unique values tracked before overflow rollup. Defaults to 250.</param>
+    /// <param name="overflowBucket">The bucket name for distinct values exceeding <paramref name="maxUniqueValues"/>. Defaults to "[Other]".</param>
+    /// <param name="dimensionName">Optional descriptive dimension label. Defaults to <paramref name="name"/>.</param>
+    public TagBreakdownCounter(
+        string name,
+        Func<IReadOnlyDictionary<string, string>?, IReadOnlyDictionary<string, long>?, string?> selector,
+        int maxUniqueValues = 250,
+        string overflowBucket = "[Other]",
+        string? dimensionName = null)
+        : base(name)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        ArgumentNullException.ThrowIfNull(selector);
         if (maxUniqueValues <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(maxUniqueValues), "MaxUniqueValues must be greater than zero.");
         }
         ArgumentException.ThrowIfNullOrWhiteSpace(overflowBucket);
 
-        TagKey = tagKey;
+        _dimensionSelector = selector;
+        DimensionName = dimensionName ?? name;
         MaxUniqueValues = maxUniqueValues;
         OverflowBucket = overflowBucket;
     }
@@ -50,49 +104,21 @@ public class TagBreakdownCounter : CounterBase<object?>
 
         var breakdownState = _states.GetOrAdd(
             context.MetricName,
-            static (name, arg) => new MetricTagBreakdownState(name, arg.TagKey, arg.MaxUniqueValues, arg.OverflowBucket),
-            (TagKey, MaxUniqueValues, OverflowBucket));
+            static (name, arg) => new MetricTagBreakdownState(name, arg.DimensionName, arg.MaxUniqueValues, arg.OverflowBucket),
+            (DimensionName, MaxUniqueValues, OverflowBucket));
 
-        string? tagValue = null;
-        if (context.Tags != null)
+        string? dimensionValue;
+        try
         {
-            if (context.Tags.TryGetValue(TagKey, out var directVal))
-            {
-                tagValue = directVal;
-            }
-            else
-            {
-                foreach (var (k, v) in context.Tags)
-                {
-                    if (string.Equals(k, TagKey, StringComparison.OrdinalIgnoreCase))
-                    {
-                        tagValue = v;
-                        break;
-                    }
-                }
-            }
+            dimensionValue = _dimensionSelector(context.Tags, context.Metadata);
+        }
+        catch
+        {
+            // Protect against unexpected exceptions in custom user selector lambdas
+            dimensionValue = null;
         }
 
-        if (tagValue == null && context.Metadata != null)
-        {
-            if (context.Metadata.TryGetValue(TagKey, out var directMeta))
-            {
-                tagValue = directMeta.ToString();
-            }
-            else
-            {
-                foreach (var (k, v) in context.Metadata)
-                {
-                    if (string.Equals(k, TagKey, StringComparison.OrdinalIgnoreCase))
-                    {
-                        tagValue = v.ToString();
-                        break;
-                    }
-                }
-            }
-        }
-
-        breakdownState.Record(tagValue, context.Failed);
+        breakdownState.Record(dimensionValue, context.Failed);
     }
 
     public override IMetricSnapshot? GetSnapshot(string metricName)
@@ -116,7 +142,75 @@ public class TagBreakdownCounter : CounterBase<object?>
         return state;
     }
 
-    public class MetricTagBreakdownState(string metricName, string tagKey, int maxUniqueValues, string overflowBucket)
+    private static string? ExtractSingleTag(
+        IReadOnlyDictionary<string, string>? tags,
+        IReadOnlyDictionary<string, long>? metadata,
+        string key)
+    {
+        if (tags != null)
+        {
+            if (tags.TryGetValue(key, out var directVal))
+            {
+                return directVal;
+            }
+
+            foreach (var (k, v) in tags)
+            {
+                if (string.Equals(k, key, StringComparison.OrdinalIgnoreCase))
+                {
+                    return v;
+                }
+            }
+        }
+
+        if (metadata != null)
+        {
+            if (metadata.TryGetValue(key, out var directMeta))
+            {
+                return directMeta.ToString();
+            }
+
+            foreach (var (k, v) in metadata)
+            {
+                if (string.Equals(k, key, StringComparison.OrdinalIgnoreCase))
+                {
+                    return v.ToString();
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private static string? ExtractMultiTags(
+        IReadOnlyDictionary<string, string>? tags,
+        IReadOnlyDictionary<string, long>? metadata,
+        IReadOnlyList<string> keys,
+        string delimiter)
+    {
+        if (keys.Count == 0) return null;
+
+        var values = new string[keys.Count];
+        bool anyPresent = false;
+
+        for (int i = 0; i < keys.Count; i++)
+        {
+            var val = ExtractSingleTag(tags, metadata, keys[i]);
+            if (!string.IsNullOrWhiteSpace(val))
+            {
+                values[i] = val;
+                anyPresent = true;
+            }
+            else
+            {
+                values[i] = "-";
+            }
+        }
+
+        return anyPresent ? string.Join(delimiter, values) : null;
+    }
+
+    public class MetricTagBreakdownState(string metricName, string dimensionName, int maxUniqueValues, string overflowBucket)
     {
         private long _totalOperations;
         private long _taggedOperations;
@@ -125,7 +219,8 @@ public class TagBreakdownCounter : CounterBase<object?>
         private readonly ConcurrentDictionary<string, long> _breakdown = new(StringComparer.OrdinalIgnoreCase);
 
         public string MetricName => metricName;
-        public string TagKey => tagKey;
+        public string DimensionName => dimensionName;
+        public string TagKey => dimensionName;
         public int MaxUniqueValues => maxUniqueValues;
         public string OverflowBucket => overflowBucket;
 
@@ -175,7 +270,7 @@ public class TagBreakdownCounter : CounterBase<object?>
             return new TagBreakdownSnapshot(
                 MetricName: metricName,
                 CounterName: counterName,
-                TagKey: tagKey,
+                DimensionName: dimensionName,
                 TotalOperations: TotalOperations,
                 TaggedOperations: TaggedOperations,
                 UntaggedOperations: UntaggedOperations,
@@ -190,7 +285,7 @@ public class TagBreakdownCounter : CounterBase<object?>
 public record TagBreakdownSnapshot(
     string MetricName,
     string CounterName,
-    string TagKey,
+    string DimensionName,
     long TotalOperations,
     long TaggedOperations,
     long UntaggedOperations,
@@ -198,6 +293,11 @@ public record TagBreakdownSnapshot(
     IReadOnlyDictionary<string, long> Breakdown,
     DateTime Timestamp) : IMetricSnapshot
 {
+    /// <summary>
+    /// Alias for <see cref="DimensionName"/> for backward compatibility.
+    /// </summary>
+    public string TagKey => DimensionName;
+
     public double TaggedPercentage => TotalOperations > 0 ? (double)TaggedOperations / TotalOperations : 0.0;
 
     public string ToFormattedString()
@@ -217,7 +317,7 @@ public record TagBreakdownSnapshot(
 
         if (Breakdown.Count > 0)
         {
-            sb.AppendLine($"Breakdown by '{TagKey}':");
+            sb.AppendLine($"Breakdown by '{DimensionName}':");
             foreach (var (key, count) in Breakdown.OrderByDescending(kv => kv.Value))
             {
                 double pct = TaggedOperations > 0 ? (double)count / TaggedOperations * 100.0 : 0.0;

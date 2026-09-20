@@ -150,33 +150,40 @@ var throughput = tracker.GetThroughputValues("ImportChannels");
 // throughput.ItemsPerSecond -> e.g. 2,500 items/sec
 ```
 
-##### Tag & Dimensional Breakdown (`AddTagBreakdownCounter` / `scope.SetTag`)
+##### Tag & Dimensional Breakdown (`TagBreakdownCounter` / `AddComputedBreakdownCounter`)
 
-Slice and categorize operation counts by business tags (e.g. `country`, `tenant_id`, `status`) with built-in cardinality safeguards:
+Slice and categorize operation counts by business tags, multi-tag combinations, or custom computed business rules with built-in cardinality safeguards:
 
 ```csharp
-// 1. Register counter for a specific tag key with optional cardinality limit (defaults to 250)
+// 1. Single tag breakdown with cardinality limit (defaults to 250, overflow into [Other])
 tracker.AddTagBreakdownCounter("country", maxUniqueValues: 100);
 
-// 2. Track with tag dictionary
-using (tracker.Track("ProcessOrder", new() { ["country"] = "US" }))
+// 2. Composite multi-tag breakdown (e.g. "US / CreditCard", "DE / PayPal")
+tracker.AddTagBreakdownCounter(
+    name: "PaymentChannels",
+    tagKeys: ["country", "payment_method"]);
+
+// 3. Computed business selector / conditional counters (zero custom metric classes needed)
+tracker.AddComputedBreakdownCounter("CustomerTier", (tags, metadata) =>
 {
-    // ...
+    var amount = metadata?.GetValueOrDefault("amount") ?? 0;
+    var country = tags?.GetValueOrDefault("country") ?? "Unknown";
+
+    if (amount >= 1000) return $"VIP_{country}";
+    if (amount >= 100) return $"Standard_{country}";
+    return null; // Return null to skip or mark untagged
+});
+
+// Tracking with tags and metadata
+using (var scope = tracker.Track("ProcessOrder", new() { ["country"] = "US", ["payment_method"] = "CreditCard" }))
+{
+    scope.SetMetadata("amount", 1500); // Evaluates CustomerTier to "VIP_US"
 }
 
-// 3. Or set tag dynamically on the active scope
-using (var scope = tracker.Track("ProcessOrder"))
-{
-    var country = ResolveCustomerCountry();
-    scope.SetTag("country", country);
-}
-
-// 4. Inspect snapshot breakdown
-var breakdown = tracker.GetTagBreakdownValues("ProcessOrder", "country");
-// breakdown.TotalOperations  -> 100
-// breakdown.TaggedOperations -> 95 (95.0%)
-// breakdown.Breakdown["US"]  -> 60
-// breakdown.Breakdown["DE"]  -> 35
+// Inspect snapshots
+var countryBreakdown = tracker.GetTagBreakdownValues("ProcessOrder", "country");
+var paymentBreakdown = tracker.GetComputedBreakdownValues("ProcessOrder", "PaymentChannels");
+var tierBreakdown = tracker.GetComputedBreakdownValues("ProcessOrder", "CustomerTier");
 ```
 
 ##### Delegate Tracking (`TrackAction` / `TrackActionAsync`)
