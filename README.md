@@ -12,6 +12,7 @@ MetricFlow is a lightweight .NET library designed to help developers define and 
 - **Counters**: Track execution counts and occurrences of events.
 - **Timers & Duration**: High-precision operation timing via lock-free stopwatch ticks.
 - **Throughput & Item Tracking**: Measure batch sizes, entity counts, and processing rates (items/sec) with `ThroughputCounter`.
+- **Dimensional Breakdown & Slicing**: Slice and compute operation distributions by business dimensions, tags, or computed rules with `DimensionCounter` and built-in cardinality safeguards.
 - **Memory Tracking**: Measure per-operation heap allocations with `MemoryCounter`.
 - **Exception & Failure Tracking**: Capture errors, exceptions, and failure counts with `ExceptionCounter`.
 - **Metadata and Tags**: Add contextual information to metrics for rich analysis and filtering.
@@ -51,7 +52,7 @@ dotnet build
 
 #### 1. Initialize Tracker
 
-Initialize a tracker and optionally chain throughput, memory, and exception counters:
+Initialize a tracker and optionally chain throughput, memory, exception, and dimension counters:
 
 ```csharp
 using DotnetKit.MetricFlow;
@@ -62,7 +63,8 @@ var tracker = new MetricTracker("OrderService", new()
     })
     .AddThroughputCounter()
     .AddMemoryCounter()
-    .AddExceptionCounter();
+    .AddExceptionCounter()
+    .AddDimensionCounter("country");
 ```
 
 #### 2. Basic Example (Minimal Setup)
@@ -146,6 +148,42 @@ using (var scope = tracker.Track("IngestMessages"))
 var throughput = tracker.GetThroughputValues("ImportChannels");
 // throughput.TotalItems -> 500
 // throughput.ItemsPerSecond -> e.g. 2,500 items/sec
+```
+
+##### Dimensional Breakdown (`DimensionCounter` / `AddDimensionCounter`)
+
+Slice and categorize operation counts by business dimensions, tags, composite keys, or custom computed business rules with built-in cardinality safeguards:
+
+```csharp
+// 1. Single dimension tag breakdown with cardinality limit (defaults to 250, overflow into [Other])
+tracker.AddDimensionCounter("country", maxUniqueValues: 100);
+
+// 2. Composite multi-tag dimension (e.g. "US / CreditCard", "DE / PayPal")
+tracker.AddDimensionCounter(
+    name: "PaymentChannels",
+    dimensionKeys: ["country", "payment_method"]);
+
+// 3. Computed business selector / conditional rules (zero custom metric classes needed)
+tracker.AddDimensionCounter("CustomerTier", (tags, metadata) =>
+{
+    var amount = metadata?.GetValueOrDefault("amount") ?? 0;
+    var country = tags?.GetValueOrDefault("country") ?? "Unknown";
+
+    if (amount >= 1000) return $"VIP_{country}";
+    if (amount >= 100) return $"Standard_{country}";
+    return null; // Return null to skip or mark untracked
+});
+
+// Tracking with tags and metadata
+using (var scope = tracker.Track("ProcessOrder", new() { ["country"] = "US", ["payment_method"] = "CreditCard" }))
+{
+    scope.SetMetadata("amount", 1500); // Evaluates CustomerTier to "VIP_US"
+}
+
+// Inspect snapshots
+var countryDim = tracker.GetDimensionValues("ProcessOrder", "country");
+var paymentDim = tracker.GetDimensionValues("ProcessOrder", "PaymentChannels");
+var tierDim = tracker.GetDimensionValues("ProcessOrder", "CustomerTier");
 ```
 
 ##### Delegate Tracking (`TrackAction` / `TrackActionAsync`)

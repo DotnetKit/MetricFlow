@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.4] - 2026-09-20
+
+### Added
+
+- **Dimension & Breakdown Counter (`DimensionCounter` / `TagBreakdownCounter`)**:
+  - Built-in dimensional counter that aggregates operation counts categorized by single tags, composite multi-tag combinations (`params string[] dimensionKeys`), or numeric metadata keys (e.g. `country`, `status`, `tenant_id`).
+  - **Computed Dimension Selectors (`AddDimensionCounter`)**: Custom lambda support (`Func<tags, metadata, string?>`) enabling dynamic business classification rules and conditional counter filters without defining custom metric classes.
+  - Native cardinality protection with configurable `maxUniqueValues` (defaults to 250) and automatic overflow rollup into `[Other]` to prevent memory leaks from high-cardinality tags.
+  - Tracking of tracked/tagged vs. untracked/untagged operations, failed operations, and percentage distributions.
+  - `DimensionSnapshot` (aliased as `TagBreakdownSnapshot`) implementing `IMetricSnapshot` with formatted output showing total operations, tracked percentages, and dimension distributions sorted descending by volume.
+  - Fluent registration and querying extensions on `IMetricTracker`: `AddDimensionCounter(...)` and `GetDimensionValues(...)` (with `AddTagBreakdownCounter` and `AddComputedBreakdownCounter` aliases).
+  - Fluent configuration on `MetricFlowOptions`: `options.AddDimensionCounter(...)`, `options.AddThroughputCounter(...)`, and `options.AddMemoryCounter(...)`.
+- **Advanced Console Example**:
+  - Added multi-counter regional dimension breakdown demonstration (`region`: US, EU, APAC) and summary output to `AdvancedConsoleExample`.
+- **Automated Tests**:
+  - Comprehensive unit and concurrency tests in `DimensionCounterTests` validating dimension matching, multi-tag combinations, dynamic scope tags, computed business selectors, conditional filters, cardinality overflow protection, and multi-threaded tracking.
+
+---
+
 ## [1.0.3] - 2026-09-19
 
 ### Added

@@ -141,6 +141,55 @@ public class CustomCountersTests
     }
 
     [Fact]
+    public void CompositeTracker_ShouldTrackAllFiveCountersSimultaneously()
+    {
+        // Arrange - Register Duration (default), Memory, Exception, Throughput, and Dimension
+        var tracker = new MetricTracker("PentaCompositeTest")
+            .AddMemoryCounter()
+            .AddExceptionCounter()
+            .AddThroughputCounter()
+            .AddDimensionCounter("country");
+
+        // Act
+        using (var scope = tracker.TrackItems("PentaMetricOp", 100, new() { ["country"] = "US" }))
+        {
+            var data = new byte[1024 * 10];
+            _ = data.Length;
+        }
+
+        using (var scope = tracker.TrackItems("PentaMetricOp", 50, new() { ["country"] = "DE" }))
+        {
+            var data = new byte[1024 * 5];
+            _ = data.Length;
+        }
+
+        // Assert - All 5 counters captured data
+        var duration = tracker.GetValues("PentaMetricOp");
+        duration.Should().NotBeNull();
+        duration.InCount.Should().Be(2);
+
+        var throughput = tracker.GetThroughputValues("PentaMetricOp");
+        throughput.Should().NotBeNull();
+        throughput!.TotalItems.Should().Be(150);
+
+        var memory = tracker.GetSnapshot("PentaMetricOp", MemoryCounter.DefaultCounterName) as MemorySnapshot;
+        memory.Should().NotBeNull();
+        memory!.OperationCount.Should().Be(2);
+
+        var exceptions = tracker.GetSnapshot("PentaMetricOp", ExceptionCounter.DefaultCounterName) as ExceptionSnapshot;
+        exceptions.Should().NotBeNull();
+        exceptions!.TotalOperations.Should().Be(2);
+        exceptions.TotalFailures.Should().Be(0);
+
+        var dimensionSnapshot = tracker.GetDimensionValues("PentaMetricOp", "country");
+        dimensionSnapshot.Should().NotBeNull();
+        dimensionSnapshot!.TotalOperations.Should().Be(2);
+        dimensionSnapshot.TrackedOperations.Should().Be(2);
+        dimensionSnapshot.Breakdown["US"].Should().Be(1);
+        dimensionSnapshot.Breakdown["DE"].Should().Be(1);
+    }
+
+    [Fact]
     public void RealtimeConfigWatch_ShouldDynamicallyDisableAndEnableCounters()
     {
         // Arrange

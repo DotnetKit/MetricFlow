@@ -46,7 +46,8 @@ flowchart TD
         C2["ThroughputCounter\n(Captures: Stopwatch ticks & Items)"]
         C3["MemoryCounter\n(Captures: Allocated bytes)"]
         C4["ExceptionCounter\n(Captures: Exceptions)"]
-        C5["CustomCounter\n(Captures: Arbitrary state)"]
+        C5["DimensionCounter\n(Captures: Dimensions & cardinality)"]
+        C6["CustomCounter\n(Captures: Arbitrary state)"]
     end
 
     Call --> Scope
@@ -125,12 +126,13 @@ public interface ICounter<TState> : ICounter
 
 ## 4. Built-in Counters
 
-MetricFlow provides four built-in counters covering standard telemetry dimensions:
+MetricFlow provides five built-in counters covering standard telemetry dimensions:
 
 | Counter | Metric Dimension | `OnIn` State Token | `OnOut` Behavior | Snapshot Output |
 | :--- | :--- | :--- | :--- | :--- |
 | **`DurationCounter`** | Execution latency | `long` (Stopwatch ticks) | Calculates elapsed time; updates total, min, max, avg durations and in/out/failed counts atomically. | `DurationSnapshot` |
 | **`ThroughputCounter`** | Processing throughput & items | `long` (Stopwatch ticks) | Extracts processed items from technical metadata (`items`, `count`, `batch_size`) with tag fallback; updates total items, operations, duration, items/sec, and avg items/op atomically. | `ThroughputSnapshot` |
+| **`DimensionCounter`** | Dimension & tag distribution | `null` (0 cost on entry) | Extracts targeted business dimension, composite multi-tags, or computed lambda; aggregates counts per value; enforces cardinality ceiling via overflow bucket (`[Other]`). | `DimensionSnapshot` |
 | **`ExceptionCounter`** | Failures & errors | `null` (0 cost on entry) | Checks `Failed` and `Exception`. Categorizes by exception type in thread-safe dictionary. | `ExceptionSnapshot` |
 | **`MemoryCounter`** | Heap allocation | `MemoryTrackingToken` | Computes allocated byte delta. Automatically handles both thread-bound code and cross-thread async hops. | `MemorySnapshot` |
 
@@ -139,6 +141,15 @@ In high-volume streaming, ingestion, or batch jobs (e.g. database ETL, message q
 - **Item volume**: Extracts item counts from technical `Metadata` (`"items"`, `"count"`, `"batch_size"`) with zero string parsing, or via `tracker.TrackItems("Op", count)` and `scope.SetItems(count)`. Falls back to `Tags` for backward compatibility. Defaults to `1` when no item metadata or tag is specified.
 - **Velocity calculation**: Atomically calculates `ItemsPerSecond` (`TotalItems / TotalDuration.TotalSeconds`) and `AverageItemsPerOperation`.
 - **Zero-allocation entry**: Captures timestamp via `Stopwatch.GetTimestamp()` as a 64-bit value state token with zero heap allocations.
+
+### Dimensional Breakdown & Cardinality Safeguards (`DimensionCounter` / `TagBreakdownCounter`)
+Telemetry often requires slicing operations by business dimensions (e.g. country, tenant, order status, HTTP route). `DimensionCounter` (also aliased as `TagBreakdownCounter`):
+- **Targeted Key Focus**: Instances focus on a specific dimension key (e.g. `tracker.AddDimensionCounter("country")`), avoiding accidental indexing of unrelated data.
+- **Composite Multi-Tag Dimensions**: Combines multiple tags into unified compound keys (e.g. `["region", "payment_method"]` -> `"US / CreditCard"`).
+- **Computed Dimension Selectors**: Accepts a `Func<tags, metadata, string?>` lambda to compute dynamic business categories or conditional filters on the fly without writing custom counter classes.
+- **Bounded Cardinality**: High-cardinality values (e.g., `guid`, `order_id`) can rapidly exhaust memory in long-running applications. `DimensionCounter` enforces a configurable ceiling (`maxUniqueValues`, default `250`). Once reached, subsequent distinct values roll into an overflow bucket (`[Other]`).
+- **Zero-Allocation Entry**: State token is `null`, incurring zero cost or allocation on operation start (`OnIn`).
+- **Fallback Hierarchy**: Inspects `context.Tags` (case-insensitive), and falls back to stringified `context.Metadata` if present.
 
 ### Async-Safe Memory Tracking
 When tracking async methods (`await Task.Yield()`), continuations may resume on different thread pool threads. `MemoryCounter` addresses this by capturing both the thread ID and a process-wide baseline:
