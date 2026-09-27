@@ -6,40 +6,47 @@
 [![DotnetKit.MetricFlow.AspNetCore](https://img.shields.io/nuget/v/DotnetKit.MetricFlow.AspNetCore)](https://www.nuget.org/packages/DotnetKit.MetricFlow.AspNetCore)
 [![DotnetKit.MetricFlow.OpenTelemetry](https://img.shields.io/nuget/v/DotnetKit.MetricFlow.OpenTelemetry)](https://www.nuget.org/packages/DotnetKit.MetricFlow.OpenTelemetry)
 
-MetricFlow is a lightweight .NET library designed to help developers define and track functional and domain-oriented metrics (such as counters, timers, throughput, and dimensional breakdowns).
+MetricFlow is a lightweight .NET library designed to simplify the way developers define and track technical and business related metrics (such as counters, timers, throughput, and dimensional breakdowns).
 
 ## What Can We Do with MetricFlow?
 
 MetricFlow provides domain-oriented observability to **monitor an entire application** or surgically profile **specific portions of your code** (methods, background loops, external calls, batch jobs).
 
+It could be used to create an in-memory metrics store with support for OpenTelemetry integration.
+It can be used in both ASP.NET Core and non-ASP.NET Core applications.
+
 ### Streamlined Use Cases
 
-| Use Case | Best For | Registration Style | Primary Injections / APIs | Example Project |
-| :--- | :--- | :--- | :--- | :--- |
-| **Simple Implementation** | Targeted method/loop profiling, CLI jobs, algorithms | Standalone instantiation | `new MetricTracker(...)` | [BasicConsoleExample](examples/BasicConsoleExample) & [AdvancedConsoleExample](examples/AdvancedConsoleExample) |
-| **DI-Based Implementation** | Background workers, daemons, multi-tenant | Standard DI (`IServiceCollection`) | `IMetricTracker`, `[FromKeyedServices]`, `IMetricFlow` | [AdvancedConsoleWithDIExample](examples/AdvancedConsoleWithDIExample) |
-| **Web Implementation** | Web APIs, microservices, HTTP routing | ASP.NET Core pipeline | `app.UseMetricFlow()`, `app.MapMetricFlow("/metrics")` | [WebApiExample](examples/WebApiExample) |
-| **OpenTelemetry & Observability** | Prometheus, Grafana, Datadog, OTLP collectors, CLI counters | OpenTelemetry SDK / BCL | `.AddMetricFlowInstrumentation()`, `dotnet-counters` | [OpenTelemetryConsoleExample](examples/OpenTelemetryConsoleExample) |
+| Use Case                          | Best For                                                    | Registration Style                 | Primary Injections / APIs                              | Example Project                                                                                                 |
+| :-------------------------------- | :---------------------------------------------------------- | :--------------------------------- | :----------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------- |
+| **Simple Implementation**         | Targeted method/loop profiling, CLI jobs, algorithms        | Standalone instantiation           | `new MetricTracker(...)`                               | [BasicConsoleExample](examples/BasicConsoleExample) & [AdvancedConsoleExample](examples/AdvancedConsoleExample) |
+| **DI-Based Implementation**       | Background workers, daemons, multi-tenant                   | Standard DI (`IServiceCollection`) | `IMetricTracker`, `[FromKeyedServices]`, `IMetricFlow` | [AdvancedConsoleWithDIExample](examples/AdvancedConsoleWithDIExample)                                           |
+| **Web Implementation**            | Web APIs, microservices, HTTP routing                       | ASP.NET Core pipeline              | `app.UseMetricFlow()`, `app.MapMetricFlow("/metrics")` | [WebApiExample](examples/WebApiExample)                                                                         |
+| **OpenTelemetry & Observability** | Prometheus, Grafana, Datadog, OTLP collectors, CLI counters | OpenTelemetry SDK / BCL            | `.AddMetricFlowInstrumentation()`, `dotnet-counters`   | [OpenTelemetryConsoleExample](examples/OpenTelemetryConsoleExample)                                             |
 
 #### 1. Targeted Code Profiling & Standalone Tracking (Simple Implementation)
+
 - **Goal**: Monitor a specific block of code, method, or CLI task with zero ceremony and no DI container.
 - **When to use**: Quick diagnostics, utility tools, benchmarks, batch scripts, and targeted algorithms.
 - **Key capabilities**: Lightweight `using (tracker.Track("Task"))` or `tracker.TrackAction(...)` measuring duration, memory allocations, throughput, and error rates.
 - **Example Projects**: [BasicConsoleExample](examples/BasicConsoleExample) & [AdvancedConsoleExample](examples/AdvancedConsoleExample)
 
 #### 2. Background Daemons, Workers & Multi-Topic Services (DI-Based Implementation)
+
 - **Goal**: Monitor long-running processes, message queues, and modular services through standard Microsoft DI.
 - **When to use**: Worker Services, hosted daemons (`IHostedService`), background consumers, and microservices requiring topic isolation.
 - **Key capabilities**: `services.AddMetricFlow()`, `options.AddTagsEnricher`, multi-topic fluent builder (`AddMetricTracker`), and native keyed resolution (`[FromKeyedServices("topic")] IMetricTracker`).
 - **Example Project**: [AdvancedConsoleWithDIExample](examples/AdvancedConsoleWithDIExample)
 
 #### 3. Full HTTP Request Pipeline & Health Monitoring (Web Implementation)
+
 - **Goal**: Automatically observe incoming HTTP traffic, endpoint performance, and status codes in web APIs.
 - **When to use**: REST APIs, Minimal APIs, and web apps needing route-level latency distributions and a standardized telemetry endpoint.
 - **Key capabilities**: Turnkey middleware (`app.UseMetricFlow()`), dynamic route resolution, HTTP request tag enrichment (`AddHttpTagsEnricher`), and exposed diagnostic route (`app.MapMetricFlow("/metrics")`).
 - **Example Project**: [WebApiExample](examples/WebApiExample)
 
 #### 4. OpenTelemetry & Cloud Telemetry Ecosystem (Observability Implementation)
+
 - **Goal**: Seamlessly export domain metrics and scoped tracking to Prometheus, Grafana, Datadog, AWS CloudWatch, and Azure Monitor via OpenTelemetry or inspect live in the terminal using `dotnet-counters`.
 - **When to use**: Microservices connected to centralized APM systems, cloud platforms, and local CLI diagnostics.
 - **Key capabilities**: Turnkey `.AddMetricFlowInstrumentation()`, BCL `System.Diagnostics.Metrics` bridge (`Histogram`, `Counter`, `UpDownCounter`), automatic tag cardinality sanitization, and ambient trace correlation (`trace_id`, `span_id`).
@@ -140,6 +147,7 @@ Console.WriteLine(tracker.ToString());
 ```
 
 **Output:**
+
 ```text
 BasicConsoleTopic
 Topic Tags:  environment:Development
@@ -359,7 +367,7 @@ services.AddMetricFlow("Billing", options => options.AddThroughputCounter())
             metrics.AddOtlpExporter()
                    .AddPrometheusExporter();
         });
-        
+
         otel.WithTracing();
     });
 ```
@@ -367,15 +375,17 @@ services.AddMetricFlow("Billing", options => options.AddThroughputCounter())
 You can also use `.AddMetricFlowInstrumentation()` directly on an existing `MeterProviderBuilder`:
 
 ##### Standard BCL Instruments Mapped
-| MetricFlow Concept | Instrument Type | Metric Name | Unit | Tags / Attributes |
-|---|---|---|---|---|
-| **DurationCounter** | `Histogram<double>` | `{metricName}.duration` | `ms` | `operation`, `status` ("ok"/"error"), sanitized tags |
-| **Execution Counts** | `Counter<long>` | `{metricName}.total` | `{operations}` | `operation`, `status` ("ok"/"error"), sanitized tags |
-| **Throughput / Items**| `Counter<long>` | `{metricName}.items` | `{items}` | `operation`, sanitized tags |
-| **ExceptionCounter** | `Counter<long>` | `{metricName}.exceptions` | `{exceptions}` | `operation`, `exception.type`, sanitized tags |
-| **In-Flight / Concurrency** | `UpDownCounter<long>` | `{metricName}.active` | `{operations}` | `operation`, sanitized tags |
+
+| MetricFlow Concept          | Instrument Type       | Metric Name               | Unit           | Tags / Attributes                                    |
+| --------------------------- | --------------------- | ------------------------- | -------------- | ---------------------------------------------------- |
+| **DurationCounter**         | `Histogram<double>`   | `{metricName}.duration`   | `ms`           | `operation`, `status` ("ok"/"error"), sanitized tags |
+| **Execution Counts**        | `Counter<long>`       | `{metricName}.total`      | `{operations}` | `operation`, `status` ("ok"/"error"), sanitized tags |
+| **Throughput / Items**      | `Counter<long>`       | `{metricName}.items`      | `{items}`      | `operation`, sanitized tags                          |
+| **ExceptionCounter**        | `Counter<long>`       | `{metricName}.exceptions` | `{exceptions}` | `operation`, `exception.type`, sanitized tags        |
+| **In-Flight / Concurrency** | `UpDownCounter<long>` | `{metricName}.active`     | `{operations}` | `operation`, sanitized tags                          |
 
 ##### Ambient Distributed Tracing Correlation
+
 Enrich scope tags with the ambient OpenTelemetry `Activity.Current` trace and span IDs:
 
 ```csharp
@@ -399,6 +409,34 @@ dotnet-counters monitor -p <PID> --counters DotnetKit.MetricFlow.OrderProcessing
 # Or monitor across all MetricFlow topics
 dotnet-counters monitor -p <PID> --counters DotnetKit.MetricFlow
 ```
+
+---
+
+### Under the Hood: System.Diagnostics Bridge
+
+MetricFlow connects domain tracking with the .NET runtime using a lightweight, built-in bridge to the standard BCL `System.Diagnostics.Metrics` APIs:
+
+- **Decoupled, Zero-Dependency Core**:
+  - The core `DotnetKit.MetricFlow` library has **no external dependency on the OpenTelemetry SDK**.
+  - It creates standard BCL `System.Diagnostics.Metrics.Meter` instances per topic via `IMetricMeterBridge` and `MetricFlowMeterRegistry`.
+  - External exporters (Prometheus, OTLP, Datadog) or the `DotnetKit.MetricFlow.OpenTelemetry` package plug into these native .NET meters without requiring custom adapters.
+
+- **Hot-Path Lifecycle Dispatch**:
+  - **Operation Start (`In`)**: Atomically increments an in-flight concurrency gauge (`UpDownCounter<long>` named `{metricName}.active`).
+  - **Operation Completion (`Out` / `Dispose`)**:
+    - Records latency in milliseconds into a `Histogram<double>` (`{metricName}.duration`).
+    - Increments the total execution count (`Counter<long>` named `{metricName}.total`) tagged with operation status (`"ok"` or `"error"`).
+    - If items/records were processed (via `TrackItems` or `scope.SetItems`), records batch volume into a `Counter<long>` (`{metricName}.items`).
+    - If an exception was thrown, records the error into a `Counter<long>` (`{metricName}.exceptions`) with the `exception.type` attribute.
+    - Decrements the in-flight concurrency gauge.
+
+- **Tag Cardinality Guard (`TagCardinalityGuard`)**:
+  - High-cardinality tags (such as user IDs or order numbers) can quickly cause metric explosion and memory leaks in downstream time-series databases.
+  - The bridge tracks distinct values per tag key and clamps any values exceeding `MaxUniqueTagValues` (default `100`, configurable via `options.ConfigureMeters(...)`) into a safe fallback bucket (`[Other]`).
+
+- **Dual-Mode Telemetry**:
+  - **Streaming BCL Metrics**: Emitted immediately to any registered `MeterListener`, `dotnet-counters`, or OpenTelemetry `MeterProvider`.
+  - **Aggregated Local Snapshots**: Maintained concurrently in memory for local logging, diagnostics, health checks, or the `/metrics` endpoint (`tracker.ToString()`).
 
 ---
 
