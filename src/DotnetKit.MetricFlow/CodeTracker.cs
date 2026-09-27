@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using DotnetKit.MetricFlow.Abstractions;
+using DotnetKit.MetricFlow.Meters;
 
 namespace DotnetKit.MetricFlow;
 
@@ -11,6 +12,8 @@ public class CodeTracker : IDisposable
     private Dictionary<string, string>? _tags;
     private Dictionary<string, long>? _metadata;
     private readonly long _startTimestamp;
+    private readonly IMetricMeterBridge? _meterBridge;
+    private readonly TagList? _inFlightTagList;
 
     private bool _failed;
     private Exception? _exception;
@@ -23,6 +26,16 @@ public class CodeTracker : IDisposable
         string metricName,
         Dictionary<string, string>? tags = null,
         Dictionary<string, long>? metadata = null)
+        : this(counters, metricName, tags, metadata, meterBridge: null)
+    {
+    }
+
+    public CodeTracker(
+        ICounter[] counters,
+        string metricName,
+        Dictionary<string, string>? tags = null,
+        Dictionary<string, long>? metadata = null,
+        IMetricMeterBridge? meterBridge = null)
     {
         _counters = counters;
         _metricName = metricName;
@@ -30,6 +43,7 @@ public class CodeTracker : IDisposable
         _metadata = metadata != null ? new Dictionary<string, long>(metadata) : null;
         _startTimestamp = Stopwatch.GetTimestamp();
         _states = new object?[counters.Length];
+        _meterBridge = meterBridge;
 
         var inContext = new InContext(metricName, _tags, _metadata);
         for (int i = 0; i < counters.Length; i++)
@@ -38,6 +52,11 @@ public class CodeTracker : IDisposable
             {
                 _states[i] = counters[i].OnIn(in inContext);
             }
+        }
+
+        if (_meterBridge != null && _meterBridge.IsEnabled)
+        {
+            _inFlightTagList = _meterBridge.RecordOperationIn(_metricName, _tags, _metadata);
         }
     }
 
@@ -86,6 +105,11 @@ public class CodeTracker : IDisposable
 
         if (disposing)
         {
+            if (_inFlightTagList.HasValue)
+            {
+                _meterBridge?.RecordOperationInFlightEnd(_metricName, _inFlightTagList.Value);
+            }
+
             var duration = Stopwatch.GetElapsedTime(_startTimestamp);
             var outContext = new OutContext(_metricName, _failed, _exception, duration, _tags, _metadata);
 
@@ -96,6 +120,8 @@ public class CodeTracker : IDisposable
                     _counters[i].OnOut(_states[i], in outContext);
                 }
             }
+
+            _meterBridge?.RecordOperationOut(_metricName, duration, _failed, _exception, _tags, _metadata);
         }
     }
 

@@ -44,6 +44,34 @@ public class MetricFlowOptions
         => AddTagsEnricher(enricher);
 
     /// <summary>
+    /// Configuration options for System.Diagnostics.Metrics instrumentation.
+    /// </summary>
+    public MetricFlowMeterOptions MeterOptions { get; set; } = new();
+
+    /// <summary>
+    /// Configures the System.Diagnostics.Metrics meter options.
+    /// </summary>
+    /// <param name="configure">The configuration delegate.</param>
+    /// <returns>This options instance for fluent chaining.</returns>
+    public MetricFlowOptions ConfigureMeters(Action<MetricFlowMeterOptions> configure)
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+        configure(MeterOptions);
+        return this;
+    }
+
+    /// <summary>
+    /// Enables or disables System.Diagnostics.Metrics meter emission.
+    /// </summary>
+    /// <param name="enabled">Whether meter emission is enabled.</param>
+    /// <returns>This options instance for fluent chaining.</returns>
+    public MetricFlowOptions EnableMeters(bool enabled = true)
+    {
+        MeterOptions.Enabled = enabled;
+        return this;
+    }
+
+    /// <summary>
     /// Sampling rate between 0.0 and 1.0 (or null to track 100%). Defaults to 1.0.
     /// </summary>
     public double? SamplingRate { get; set; } = 1.0;

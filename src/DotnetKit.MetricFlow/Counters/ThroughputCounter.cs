@@ -29,59 +29,13 @@ public class ThroughputCounter(string name = ThroughputCounter.DefaultCounterNam
         var throughputState = _states.GetOrAdd(context.MetricName, static name => new MetricThroughputState(name));
 
         long items = 1;
-        if (context.Metadata != null && TryExtractItemCountFromMetadata(context.Metadata, out var parsedItems))
-        {
-            items = parsedItems;
-        }
-        else if (context.Tags != null && TryExtractItemCountFromTags(context.Tags, out parsedItems))
+        if (ItemCountExtractor.TryExtractItemCount(context.Tags, context.Metadata, out var parsedItems))
         {
             items = parsedItems;
         }
 
         TimeSpan duration = context.Duration ?? (state > 0 ? Stopwatch.GetElapsedTime(state) : TimeSpan.Zero);
         throughputState.Record(items, duration, context.Failed);
-    }
-
-    private static bool TryExtractItemCountFromMetadata(IReadOnlyDictionary<string, long> metadata, out long items)
-    {
-        if (metadata.TryGetValue("items", out items)) return true;
-        if (metadata.TryGetValue("count", out items)) return true;
-        if (metadata.TryGetValue("batch_size", out items)) return true;
-
-        foreach (var (key, value) in metadata)
-        {
-            if (string.Equals(key, "items", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(key, "count", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(key, "batch_size", StringComparison.OrdinalIgnoreCase))
-            {
-                items = value;
-                return true;
-            }
-        }
-
-        items = 1;
-        return false;
-    }
-
-    private static bool TryExtractItemCountFromTags(IReadOnlyDictionary<string, string> tags, out long items)
-    {
-        if (tags.TryGetValue("items", out var itemsStr) && long.TryParse(itemsStr, out items)) return true;
-        if (tags.TryGetValue("count", out var countStr) && long.TryParse(countStr, out items)) return true;
-        if (tags.TryGetValue("batch_size", out var batchStr) && long.TryParse(batchStr, out items)) return true;
-
-        // Fallback: search case-insensitively if the dictionary does not use OrdinalIgnoreCase
-        foreach (var (key, value) in tags)
-        {
-            if (string.Equals(key, "items", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(key, "count", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(key, "batch_size", StringComparison.OrdinalIgnoreCase))
-            {
-                if (long.TryParse(value, out items)) return true;
-            }
-        }
-
-        items = 1;
-        return false;
     }
 
     public override IMetricSnapshot? GetSnapshot(string metricName)

@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.51] - 2026-09-27
+
+### Added
+
+- **Core `System.Diagnostics.Metrics` Bridge (`IMetricMeterBridge` & `MetricFlowMeterBridge`)**:
+  - Direct integration with .NET Base Class Library (`System.Diagnostics.Metrics.Meter`) exposing standard instruments.
+  - Duration Histogram (`{metricName}.duration` in milliseconds) capturing execution timings with `status` ("ok"/"error") and sanitized tags.
+  - Operation Counter (`{metricName}.total` with `{operations}` unit) tracking execution volumes.
+  - Throughput / Items Counter (`{metricName}.items` with `{items}` unit) tracking batch and processed items.
+  - Exception Counter (`{metricName}.exceptions`) tracking failures with `exception.type`.
+  - In-Flight Concurrency Counter (`{metricName}.active` `UpDownCounter<long>`) incrementing on operation start and decrementing on completion with matching tag lists.
+- **Cardinality Protection & Sanitization (`TagCardinalityGuard`)**:
+  - Automatic thread-safe cardinality enforcement preventing unbounded memory growth in metric exporters.
+  - Enforces `MaxUniqueTagValues` per tag key (defaults to 250), rolling distinct values exceeding thresholds into `[Other]`.
+  - Configurable per-tag cardinality limits (`TagCardinalityLimits`).
+- **Meter Options & Multi-Topic Registry (`MetricFlowMeterOptions` & `MetricFlowMeterRegistry`)**:
+  - Fluent configuration on `MetricFlowOptions`: `options.ConfigureMeters(...)` and `options.EnableMeters(...)`.
+  - Configurable `MeterPrefix` (defaults to `"DotnetKit.MetricFlow"`), producing meters named `DotnetKit.MetricFlow.{Topic}`.
+  - Support for both `PerMetricName` (default) and `SharedOperation` naming conventions.
+  - Registered `MetricFlowMeterRegistry` in Microsoft DI, automatically injecting topic-scoped meter bridges into keyed and default trackers.
+- **Lifecycle & Resource Cleanup**:
+  - `IDisposable` support on `MetricTrackerBase`, `MetricTracker`, `MetricFlowRegistry`, and `IMetricMeterBridge` to ensure clean disposal of `Meter` instances on application shutdown.
+- **OpenTelemetry Integration Package (`DotnetKit.MetricFlow.OpenTelemetry`)**:
+  - New dedicated integration library providing fluent `.AddMetricFlowInstrumentation(...)` extensions for OpenTelemetry `MeterProviderBuilder`.
+  - Automated subscription to MetricFlow meters by pattern (`DotnetKit.MetricFlow.*`) or explicit topic lists.
+  - Seamless export to any OpenTelemetry-compatible collector (Prometheus, OTLP, Grafana, Datadog, AWS CloudWatch, Azure Monitor).
+  - Distributed tracing correlation via `WithTraceContext()` attaching `trace_id` and `span_id` to metrics, and `AddMetricFlowInstrumentation()` on `TracerProviderBuilder`.
+  - Comprehensive integration test suite (`MetricFlow.OpenTelemetry.Tests`) with in-memory reader validating export of duration, execution totals, items throughput, and trace correlation.
+- **Automated Tests**:
+  - Comprehensive unit and integration tests using `MeterListener` in `MetricMeterBridgeTests` and in-memory OpenTelemetry reader in `MetricFlow.OpenTelemetry.Tests`.
+
+---
+
 ## [1.0.5] - 2026-09-27
 
 ### Added

@@ -6,7 +6,7 @@ namespace DotnetKit.MetricFlow;
 /// <summary>
 /// Central registry managing all metric trackers across topics.
 /// </summary>
-public class MetricFlowRegistry : IMetricFlow
+public class MetricFlowRegistry : IMetricFlow, IDisposable
 {
     private readonly ConcurrentDictionary<string, IMetricTracker> _trackers = new(StringComparer.OrdinalIgnoreCase);
     private readonly Func<string, IMetricTracker>? _trackerFactory;
@@ -110,5 +110,20 @@ public class MetricFlowRegistry : IMetricFlow
         {
             _defaultTracker = tracker;
         }
+    }
+
+    /// <summary>
+    /// Disposes all registered metric trackers that implement IDisposable.
+    /// </summary>
+    public void Dispose()
+    {
+        foreach (var tracker in _trackers.Values)
+        {
+            if (tracker is IDisposable disposable)
+            {
+                disposable.Dispose();
+            }
+        }
+        _trackers.Clear();
     }
 }

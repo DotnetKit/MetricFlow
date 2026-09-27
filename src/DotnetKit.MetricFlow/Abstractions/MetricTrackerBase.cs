@@ -1,13 +1,15 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Diagnostics.Metrics;
 using System.Runtime.CompilerServices;
 using System.Text;
 using DotnetKit.MetricFlow.Configuration;
 using DotnetKit.MetricFlow.Extensions;
+using DotnetKit.MetricFlow.Meters;
 
 namespace DotnetKit.MetricFlow.Abstractions;
 
-public abstract class MetricTrackerBase : IMetricTracker
+public abstract class MetricTrackerBase : IMetricTracker, IDisposable
 {
     private readonly ConcurrentDictionary<string, ICounter> _counters = new(StringComparer.OrdinalIgnoreCase);
     private volatile ICounter[] _activeCounters = [];
@@ -18,19 +20,32 @@ public abstract class MetricTrackerBase : IMetricTracker
     private readonly string _topic;
     private readonly Dictionary<string, string>? _topicTags;
     private readonly double? _samplingRate;
+    private readonly IMetricMeterBridge? _meterBridge;
 
     public string Topic => _topic;
-    public Dictionary<string, string>? TopicTags => _topicTags; 
+    public Dictionary<string, string>? TopicTags => _topicTags;
+    public IMetricMeterBridge? MeterBridge => _meterBridge;
 
     protected MetricTrackerBase(
         string topic,
         Dictionary<string, string>? topicTags = null,
         double? samplingRate = 1.0,
         ICounterConfigObservable? configObservable = null)
+        : this(topic, topicTags, samplingRate, configObservable, meterBridge: null)
+    {
+    }
+
+    protected MetricTrackerBase(
+        string topic,
+        Dictionary<string, string>? topicTags,
+        double? samplingRate,
+        ICounterConfigObservable? configObservable,
+        IMetricMeterBridge? meterBridge)
     {
         _topic = topic;
         _topicTags = topicTags;
         _samplingRate = samplingRate;
+        _meterBridge = meterBridge ?? new MetricFlowMeterBridge(topic, topicTags, new MetricFlowMeterOptions());
 
         configObservable?.Subscribe(OnCounterConfigChanged);
     }
@@ -78,12 +93,12 @@ public abstract class MetricTrackerBase : IMetricTracker
         }
 
         var active = _activeCounters;
-        if (active.Length == 0)
+        if (active.Length == 0 && (_meterBridge == null || !_meterBridge.IsEnabled))
         {
             return NoOpDisposable.Instance;
         }
 
-        return new CodeTracker(active, metricName, tags, metadata);
+        return new CodeTracker(active, metricName, tags, metadata, _meterBridge);
     }
 
     public IDisposable Track(Dictionary<string, string>? tags = null, Dictionary<string, long>? metadata = null, [CallerMemberName] string metricName = "")
@@ -106,7 +121,13 @@ public abstract class MetricTrackerBase : IMetricTracker
             states[i] = active[i].OnIn(in inContext);
         }
 
-        RecordInOperation(metricName, new InOperationState(Stopwatch.GetTimestamp(), active, states));
+        TagList? inFlightTags = null;
+        if (_meterBridge != null && _meterBridge.IsEnabled)
+        {
+            inFlightTags = _meterBridge.RecordOperationIn(metricName, tags, metadata);
+        }
+
+        RecordInOperation(metricName, new InOperationState(Stopwatch.GetTimestamp(), active, states, inFlightTags));
     }
 
     public void In(Dictionary<string, string>? tags = null, Dictionary<string, long>? metadata = null, [CallerMemberName] string metricName = "")
@@ -132,6 +153,11 @@ public abstract class MetricTrackerBase : IMetricTracker
             duration = Stopwatch.GetElapsedTime(opState.StartTimestamp);
         }
 
+        if (opState?.InFlightTags.HasValue == true)
+        {
+            _meterBridge?.RecordOperationInFlightEnd(metricName, opState.InFlightTags.Value);
+        }
+
         var outContext = new OutContext(metricName, failed, exception, duration, tags, metadata);
 
         if (opState != null)
@@ -155,6 +181,12 @@ public abstract class MetricTrackerBase : IMetricTracker
                     active[i].OnOut(null, in outContext);
                 }
             }
+        }
+
+        if (_meterBridge != null && _meterBridge.IsEnabled)
+        {
+            var opDuration = duration ?? TimeSpan.Zero;
+            _meterBridge.RecordOperationOut(metricName, opDuration, failed, exception, tags, metadata);
         }
     }
 
@@ -200,6 +232,21 @@ public abstract class MetricTrackerBase : IMetricTracker
         foreach (var counter in _counters.Values)
         {
             counter.Reset();
+        }
+        _meterBridge?.Reset();
+    }
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            _meterBridge?.Dispose();
         }
     }
 
@@ -299,11 +346,12 @@ public abstract class MetricTrackerBase : IMetricTracker
         return false;
     }
 
-    private sealed class InOperationState(long startTimestamp, ICounter[] counters, object?[] states)
+    private sealed class InOperationState(long startTimestamp, ICounter[] counters, object?[] states, TagList? inFlightTags)
     {
         public long StartTimestamp => startTimestamp;
         public ICounter[] Counters => counters;
         public object?[] States => states;
+        public TagList? InFlightTags => inFlightTags;
     }
 
     private sealed class NoOpDisposable : IDisposable
