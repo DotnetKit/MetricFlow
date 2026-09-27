@@ -425,6 +425,67 @@ public class MetricFlowMiddlewareTests
         snapshot.OutCount.Should().Be(1);
         snapshot.FailedCount.Should().Be(0);
     }
+
+    [Fact]
+    public async Task Middleware_ShouldSupportAddHttpTagsEnricher_WithMultipleChainedEnrichers()
+    {
+        // Arrange
+        Dictionary<string, string>? capturedTags = null;
+
+        using var host = await new HostBuilder()
+            .ConfigureWebHost(webBuilder =>
+            {
+                webBuilder
+                    .UseTestServer()
+                    .ConfigureServices(services =>
+                    {
+                        services.AddRouting();
+                        services.AddMetricFlow("TestApi", options =>
+                        {
+                            options
+                                .AddHttpTagsEnricher((tags, ctx) =>
+                                {
+                                    if (ctx.Request.Headers.TryGetValue("X-Tenant-ID", out var tenantId))
+                                    {
+                                        tags["tenant_id"] = tenantId!;
+                                    }
+                                })
+                                .AddHttpTagsEnricher((tags, ctx) =>
+                                {
+                                    if (ctx.Request.Headers.TryGetValue("X-Client-Ver", out var ver))
+                                    {
+                                        tags["client_version"] = ver!;
+                                    }
+                                    capturedTags = new Dictionary<string, string>(tags);
+                                });
+                        });
+                    })
+                    .Configure(app =>
+                    {
+                        app.UseRouting();
+                        app.UseMetricFlow();
+                        app.UseEndpoints(endpoints =>
+                        {
+                            endpoints.MapGet("/enriched-endpoint", () => "ok");
+                        });
+                    });
+            })
+            .StartAsync();
+
+        var client = host.GetTestClient();
+        var request = new HttpRequestMessage(HttpMethod.Get, "/enriched-endpoint");
+        request.Headers.Add("X-Tenant-ID", "tenant-42");
+        request.Headers.Add("X-Client-Ver", "2.1.0");
+
+        // Act
+        var response = await client.SendAsync(request);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        capturedTags.Should().NotBeNull();
+        capturedTags.Should().ContainKey("tenant_id").WhoseValue.Should().Be("tenant-42");
+        capturedTags.Should().ContainKey("client_version").WhoseValue.Should().Be("2.1.0");
+    }
 }
 
 [Microsoft.AspNetCore.Mvc.ApiController]

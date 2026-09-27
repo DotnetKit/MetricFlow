@@ -20,6 +20,30 @@ public class MetricFlowOptions
     public Dictionary<string, string>? TopicTags { get; set; }
 
     /// <summary>
+    /// Adds a tag enrichment delegate to configure topic-level tags.
+    /// Supports fluent chaining and multiple enrichers.
+    /// </summary>
+    /// <param name="enricher">The tag enricher action.</param>
+    /// <returns>This options instance for fluent chaining.</returns>
+    public MetricFlowOptions AddTagsEnricher(Action<Dictionary<string, string>> enricher)
+    {
+        ArgumentNullException.ThrowIfNull(enricher);
+
+        TopicTags ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        enricher(TopicTags);
+
+        return this;
+    }
+
+    /// <summary>
+    /// Adds a tag enrichment delegate (alias for <see cref="AddTagsEnricher"/>).
+    /// </summary>
+    /// <param name="enricher">The tag enricher action.</param>
+    /// <returns>This options instance for fluent chaining.</returns>
+    public MetricFlowOptions AddTagEnricher(Action<Dictionary<string, string>> enricher)
+        => AddTagsEnricher(enricher);
+
+    /// <summary>
     /// Sampling rate between 0.0 and 1.0 (or null to track 100%). Defaults to 1.0.
     /// </summary>
     public double? SamplingRate { get; set; } = 1.0;
@@ -34,6 +58,17 @@ public class MetricFlowOptions
     /// Defaults to true.
     /// </summary>
     public bool AutoAddExceptionCounter { get; set; } = true;
+
+    /// <summary>
+    /// Configures whether to automatically register an exception counter on the tracker.
+    /// </summary>
+    /// <param name="enabled">Whether to automatically register an exception counter. Defaults to true.</param>
+    /// <returns>The options instance for chaining.</returns>
+    public MetricFlowOptions AddExceptionCounter(bool enabled = true)
+    {
+        AutoAddExceptionCounter = enabled;
+        return this;
+    }
 
     /// <summary>
     /// Additional counters to register with the tracker.
