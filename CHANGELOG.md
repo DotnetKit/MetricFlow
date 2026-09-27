@@ -21,6 +21,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Keyed Services & Dedicated Tracker Registration**:
   - Direct keyed dependency injection support in .NET 8+ via `[FromKeyedServices(topic)] IMetricTracker`.
   - Standalone `services.AddMetricFlowTracker(topic, configure)` extension for modular architectures.
+- **Tag Enrichment Helpers (`AddTagsEnricher` & `AddHttpTagsEnricher`)**:
+  - Fluent helper `options.AddTagsEnricher((tags) => ...)` on `MetricFlowOptions` for configuring topic-level tags across console, daemon, and worker services.
+  - Fluent helper `options.AddHttpTagsEnricher((tags, context) => ...)` on `MetricFlowAspNetCoreOptions` with delegate chaining support for multiple HTTP request enrichers.
+- **Advanced Console with DI Example (`AdvancedConsoleWithDIExample`)**:
+  - Added new console example project demonstrating standard Microsoft DI integration, fluent multi-topic registration, `AddTagsEnricher`, keyed service resolution (`[FromKeyedServices]`), worker pipelines, and top-level `IMetricFlow` telemetry queries.
 
 ---
 

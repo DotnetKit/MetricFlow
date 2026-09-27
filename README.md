@@ -5,7 +5,39 @@
 [![DotnetKit.MetricFlow](https://img.shields.io/nuget/v/DotnetKit.MetricFlow)](https://www.nuget.org/packages/DotnetKit.MetricFlow)
 [![DotnetKit.MetricFlow.AspNetCore](https://img.shields.io/nuget/v/DotnetKit.MetricFlow.AspNetCore)](https://www.nuget.org/packages/DotnetKit.MetricFlow.AspNetCore)
 
-MetricFlow is a lightweight .NET library designed to help developers define and track functional and domain-oriented metrics (such as counters, timers, and event-based measurements).
+MetricFlow is a lightweight .NET library designed to help developers define and track functional and domain-oriented metrics (such as counters, timers, throughput, and dimensional breakdowns).
+
+## What Can We Do with MetricFlow?
+
+MetricFlow provides domain-oriented observability to **monitor an entire application** or surgically profile **specific portions of your code** (methods, background loops, external calls, batch jobs).
+
+### Streamlined Use Cases
+
+| Use Case | Best For | Registration Style | Primary Injections / APIs | Example Project |
+| :--- | :--- | :--- | :--- | :--- |
+| **Simple Implementation** | Targeted method/loop profiling, CLI jobs, algorithms | Standalone instantiation | `new MetricTracker(...)` | [BasicConsoleExample](examples/BasicConsoleExample) & [AdvancedConsoleExample](examples/AdvancedConsoleExample) |
+| **DI-Based Implementation** | Background workers, daemons, multi-tenant | Standard DI (`IServiceCollection`) | `IMetricTracker`, `[FromKeyedServices]`, `IMetricFlow` | [AdvancedConsoleWithDIExample](examples/AdvancedConsoleWithDIExample) |
+| **Web Implementation** | Web APIs, microservices, HTTP routing | ASP.NET Core pipeline | `app.UseMetricFlow()`, `app.MapMetricFlow("/metrics")` | [WebApiExample](examples/WebApiExample) |
+
+#### 1. Targeted Code Profiling & Standalone Tracking (Simple Implementation)
+- **Goal**: Monitor a specific block of code, method, or CLI task with zero ceremony and no DI container.
+- **When to use**: Quick diagnostics, utility tools, benchmarks, batch scripts, and targeted algorithms.
+- **Key capabilities**: Lightweight `using (tracker.Track("Task"))` or `tracker.TrackAction(...)` measuring duration, memory allocations, throughput, and error rates.
+- **Example Projects**: [BasicConsoleExample](examples/BasicConsoleExample) & [AdvancedConsoleExample](examples/AdvancedConsoleExample)
+
+#### 2. Background Daemons, Workers & Multi-Topic Services (DI-Based Implementation)
+- **Goal**: Monitor long-running processes, message queues, and modular services through standard Microsoft DI.
+- **When to use**: Worker Services, hosted daemons (`IHostedService`), background consumers, and microservices requiring topic isolation.
+- **Key capabilities**: `services.AddMetricFlow()`, `options.AddTagsEnricher`, multi-topic fluent builder (`AddMetricTracker`), and native keyed resolution (`[FromKeyedServices("topic")] IMetricTracker`).
+- **Example Project**: [AdvancedConsoleWithDIExample](examples/AdvancedConsoleWithDIExample)
+
+#### 3. Full HTTP Request Pipeline & Health Monitoring (Web Implementation)
+- **Goal**: Automatically observe incoming HTTP traffic, endpoint performance, and status codes in web APIs.
+- **When to use**: REST APIs, Minimal APIs, and web apps needing route-level latency distributions and a standardized telemetry endpoint.
+- **Key capabilities**: Turnkey middleware (`app.UseMetricFlow()`), dynamic route resolution, HTTP request tag enrichment (`AddHttpTagsEnricher`), and exposed diagnostic route (`app.MapMetricFlow("/metrics")`).
+- **Example Project**: [WebApiExample](examples/WebApiExample)
+
+---
 
 ## Features
 
@@ -219,7 +251,10 @@ using DotnetKit.MetricFlow;
 services.AddMetricFlow("WorkerDaemon", options =>
 {
     options.SamplingRate = 1.0;
-    options.TopicTags = new() { ["env"] = "Production" };
+    options.AddTagsEnricher(tags =>
+    {
+        tags["env"] = "Production";
+    });
 });
 
 // Inject IMetricTracker or MetricTracker anywhere in your application
@@ -297,6 +332,7 @@ app.Run();
 
 - **[BasicConsoleExample](examples/BasicConsoleExample)**: Simplest implementation demonstrating minimal tracker setup and duration measurement with zero optional counters.
 - **[AdvancedConsoleExample](examples/AdvancedConsoleExample)**: Full multi-counter demonstration including duration, throughput (items/sec and batch sizing), memory allocation, exceptions, and delegate tracking.
+- **[AdvancedConsoleWithDIExample](examples/AdvancedConsoleWithDIExample)**: Standard Microsoft DI integration demonstrating fluent builder (`AddMetricTracker`), `AddTagsEnricher`, multi-topic tracking, keyed services (`[FromKeyedServices]`), worker pipelines, and programmatic telemetry queries.
 - **[WebApiExample](examples/WebApiExample)**: Demonstrates ASP.NET Core integration, middleware, and `/metrics` endpoint.
 - **[CustomCounters](examples/CustomCounters)**: Demonstrates extension capabilities by implementing custom counters and trackers.
 
@@ -308,6 +344,9 @@ dotnet run --project examples/BasicConsoleExample
 
 # Multi-counter console example (advanced: duration, throughput, memory, exceptions)
 dotnet run --project examples/AdvancedConsoleExample
+
+# Dependency injection console example (DI, AddTagsEnricher, keyed services)
+dotnet run --project examples/AdvancedConsoleWithDIExample
 
 # ASP.NET Core Web API example
 dotnet run --project examples/WebApiExample

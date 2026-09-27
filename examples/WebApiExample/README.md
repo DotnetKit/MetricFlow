@@ -35,13 +35,13 @@ Using the fluent builder pattern based on `IFluentBuilder<IServiceCollection>`, 
 builder.Services.AddMetricFlow("WebApiExample", options =>
 {
     // Custom tag enrichment from request headers
-    options.EnrichTags = (tags, context) =>
+    options.AddHttpTagsEnricher((tags, context) =>
     {
         if (context.Request.Headers.TryGetValue("X-Tenant-ID", out var tenantId))
         {
             tags["tenant_id"] = tenantId!;
         }
-    };
+    });
 })
 .AddMetricTracker("WeatherRadar", options =>
 {
@@ -172,13 +172,13 @@ To prevent high-cardinality memory leaks from unbounded tag values, MetricFlow h
    builder.Services.AddMetricFlow("WebApiExample", options =>
    {
        // 1. Enrich tags from HTTP headers in middleware
-       options.EnrichTags = (tags, context) =>
+       options.AddHttpTagsEnricher((tags, context) =>
        {
            if (context.Request.Headers.TryGetValue("X-Tenant-ID", out var tenantId))
            {
                tags["tenant_id"] = tenantId!;
            }
-       };
+       });
 
        // 2. Break down snapshots by tenant_id (from middleware)
        options.AddTagBreakdownCounter("tenant_id");
@@ -243,13 +243,13 @@ builder.Services.AddSwaggerGen();
 // Register MetricFlow with custom tag enrichment and additional topic tracker via fluent builder
 builder.Services.AddMetricFlow("WebApiExample", options =>
 {
-    options.EnrichTags = (tags, context) =>
+    options.AddHttpTagsEnricher((tags, context) =>
     {
         if (context.Request.Headers.TryGetValue("X-Tenant-ID", out var tenantId))
         {
             tags["tenant_id"] = tenantId!;
         }
-    };
+    });
 })
 .AddMetricTracker("WeatherRadar");
 

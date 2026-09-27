@@ -1,4 +1,4 @@
-
+﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.5.2.0
@@ -22,6 +22,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MetricFlow.AspNetCore.Tests", "tests\MetricFlow.AspNetCore.Tests\MetricFlow.AspNetCore.Tests.csproj", "{F79A0AC5-F2D6-4AAA-A503-18A05B662329}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BasicConsoleExample", "examples\BasicConsoleExample\BasicConsoleExample.csproj", "{755D8409-D285-491A-9997-94756ED0DC10}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AdvancedConsoleWithDIExample", "examples\AdvancedConsoleWithDIExample\AdvancedConsoleWithDIExample.csproj", "{A73503CC-56F0-4190-B8C3-78779CB1A845}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -117,6 +119,18 @@ Global
 		{755D8409-D285-491A-9997-94756ED0DC10}.Release|x64.Build.0 = Release|Any CPU
 		{755D8409-D285-491A-9997-94756ED0DC10}.Release|x86.ActiveCfg = Release|Any CPU
 		{755D8409-D285-491A-9997-94756ED0DC10}.Release|x86.Build.0 = Release|Any CPU
+		{A73503CC-56F0-4190-B8C3-78779CB1A845}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A73503CC-56F0-4190-B8C3-78779CB1A845}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A73503CC-56F0-4190-B8C3-78779CB1A845}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{A73503CC-56F0-4190-B8C3-78779CB1A845}.Debug|x64.Build.0 = Debug|Any CPU
+		{A73503CC-56F0-4190-B8C3-78779CB1A845}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{A73503CC-56F0-4190-B8C3-78779CB1A845}.Debug|x86.Build.0 = Debug|Any CPU
+		{A73503CC-56F0-4190-B8C3-78779CB1A845}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A73503CC-56F0-4190-B8C3-78779CB1A845}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A73503CC-56F0-4190-B8C3-78779CB1A845}.Release|x64.ActiveCfg = Release|Any CPU
+		{A73503CC-56F0-4190-B8C3-78779CB1A845}.Release|x64.Build.0 = Release|Any CPU
+		{A73503CC-56F0-4190-B8C3-78779CB1A845}.Release|x86.ActiveCfg = Release|Any CPU
+		{A73503CC-56F0-4190-B8C3-78779CB1A845}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -129,6 +143,7 @@ Global
 		{72BAD5C4-889A-43BB-AF27-27A6A8AFB656} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{F79A0AC5-F2D6-4AAA-A503-18A05B662329} = {01644C81-1609-407B-A964-A15BFA59E822}
 		{755D8409-D285-491A-9997-94756ED0DC10} = {B36A84DF-456D-A817-6EDD-3EC3E7F6E11F}
+		{A73503CC-56F0-4190-B8C3-78779CB1A845} = {B36A84DF-456D-A817-6EDD-3EC3E7F6E11F}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {7CE4E738-181F-42CA-B63C-365DBD1BC7B9}

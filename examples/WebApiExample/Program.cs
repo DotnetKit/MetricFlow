@@ -11,13 +11,13 @@ builder.Services.AddSwaggerGen();
 // Register MetricFlow with custom tag enrichment and additional topic tracker via fluent builder
 builder.Services.AddMetricFlow("WebApiExample", options =>
 {
-    options.EnrichTags = (tags, context) =>
+    options.AddHttpTagsEnricher((tags, context) =>
     {
         if (context.Request.Headers.TryGetValue("X-Tenant-ID", out var tenantId))
         {
             tags["tenant_id"] = tenantId!;
         }
-    };
+    });
 })
 .AddMetricTracker("WeatherRadar");
 

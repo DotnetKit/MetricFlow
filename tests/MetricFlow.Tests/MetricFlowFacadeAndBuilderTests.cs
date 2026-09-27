@@ -1,3 +1,4 @@
+using DotnetKit.MetricFlow;
 using DotnetKit.MetricFlow.Abstractions;
 using DotnetKit.MetricFlow.Counters;
 using FluentAssertions;
@@ -143,4 +144,48 @@ public class MetricFlowFacadeAndBuilderTests
         tracker.Topic.Should().Be("MyPlixConsole");
         operation.Should().NotBeNull();
     }
+
+    [Fact]
+    public void MetricFlowOptions_AddTagsEnricher_EnrichesTopicTags()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddMetricFlow("OptionsEnricherTopic", options =>
+        {
+            options.AddTagsEnricher(tags =>
+            {
+                tags["tenant_id"] = "T1";
+            })
+            .AddTagsEnricher(tags =>
+            {
+                tags["env"] = "Prod";
+            });
+        });
+
+        using var provider = services.BuildServiceProvider();
+        var tracker = provider.GetRequiredService<IMetricTracker>();
+
+        // Assert
+        tracker.TopicTags.Should().NotBeNull();
+        tracker.TopicTags.Should().ContainKey("tenant_id").WhoseValue.Should().Be("T1");
+        tracker.TopicTags.Should().ContainKey("env").WhoseValue.Should().Be("Prod");
+    }
+
+    [Fact]
+    public void MetricFlowOptions_AddExceptionCounter_ControlsExceptionCounterRegistration()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        services.AddMetricFlow("DisabledExceptions", options =>
+        {
+            options.AddExceptionCounter(false);
+        });
+
+        using var provider = services.BuildServiceProvider();
+        var tracker = provider.GetRequiredService<IMetricTracker>();
+
+        // Assert
+        tracker.GetCounters().Any(c => c is ExceptionCounter).Should().BeFalse();
+    }
 }
+

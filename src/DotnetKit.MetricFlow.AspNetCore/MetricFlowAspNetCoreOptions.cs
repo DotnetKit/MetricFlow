@@ -92,4 +92,49 @@ public class MetricFlowAspNetCoreOptions : MetricFlowOptions
     /// Defaults to true.
     /// </summary>
     public bool TrackFailedStatusCodes { get; set; } = true;
+
+    /// <summary>
+    /// Adds an HTTP tag enrichment delegate to enrich metric tags with request-specific metadata.
+    /// Supports fluent chaining and multiple enrichers.
+    /// </summary>
+    /// <param name="enricher">The HTTP tag enricher action.</param>
+    /// <returns>This options instance for fluent chaining.</returns>
+    public MetricFlowAspNetCoreOptions AddHttpTagsEnricher(Action<Dictionary<string, string>, HttpContext> enricher)
+    {
+        ArgumentNullException.ThrowIfNull(enricher);
+
+        if (EnrichTags == null)
+        {
+            EnrichTags = enricher;
+        }
+        else
+        {
+            var existing = EnrichTags;
+            EnrichTags = (tags, context) =>
+            {
+                existing(tags, context);
+                enricher(tags, context);
+            };
+        }
+
+        return this;
+    }
+
+    /// <summary>
+    /// Adds an HTTP tag enrichment delegate (alias for <see cref="AddHttpTagsEnricher"/>).
+    /// </summary>
+    public MetricFlowAspNetCoreOptions AddHttpTagEnricher(Action<Dictionary<string, string>, HttpContext> enricher)
+        => AddHttpTagsEnricher(enricher);
+
+    /// <summary>
+    /// Adds an HTTP tag enrichment delegate (alias for <see cref="AddHttpTagsEnricher"/>).
+    /// </summary>
+    public MetricFlowAspNetCoreOptions AddTagsEnricher(Action<Dictionary<string, string>, HttpContext> enricher)
+        => AddHttpTagsEnricher(enricher);
+
+    /// <summary>
+    /// Adds an HTTP tag enrichment delegate (alias for <see cref="AddHttpTagsEnricher"/>).
+    /// </summary>
+    public MetricFlowAspNetCoreOptions AddTagEnricher(Action<Dictionary<string, string>, HttpContext> enricher)
+        => AddHttpTagsEnricher(enricher);
 }
