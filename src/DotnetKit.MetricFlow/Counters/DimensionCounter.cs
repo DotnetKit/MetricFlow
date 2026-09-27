@@ -344,15 +344,15 @@ public record DimensionSnapshot(
     {
         var sb = new StringBuilder();
         sb.AppendLine($"[{CounterName}] Metric: {MetricName}");
-        sb.AppendLine($"Total Operations       : {TotalOperations:N0}");
-        sb.AppendLine($"Tagged Operations      : {TaggedOperations:N0} ({TaggedPercentage * 100:F1}%)");
+        sb.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"Total Operations       : {TotalOperations:N0}");
+        sb.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"Tagged Operations      : {TaggedOperations:N0} ({TaggedPercentage * 100:F1}%)");
         if (UntaggedOperations > 0)
         {
-            sb.AppendLine($"Untagged Operations    : {UntaggedOperations:N0}");
+            sb.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"Untagged Operations    : {UntaggedOperations:N0}");
         }
         if (FailedOperations > 0)
         {
-            sb.AppendLine($"Failed Operations      : {FailedOperations:N0}");
+            sb.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"Failed Operations      : {FailedOperations:N0}");
         }
 
         if (Breakdown.Count > 0)
@@ -361,7 +361,7 @@ public record DimensionSnapshot(
             foreach (var (key, count) in Breakdown.OrderByDescending(kv => kv.Value))
             {
                 double pct = TaggedOperations > 0 ? (double)count / TaggedOperations * 100.0 : 0.0;
-                sb.AppendLine($"  - {key}: {count:N0} ({pct:F1}%)");
+                sb.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"  - {key}: {count:N0} ({pct:F1}%)");
             }
         }
 

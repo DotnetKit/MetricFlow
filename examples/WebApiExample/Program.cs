@@ -8,7 +8,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Register MetricFlow with custom tag enrichment (e.g. tenant_id)
+// Register MetricFlow with custom tag enrichment and additional topic tracker via fluent builder
 builder.Services.AddMetricFlow("WebApiExample", options =>
 {
     options.EnrichTags = (tags, context) =>
@@ -18,7 +18,8 @@ builder.Services.AddMetricFlow("WebApiExample", options =>
             tags["tenant_id"] = tenantId!;
         }
     };
-});
+})
+.AddTracker("WeatherRadar");
 
 var app = builder.Build();
 
@@ -64,6 +65,15 @@ app.MapGet("/throw_exception", () =>
     throw new Exception("This is an exception");
 })
 .WithName("Exception")
+.WithOpenApi();
+
+app.MapGet("/radar/scan", (IMetricFlow metricFlow) =>
+{
+    var tracker = metricFlow.GetTracker("WeatherRadar");
+    using var operation = tracker.Track("ScanRadar");
+    return Results.Ok(new { message = "Radar scan tracked", topic = tracker.Topic });
+})
+.WithName("ScanRadar")
 .WithOpenApi();
 
 // Expose metrics endpoint
