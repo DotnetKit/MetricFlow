@@ -1,7 +1,5 @@
 namespace DotnetKit.MetricFlow.Configuration;
 
-public record CounterConfig(string CounterName, bool Enabled);
-
 public interface ICounterConfigObservable
 {
     IDisposable Subscribe(Action<string, bool> onConfigChanged);
@@ -9,7 +7,7 @@ public interface ICounterConfigObservable
 
 public class CounterConfigNotifier : ICounterConfigObservable
 {
-    private readonly List<Action<string, bool>> _subscribers = new();
+    private readonly List<Action<string, bool>> _subscribers = [];
     private readonly object _lock = new();
 
     public IDisposable Subscribe(Action<string, bool> onConfigChanged)
@@ -33,7 +31,7 @@ public class CounterConfigNotifier : ICounterConfigObservable
         Action<string, bool>[] snapshot;
         lock (_lock)
         {
-            snapshot = _subscribers.ToArray();
+            snapshot = [.. _subscribers];
         }
 
         foreach (var subscriber in snapshot)

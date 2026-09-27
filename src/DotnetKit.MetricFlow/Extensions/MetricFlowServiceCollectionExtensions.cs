@@ -1,5 +1,6 @@
 using DotnetKit.MetricFlow;
 using DotnetKit.MetricFlow.Abstractions;
+using DotnetKit.MetricFlow.Meters;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 // ReSharper disable once CheckNamespace
@@ -27,11 +28,21 @@ public static class MetricFlowServiceCollectionExtensions
         configure?.Invoke(options);
 
         services.TryAddSingleton(options);
+        services.TryAddSingleton(options.MeterOptions);
+
+        // Register meter registry for BCL instrumentation
+        services.TryAddSingleton<MetricFlowMeterRegistry>(sp =>
+        {
+            var defaultOptions = sp.GetService<MetricFlowOptions>() ?? options;
+            var meterOptions = sp.GetService<MetricFlowMeterOptions>() ?? defaultOptions.MeterOptions;
+            return new MetricFlowMeterRegistry(meterOptions);
+        });
 
         // Register central registry & top-level facade
         services.TryAddSingleton<MetricFlowRegistry>(sp =>
         {
             var defaultOptions = sp.GetService<MetricFlowOptions>() ?? options;
+            var meterRegistry = sp.GetRequiredService<MetricFlowMeterRegistry>();
 
             var registry = new MetricFlowRegistry(
                 defaultTopic: defaultOptions.Topic,
@@ -44,12 +55,15 @@ public static class MetricFlowServiceCollectionExtensions
                         return keyed;
                     }
 
+                    var meterBridge = meterRegistry.GetOrCreateBridge(topic, defaultOptions.TopicTags);
+
                     var tracker = new MetricTracker(
                         topic: topic,
                         topicTags: defaultOptions.TopicTags,
                         samplingRate: defaultOptions.SamplingRate,
                         configObservable: defaultOptions.ConfigObservable,
-                        additionalCounters: defaultOptions.Counters);
+                        additionalCounters: defaultOptions.Counters,
+                        meterBridge: meterBridge);
 
                     if (defaultOptions.AutoAddExceptionCounter)
                     {
@@ -121,6 +135,7 @@ public static class MetricFlowServiceCollectionExtensions
             opt.SamplingRate = trackerOptions.SamplingRate;
             opt.ConfigObservable = trackerOptions.ConfigObservable;
             opt.AutoAddExceptionCounter = trackerOptions.AutoAddExceptionCounter;
+            opt.MeterOptions = trackerOptions.MeterOptions;
             foreach (var counter in trackerOptions.Counters)
             {
                 opt.Counters.Add(counter);
@@ -133,12 +148,16 @@ public static class MetricFlowServiceCollectionExtensions
         // Keyed registrations
         services.AddKeyedSingleton<MetricTracker>(topic, (sp, key) =>
         {
+            var meterRegistry = sp.GetRequiredService<MetricFlowMeterRegistry>();
+            var meterBridge = meterRegistry.GetOrCreateBridge(trackerOptions.Topic, trackerOptions.TopicTags);
+
             var tracker = new MetricTracker(
                 topic: trackerOptions.Topic,
                 topicTags: trackerOptions.TopicTags,
                 samplingRate: trackerOptions.SamplingRate,
                 configObservable: trackerOptions.ConfigObservable,
-                additionalCounters: trackerOptions.Counters);
+                additionalCounters: trackerOptions.Counters,
+                meterBridge: meterBridge);
 
             if (trackerOptions.AutoAddExceptionCounter)
             {

@@ -1,4 +1,3 @@
-using DotnetKit.MetricFlow;
 using DotnetKit.MetricFlow.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;

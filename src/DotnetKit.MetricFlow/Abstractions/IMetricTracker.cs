@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using DotnetKit.MetricFlow.Meters;
 
 namespace DotnetKit.MetricFlow.Abstractions;
 
@@ -6,6 +7,11 @@ public interface IMetricTracker : IMetricSnapshotsSource
 {
     string Topic { get; }
     Dictionary<string, string>? TopicTags { get; }
+
+    /// <summary>
+    /// Gets the meter bridge connecting this tracker to System.Diagnostics.Metrics, if configured.
+    /// </summary>
+    IMetricMeterBridge? MeterBridge => null;
 
     IMetricTracker RegisterCounter(ICounter counter);
     bool UnregisterCounter(string counterName);

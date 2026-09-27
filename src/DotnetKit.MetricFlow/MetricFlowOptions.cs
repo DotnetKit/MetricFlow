@@ -1,6 +1,7 @@
 using DotnetKit.MetricFlow.Abstractions;
 using DotnetKit.MetricFlow.Configuration;
 using DotnetKit.MetricFlow.Counters;
+using DotnetKit.MetricFlow.Meters;
 
 namespace DotnetKit.MetricFlow;
 
@@ -42,6 +43,34 @@ public class MetricFlowOptions
     /// <returns>This options instance for fluent chaining.</returns>
     public MetricFlowOptions AddTagEnricher(Action<Dictionary<string, string>> enricher)
         => AddTagsEnricher(enricher);
+
+    /// <summary>
+    /// Configuration options for System.Diagnostics.Metrics instrumentation.
+    /// </summary>
+    public MetricFlowMeterOptions MeterOptions { get; set; } = new();
+
+    /// <summary>
+    /// Configures the System.Diagnostics.Metrics meter options.
+    /// </summary>
+    /// <param name="configure">The configuration delegate.</param>
+    /// <returns>This options instance for fluent chaining.</returns>
+    public MetricFlowOptions ConfigureMeters(Action<MetricFlowMeterOptions> configure)
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+        configure(MeterOptions);
+        return this;
+    }
+
+    /// <summary>
+    /// Enables or disables System.Diagnostics.Metrics meter emission.
+    /// </summary>
+    /// <param name="enabled">Whether meter emission is enabled.</param>
+    /// <returns>This options instance for fluent chaining.</returns>
+    public MetricFlowOptions EnableMeters(bool enabled = true)
+    {
+        MeterOptions.Enabled = enabled;
+        return this;
+    }
 
     /// <summary>
     /// Sampling rate between 0.0 and 1.0 (or null to track 100%). Defaults to 1.0.
@@ -154,36 +183,5 @@ public class MetricFlowOptions
         Counters.Add(new DimensionCounter(name, selector, maxUniqueValues, overflowBucket, dimensionName));
         return this;
     }
-
-    /// <summary>
-    /// Alias for <see cref="AddDimensionCounter(string, string?, int, string)"/>.
-    /// </summary>
-    public MetricFlowOptions AddTagBreakdownCounter(
-        string tagKey,
-        string? name = null,
-        int maxUniqueValues = 250,
-        string overflowBucket = "[Other]")
-        => AddDimensionCounter(tagKey, name ?? $"TagBreakdown:{tagKey}", maxUniqueValues, overflowBucket);
-
-    /// <summary>
-    /// Alias for <see cref="AddDimensionCounter(string, IEnumerable{string}, string, int, string)"/>.
-    /// </summary>
-    public MetricFlowOptions AddTagBreakdownCounter(
-        string name,
-        IEnumerable<string> tagKeys,
-        string delimiter = " / ",
-        int maxUniqueValues = 250,
-        string overflowBucket = "[Other]")
-        => AddDimensionCounter(name, tagKeys, delimiter, maxUniqueValues, overflowBucket);
-
-    /// <summary>
-    /// Alias for <see cref="AddDimensionCounter(string, Func{IReadOnlyDictionary{string, string}?, IReadOnlyDictionary{string, long}?, string?}, int, string, string?)"/>.
-    /// </summary>
-    public MetricFlowOptions AddComputedBreakdownCounter(
-        string name,
-        Func<IReadOnlyDictionary<string, string>?, IReadOnlyDictionary<string, long>?, string?> selector,
-        int maxUniqueValues = 250,
-        string overflowBucket = "[Other]",
-        string? dimensionName = null)
-        => AddDimensionCounter(name, selector, maxUniqueValues, overflowBucket, dimensionName);
 }
+

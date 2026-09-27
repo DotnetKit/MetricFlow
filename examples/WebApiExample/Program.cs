@@ -77,7 +77,7 @@ app.MapGet("/radar/scan", (IMetricFlow metricFlow) =>
 .WithOpenApi();
 
 // Expose metrics endpoint
-app.MapMetricFlow("/metrics")
+app.MapMetricFlow()
 .WithOpenApi();
 
 app.Run();

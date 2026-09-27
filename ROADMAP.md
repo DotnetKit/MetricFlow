@@ -29,10 +29,11 @@ The roadmap outlines the upcoming development milestones for MetricFlow, priorit
 
 ## 3. Sinks and Adapters for OpenTelemetry & Cloud Providers
 
-- **OpenTelemetry Integration (`DotnetKit.MetricFlow.OpenTelemetry`)**:
-  - Map MetricFlow counters and snapshots to `System.Diagnostics.Metrics` (`Meter`, `Counter`, `Histogram`).
-  - Native OTLP exporter to send telemetry to OpenTelemetry Collectors, Prometheus, Grafana, and Jaeger.
-  - Trace context correlation: align MetricFlow tracking scopes (`Track`, `TrackAction`) with OpenTelemetry `Activity`.
+- **OpenTelemetry Integration (`DotnetKit.MetricFlow.OpenTelemetry`)** *(Completed in v1.0.51)*:
+  - [x] Map MetricFlow counters and snapshots to `System.Diagnostics.Metrics` (`Meter`, `Counter`, `Histogram`, `UpDownCounter`).
+  - [x] Native OTLP export via OpenTelemetry SDK pipeline (Prometheus, Grafana, OTLP collectors, `dotnet-counters`).
+  - [x] Trace context correlation: ambient OpenTelemetry `Activity.Current` capture (`WithTraceContext`) and `ActivitySource` registration.
+  - [x] Cardinality protection guard clamping high-cardinality tags before emission.
 - **Cloud Provider Sinks & Adapters**:
   - **Azure Monitor / Application Insights**: Dedicated exporter for Azure Monitor metrics and Application Insights custom metrics.
   - **AWS CloudWatch**: Exporter supporting CloudWatch metrics and Embedded Metric Format (EMF).
