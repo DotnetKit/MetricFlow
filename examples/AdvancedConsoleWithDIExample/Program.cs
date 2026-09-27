@@ -1,13 +1,12 @@
 using DotnetKit.MetricFlow;
 using DotnetKit.MetricFlow.Abstractions;
-using DotnetKit.MetricFlow.Counters;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace AdvancedConsoleWithDIExample;
 
 internal class Program
 {
-    private static async Task Main(string[] args)
+    private static async Task Main(string[] _)
     {
         Console.WriteLine("=== MetricFlow Dependency Injection Console Example ===\n");
 
@@ -43,7 +42,7 @@ internal class Program
         services.AddTransient<BatchProcessorService>();
         services.AddTransient<AuditService>();
 
-        using var provider = services.BuildServiceProvider();
+        await using var provider = services.BuildServiceProvider();
 
         // 4. Run worker services resolved from DI
         var batchService = provider.GetRequiredService<BatchProcessorService>();

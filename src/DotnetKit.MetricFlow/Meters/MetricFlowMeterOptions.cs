@@ -1,4 +1,4 @@
-namespace DotnetKit.MetricFlow;
+namespace DotnetKit.MetricFlow.Meters;
 
 /// <summary>
 /// Options for configuring System.Diagnostics.Metrics integration in MetricFlow.

@@ -1,6 +1,4 @@
-using DotnetKit.MetricFlow.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
-using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 

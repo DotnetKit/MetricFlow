@@ -1,6 +1,7 @@
 using DotnetKit.MetricFlow.Abstractions;
 using DotnetKit.MetricFlow.Counters;
 
+// ReSharper disable once CheckNamespace
 namespace DotnetKit.MetricFlow;
 
 /// <summary>
@@ -159,44 +160,6 @@ public static class TrackerCounterExtensions
     }
 
     /// <summary>
-    /// Alias for <see cref="AddDimensionCounter{T}(T, string, string?, int, string)"/>.
-    /// </summary>
-    public static T AddTagBreakdownCounter<T>(
-        this T tracker,
-        string tagKey,
-        string? name = null,
-        int maxUniqueValues = 250,
-        string overflowBucket = "[Other]")
-        where T : IMetricTracker
-        => tracker.AddDimensionCounter(tagKey, name ?? $"TagBreakdown:{tagKey}", maxUniqueValues, overflowBucket);
-
-    /// <summary>
-    /// Alias for <see cref="AddDimensionCounter{T}(T, string, IEnumerable{string}, string, int, string)"/>.
-    /// </summary>
-    public static T AddTagBreakdownCounter<T>(
-        this T tracker,
-        string name,
-        IEnumerable<string> tagKeys,
-        string delimiter = " / ",
-        int maxUniqueValues = 250,
-        string overflowBucket = "[Other]")
-        where T : IMetricTracker
-        => tracker.AddDimensionCounter(name, tagKeys, delimiter, maxUniqueValues, overflowBucket);
-
-    /// <summary>
-    /// Alias for <see cref="AddDimensionCounter{T}(T, string, Func{IReadOnlyDictionary{string, string}?, IReadOnlyDictionary{string, long}?, string?}, int, string, string?)"/>.
-    /// </summary>
-    public static T AddComputedBreakdownCounter<T>(
-        this T tracker,
-        string name,
-        Func<IReadOnlyDictionary<string, string>?, IReadOnlyDictionary<string, long>?, string?> selector,
-        int maxUniqueValues = 250,
-        string overflowBucket = "[Other]",
-        string? dimensionName = null)
-        where T : IMetricTracker
-        => tracker.AddDimensionCounter(name, selector, maxUniqueValues, overflowBucket, dimensionName);
-
-    /// <summary>
     /// Retrieves the <see cref="DimensionSnapshot"/> for a specific metric name and dimension or counter name, or <c>null</c> if not tracked.
     /// </summary>
     /// <param name="tracker">The tracker instance.</param>
@@ -221,23 +184,4 @@ public static class TrackerCounterExtensions
                 tracker.GetSnapshot(metricName, dimensionOrCounterName) ??
                 tracker.GetSnapshot(metricName, $"TagBreakdown:{dimensionOrCounterName}")) as DimensionSnapshot;
     }
-
-    /// <summary>
-    /// Alias for <see cref="GetDimensionValues(IMetricTracker, string, string, string?)"/>.
-    /// </summary>
-    public static DimensionSnapshot? GetTagBreakdownValues(
-        this IMetricTracker tracker,
-        string metricName,
-        string tagKey,
-        string? counterName = null)
-        => tracker.GetDimensionValues(metricName, tagKey, counterName);
-
-    /// <summary>
-    /// Alias for <see cref="GetDimensionValues(IMetricTracker, string, string, string?)"/>.
-    /// </summary>
-    public static DimensionSnapshot? GetComputedBreakdownValues(
-        this IMetricTracker tracker,
-        string metricName,
-        string counterName)
-        => tracker.GetDimensionValues(metricName, counterName);
 }

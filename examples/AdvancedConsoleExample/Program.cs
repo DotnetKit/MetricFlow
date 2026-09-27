@@ -6,7 +6,7 @@ internal class Program
 {
     private const int OperationCount = 10;
 
-    private static async Task Main(string[] args)
+    private static async Task Main(string[] _)
     {
         // Initialize tracker with full multi-counter telemetry pipeline:
         // DurationCounter (default) + ThroughputCounter + ExceptionCounter + MemoryCounter + TagBreakdownCounter

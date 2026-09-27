@@ -22,7 +22,7 @@ public class DimensionCounterTests
         // Assert
         var snapshot = tracker.GetDimensionValues("ProcessJob", "tenant");
         snapshot.Should().NotBeNull();
-        snapshot!.TotalOperations.Should().Be(3);
+        snapshot.TotalOperations.Should().Be(3);
         snapshot.TrackedOperations.Should().Be(3);
         snapshot.TaggedOperations.Should().Be(3);
         snapshot.UntrackedOperations.Should().Be(0);
@@ -35,7 +35,7 @@ public class DimensionCounterTests
     {
         // Arrange
         var tracker = new MetricTracker("TagTrackingTopic")
-            .AddTagBreakdownCounter("country");
+            .AddDimensionCounter("country");
 
         // Act
         using (tracker.Track("ProcessOrder", new() { ["country"] = "US" })) { }
@@ -44,9 +44,9 @@ public class DimensionCounterTests
         using (tracker.Track("ProcessOrder")) { } // untagged
 
         // Assert
-        var snapshot = tracker.GetTagBreakdownValues("ProcessOrder", "country");
+        var snapshot = tracker.GetDimensionValues("ProcessOrder", "country");
         snapshot.Should().NotBeNull();
-        snapshot!.TotalOperations.Should().Be(4);
+        snapshot.TotalOperations.Should().Be(4);
         snapshot.TaggedOperations.Should().Be(3);
         snapshot.UntaggedOperations.Should().Be(1);
         snapshot.FailedOperations.Should().Be(0);
@@ -63,7 +63,7 @@ public class DimensionCounterTests
     {
         // Arrange
         var tracker = new MetricTracker("DynamicTagTopic")
-            .AddTagBreakdownCounter("country");
+            .AddDimensionCounter("country");
 
         // Act
         using (var scope = tracker.Track("CreateShipment"))
@@ -72,9 +72,9 @@ public class DimensionCounterTests
         }
 
         // Assert
-        var snapshot = tracker.GetTagBreakdownValues("CreateShipment", "country");
+        var snapshot = tracker.GetDimensionValues("CreateShipment", "country");
         snapshot.Should().NotBeNull();
-        snapshot!.TotalOperations.Should().Be(1);
+        snapshot.TotalOperations.Should().Be(1);
         snapshot.TaggedOperations.Should().Be(1);
         snapshot.Breakdown.Should().ContainKey("JP");
         snapshot.Breakdown["JP"].Should().Be(1);
@@ -85,16 +85,16 @@ public class DimensionCounterTests
     {
         // Arrange
         var tracker = new MetricTracker("CaseInsensitiveTopic")
-            .AddTagBreakdownCounter("country");
+            .AddDimensionCounter("country");
 
         // Act - provide key with different casing
         using (tracker.Track("OrderOp", new() { ["Country"] = "FR" })) { }
         using (tracker.Track("OrderOp", new() { ["COUNTRY"] = "fr" })) { }
 
         // Assert
-        var snapshot = tracker.GetTagBreakdownValues("OrderOp", "country");
+        var snapshot = tracker.GetDimensionValues("OrderOp", "country");
         snapshot.Should().NotBeNull();
-        snapshot!.TotalOperations.Should().Be(2);
+        snapshot.TotalOperations.Should().Be(2);
         snapshot.TaggedOperations.Should().Be(2);
         snapshot.Breakdown.Should().ContainKey("FR");
         snapshot.Breakdown["FR"].Should().Be(2);
@@ -105,7 +105,7 @@ public class DimensionCounterTests
     {
         // Arrange
         var tracker = new MetricTracker("MetadataFallbackTopic")
-            .AddTagBreakdownCounter("status_code");
+            .AddDimensionCounter("status_code");
 
         // Act - set numeric metadata rather than string tag
         using (var scope = tracker.Track("HandleRequest"))
@@ -119,9 +119,9 @@ public class DimensionCounterTests
         }
 
         // Assert
-        var snapshot = tracker.GetTagBreakdownValues("HandleRequest", "status_code");
+        var snapshot = tracker.GetDimensionValues("HandleRequest", "status_code");
         snapshot.Should().NotBeNull();
-        snapshot!.TotalOperations.Should().Be(2);
+        snapshot.TotalOperations.Should().Be(2);
         snapshot.TaggedOperations.Should().Be(2);
         snapshot.Breakdown.Should().ContainKey("200");
         snapshot.Breakdown["200"].Should().Be(1);
@@ -134,7 +134,7 @@ public class DimensionCounterTests
     {
         // Arrange - max 3 unique values, bucket "[Other]"
         var tracker = new MetricTracker("CardinalityTopic")
-            .AddTagBreakdownCounter("tenant_id", maxUniqueValues: 3, overflowBucket: "[Other]");
+            .AddDimensionCounter("tenant_id", maxUniqueValues: 3, overflowBucket: "[Other]");
 
         // Act - insert 5 distinct values and repeat one
         using (tracker.Track("TenantJob", new() { ["tenant_id"] = "Tenant_A" })) { }
@@ -145,9 +145,9 @@ public class DimensionCounterTests
         using (tracker.Track("TenantJob", new() { ["tenant_id"] = "Tenant_A" })) { } // existing key
 
         // Assert
-        var snapshot = tracker.GetTagBreakdownValues("TenantJob", "tenant_id");
+        var snapshot = tracker.GetDimensionValues("TenantJob", "tenant_id");
         snapshot.Should().NotBeNull();
-        snapshot!.TotalOperations.Should().Be(6);
+        snapshot.TotalOperations.Should().Be(6);
         snapshot.TaggedOperations.Should().Be(6);
 
         // Should have 3 allowed keys + 1 overflow key
@@ -163,7 +163,7 @@ public class DimensionCounterTests
     {
         // Arrange
         var tracker = new MetricTracker("ConcurrentTopic")
-            .AddTagBreakdownCounter("country");
+            .AddDimensionCounter("country");
 
         var countries = new[] { "US", "DE", "FR", "JP", "UK" };
         const int concurrency = 20;
@@ -186,9 +186,9 @@ public class DimensionCounterTests
         await Task.WhenAll(tasks);
 
         // Assert
-        var snapshot = tracker.GetTagBreakdownValues("ConcurrOp", "country");
+        var snapshot = tracker.GetDimensionValues("ConcurrOp", "country");
         snapshot.Should().NotBeNull();
-        snapshot!.TotalOperations.Should().Be(concurrency * iterationsPerTask);
+        snapshot.TotalOperations.Should().Be(concurrency * iterationsPerTask);
         snapshot.TaggedOperations.Should().Be(concurrency * iterationsPerTask);
         snapshot.UntaggedOperations.Should().Be(0);
 
@@ -207,8 +207,8 @@ public class DimensionCounterTests
     {
         // Arrange - track both country and order_type
         var tracker = new MetricTracker("MultiDimensionTopic")
-            .AddTagBreakdownCounter("country")
-            .AddTagBreakdownCounter("order_type");
+            .AddDimensionCounter("country")
+            .AddDimensionCounter("order_type");
 
         // Act
         using (tracker.Track("Checkout", new() { ["country"] = "US", ["order_type"] = "retail" })) { }
@@ -216,15 +216,15 @@ public class DimensionCounterTests
         using (tracker.Track("Checkout", new() { ["country"] = "US", ["order_type"] = "wholesale" })) { }
 
         // Assert - country
-        var countrySnap = tracker.GetTagBreakdownValues("Checkout", "country");
+        var countrySnap = tracker.GetDimensionValues("Checkout", "country");
         countrySnap.Should().NotBeNull();
-        countrySnap!.Breakdown["US"].Should().Be(2);
+        countrySnap.Breakdown["US"].Should().Be(2);
         countrySnap.Breakdown["DE"].Should().Be(1);
 
         // Assert - order_type
-        var typeSnap = tracker.GetTagBreakdownValues("Checkout", "order_type");
+        var typeSnap = tracker.GetDimensionValues("Checkout", "order_type");
         typeSnap.Should().NotBeNull();
-        typeSnap!.Breakdown["retail"].Should().Be(2);
+        typeSnap.Breakdown["retail"].Should().Be(2);
         typeSnap.Breakdown["wholesale"].Should().Be(1);
     }
 
@@ -233,7 +233,7 @@ public class DimensionCounterTests
     {
         // Arrange
         var tracker = new MetricTracker("FormatTopic")
-            .AddTagBreakdownCounter("country");
+            .AddDimensionCounter("country");
 
         using (tracker.Track("Shipment", new() { ["country"] = "US" })) { }
         using (tracker.Track("Shipment", new() { ["country"] = "US" })) { }
@@ -241,11 +241,11 @@ public class DimensionCounterTests
         using (tracker.Track("Shipment")) { } // untagged
 
         // Act
-        var snapshot = tracker.GetTagBreakdownValues("Shipment", "country");
-        var formatted = snapshot!.ToFormattedString();
+        var snapshot = tracker.GetDimensionValues("Shipment", "country");
+        var formatted = snapshot?.ToFormattedString();
 
         // Assert
-        formatted.Should().Contain("[TagBreakdown:country] Metric: Shipment");
+        formatted.Should().Contain("[Dimension:country] Metric: Shipment");
         formatted.Should().Contain("Total Operations       : 4");
         formatted.Should().Contain("Tagged Operations      : 3 (75.0%)");
         formatted.Should().Contain("Untagged Operations    : 1");
@@ -259,7 +259,7 @@ public class DimensionCounterTests
     {
         // Arrange
         var tracker = new MetricTracker("ResetTopic")
-            .AddTagBreakdownCounter("country");
+            .AddDimensionCounter("country");
 
         using (tracker.Track("ResetOp", new() { ["country"] = "US" })) { }
 
@@ -267,7 +267,7 @@ public class DimensionCounterTests
         tracker.Clear();
 
         // Assert
-        var snapshot = tracker.GetTagBreakdownValues("ResetOp", "country");
+        var snapshot = tracker.GetDimensionValues("ResetOp", "country");
         snapshot.Should().BeNull();
     }
 
@@ -290,7 +290,7 @@ public class DimensionCounterTests
     {
         // Arrange
         var tracker = new MetricTracker("MultiTagTopic")
-            .AddTagBreakdownCounter("CountryAndPayment", ["country", "payment_method"]);
+            .AddDimensionCounter("CountryAndPayment", ["country", "payment_method"]);
 
         // Act
         // 1. Both tags present
@@ -307,9 +307,9 @@ public class DimensionCounterTests
         using (tracker.Track("Checkout")) { }
 
         // Assert
-        var snapshot = tracker.GetComputedBreakdownValues("Checkout", "CountryAndPayment");
+        var snapshot = tracker.GetDimensionValues("Checkout", "CountryAndPayment");
         snapshot.Should().NotBeNull();
-        snapshot!.TotalOperations.Should().Be(5);
+        snapshot.TotalOperations.Should().Be(5);
         snapshot.TaggedOperations.Should().Be(4);
         snapshot.UntaggedOperations.Should().Be(1);
 
@@ -328,7 +328,7 @@ public class DimensionCounterTests
     {
         // Arrange - compute tier based on metadata and tags
         var tracker = new MetricTracker("ComputedTopic")
-            .AddComputedBreakdownCounter("CustomerTier", (tags, metadata) =>
+            .AddDimensionCounter("CustomerTier", (tags, metadata) =>
             {
                 var country = tags?.GetValueOrDefault("country") ?? "Unknown";
                 var amount = metadata?.GetValueOrDefault("amount") ?? 0;
@@ -355,9 +355,9 @@ public class DimensionCounterTests
         }
 
         // Assert
-        var snapshot = tracker.GetComputedBreakdownValues("ProcessOrder", "CustomerTier");
+        var snapshot = tracker.GetDimensionValues("ProcessOrder", "CustomerTier");
         snapshot.Should().NotBeNull();
-        snapshot!.TotalOperations.Should().Be(3);
+        snapshot.TotalOperations.Should().Be(3);
         snapshot.TaggedOperations.Should().Be(3);
         snapshot.UntaggedOperations.Should().Be(0);
 
@@ -376,7 +376,7 @@ public class DimensionCounterTests
     {
         // Arrange - only count operations satisfying a business predicate (return null otherwise)
         var tracker = new MetricTracker("ConditionalTopic")
-            .AddComputedBreakdownCounter("HighValueOrders", (tags, metadata) =>
+            .AddDimensionCounter("HighValueOrders", (_, metadata) =>
             {
                 var isHighValue = metadata?.GetValueOrDefault("amount") > 500;
                 return isHighValue ? "HighValue" : null;
@@ -402,9 +402,9 @@ public class DimensionCounterTests
         }
 
         // Assert
-        var snapshot = tracker.GetComputedBreakdownValues("PlaceOrder", "HighValueOrders");
+        var snapshot = tracker.GetDimensionValues("PlaceOrder", "HighValueOrders");
         snapshot.Should().NotBeNull();
-        snapshot!.TotalOperations.Should().Be(3);
+        snapshot.TotalOperations.Should().Be(3);
         snapshot.TaggedOperations.Should().Be(1);
         snapshot.UntaggedOperations.Should().Be(2);
 
@@ -417,10 +417,7 @@ public class DimensionCounterTests
     {
         // Arrange - lambda that deliberately throws an exception
         var tracker = new MetricTracker("FaultySelectorTopic")
-            .AddComputedBreakdownCounter("FaultySelector", (tags, metadata) =>
-            {
-                throw new InvalidOperationException("Simulation error in user lambda");
-            });
+            .AddDimensionCounter("FaultySelector", (_, _) => throw new InvalidOperationException("Simulation error in user lambda"));
 
         // Act - should execute and dispose smoothly without throwing
         FluentActions.Invoking(() =>
@@ -432,9 +429,9 @@ public class DimensionCounterTests
         }).Should().NotThrow();
 
         // Assert - operation recorded safely as untagged
-        var snapshot = tracker.GetComputedBreakdownValues("FaultyOp", "FaultySelector");
+        var snapshot = tracker.GetDimensionValues("FaultyOp", "FaultySelector");
         snapshot.Should().NotBeNull();
-        snapshot!.TotalOperations.Should().Be(1);
+        snapshot.TotalOperations.Should().Be(1);
         snapshot.TaggedOperations.Should().Be(0);
         snapshot.UntaggedOperations.Should().Be(1);
     }

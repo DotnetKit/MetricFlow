@@ -1,7 +1,8 @@
 using System.Text;
 using DotnetKit.MetricFlow.Abstractions;
 
-namespace DotnetKit.MetricFlow.Extensions;
+// ReSharper disable once CheckNamespace
+namespace DotnetKit.MetricFlow;
 
 /// <summary>
 /// Extension methods for formatting metric snapshots and snapshot sources.

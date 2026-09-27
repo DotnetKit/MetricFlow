@@ -70,14 +70,11 @@ public class MetricFlowRegistry : IMetricFlow, IDisposable
             if (_trackerFactory != null)
             {
                 var factoryTracker = _trackerFactory(key);
-                if (factoryTracker != null)
+                if (_defaultTracker == null)
                 {
-                    if (_defaultTracker == null)
-                    {
-                        _defaultTracker = factoryTracker;
-                    }
-                    return factoryTracker;
+                    _defaultTracker = factoryTracker;
                 }
+                return factoryTracker;
             }
 
             var fallback = new MetricTracker(key);

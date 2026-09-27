@@ -1,6 +1,6 @@
-using DotnetKit.MetricFlow.OpenTelemetry;
+using OpenTelemetry.Trace;
 
-namespace OpenTelemetry.Trace;
+namespace DotnetKit.MetricFlow.OpenTelemetry;
 
 /// <summary>
 /// Extension methods for configuring MetricFlow tracing on OpenTelemetry <see cref="TracerProviderBuilder"/>.

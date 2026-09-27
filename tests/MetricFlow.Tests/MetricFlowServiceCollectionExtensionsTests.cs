@@ -191,7 +191,7 @@ public class MetricFlowServiceCollectionExtensionsTests
             opt.AddThroughputCounter()
                .AddMemoryCounter()
                .AddDimensionCounter("country")
-               .AddTagBreakdownCounter("tenant");
+               .AddDimensionCounter("tenant");
         });
 
         using var provider = services.BuildServiceProvider();
@@ -205,6 +205,6 @@ public class MetricFlowServiceCollectionExtensionsTests
         tracker.GetThroughputValues("OrderCreated").Should().NotBeNull();
         tracker.GetSnapshot("OrderCreated", MemoryCounter.DefaultCounterName).Should().NotBeNull();
         tracker.GetDimensionValues("OrderCreated", "country").Should().NotBeNull();
-        tracker.GetTagBreakdownValues("OrderCreated", "tenant").Should().NotBeNull();
+        tracker.GetDimensionValues("OrderCreated", "tenant").Should().NotBeNull();
     }
 }

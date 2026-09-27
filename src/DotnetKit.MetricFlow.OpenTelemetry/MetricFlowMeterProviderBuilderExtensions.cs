@@ -1,6 +1,6 @@
-using DotnetKit.MetricFlow.OpenTelemetry;
+using OpenTelemetry.Metrics;
 
-namespace OpenTelemetry.Metrics;
+namespace DotnetKit.MetricFlow.OpenTelemetry;
 
 /// <summary>
 /// Extension methods for configuring MetricFlow instrumentation on OpenTelemetry <see cref="MeterProviderBuilder"/>.

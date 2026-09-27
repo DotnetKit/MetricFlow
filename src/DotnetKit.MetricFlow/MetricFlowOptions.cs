@@ -1,6 +1,7 @@
 using DotnetKit.MetricFlow.Abstractions;
 using DotnetKit.MetricFlow.Configuration;
 using DotnetKit.MetricFlow.Counters;
+using DotnetKit.MetricFlow.Meters;
 
 namespace DotnetKit.MetricFlow;
 
@@ -182,36 +183,5 @@ public class MetricFlowOptions
         Counters.Add(new DimensionCounter(name, selector, maxUniqueValues, overflowBucket, dimensionName));
         return this;
     }
-
-    /// <summary>
-    /// Alias for <see cref="AddDimensionCounter(string, string?, int, string)"/>.
-    /// </summary>
-    public MetricFlowOptions AddTagBreakdownCounter(
-        string tagKey,
-        string? name = null,
-        int maxUniqueValues = 250,
-        string overflowBucket = "[Other]")
-        => AddDimensionCounter(tagKey, name ?? $"TagBreakdown:{tagKey}", maxUniqueValues, overflowBucket);
-
-    /// <summary>
-    /// Alias for <see cref="AddDimensionCounter(string, IEnumerable{string}, string, int, string)"/>.
-    /// </summary>
-    public MetricFlowOptions AddTagBreakdownCounter(
-        string name,
-        IEnumerable<string> tagKeys,
-        string delimiter = " / ",
-        int maxUniqueValues = 250,
-        string overflowBucket = "[Other]")
-        => AddDimensionCounter(name, tagKeys, delimiter, maxUniqueValues, overflowBucket);
-
-    /// <summary>
-    /// Alias for <see cref="AddDimensionCounter(string, Func{IReadOnlyDictionary{string, string}?, IReadOnlyDictionary{string, long}?, string?}, int, string, string?)"/>.
-    /// </summary>
-    public MetricFlowOptions AddComputedBreakdownCounter(
-        string name,
-        Func<IReadOnlyDictionary<string, string>?, IReadOnlyDictionary<string, long>?, string?> selector,
-        int maxUniqueValues = 250,
-        string overflowBucket = "[Other]",
-        string? dimensionName = null)
-        => AddDimensionCounter(name, selector, maxUniqueValues, overflowBucket, dimensionName);
 }
+

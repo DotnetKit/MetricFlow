@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 using DotnetKit.MetricFlow.Abstractions;
 
+// ReSharper disable once CheckNamespace
 namespace DotnetKit.MetricFlow;
 
 /// <summary>

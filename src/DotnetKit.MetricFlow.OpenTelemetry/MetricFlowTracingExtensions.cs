@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using DotnetKit.MetricFlow.Abstractions;
 
 namespace DotnetKit.MetricFlow.OpenTelemetry;
 
@@ -10,14 +9,12 @@ public static class MetricFlowTracingExtensions
 {
     public const string DefaultActivitySourceName = "DotnetKit.MetricFlow";
 
-    private static readonly ActivitySource _activitySource = new(
-        DefaultActivitySourceName,
-        typeof(MetricFlowTracingExtensions).Assembly.GetName().Version?.ToString(3) ?? "1.0.0");
-
     /// <summary>
     /// Gets the MetricFlow <see cref="ActivitySource"/> instance.
     /// </summary>
-    public static ActivitySource ActivitySource => _activitySource;
+    public static ActivitySource ActivitySource { get; } = new(
+        DefaultActivitySourceName,
+        typeof(MetricFlowTracingExtensions).Assembly.GetName().Version?.ToString(3) ?? "1.0.0");
 
     /// <summary>
     /// Enriches a tag dictionary with the current ambient <see cref="Activity.Current"/> trace ID and span ID.
@@ -41,6 +38,6 @@ public static class MetricFlowTracingExtensions
     /// </summary>
     public static Activity? StartActivity(string operationName, ActivityKind kind = ActivityKind.Internal)
     {
-        return _activitySource.StartActivity(operationName, kind);
+        return ActivitySource.StartActivity(operationName, kind);
     }
 }

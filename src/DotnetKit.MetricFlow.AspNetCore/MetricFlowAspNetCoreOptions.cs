@@ -1,4 +1,3 @@
-using DotnetKit.MetricFlow;
 using Microsoft.AspNetCore.Http;
 
 namespace DotnetKit.MetricFlow.AspNetCore;
@@ -57,7 +56,7 @@ public class MetricFlowAspNetCoreOptions : MetricFlowOptions
     /// <summary>
     /// Path prefixes to exclude from metric tracking (e.g. "/swagger").
     /// </summary>
-    public List<string> ExcludePathPrefixes { get; } = new();
+    public List<string> ExcludePathPrefixes { get; } = [];
 
     /// <summary>
     /// Optional custom predicate to determine if a request should be excluded from tracking.
@@ -119,22 +118,4 @@ public class MetricFlowAspNetCoreOptions : MetricFlowOptions
 
         return this;
     }
-
-    /// <summary>
-    /// Adds an HTTP tag enrichment delegate (alias for <see cref="AddHttpTagsEnricher"/>).
-    /// </summary>
-    public MetricFlowAspNetCoreOptions AddHttpTagEnricher(Action<Dictionary<string, string>, HttpContext> enricher)
-        => AddHttpTagsEnricher(enricher);
-
-    /// <summary>
-    /// Adds an HTTP tag enrichment delegate (alias for <see cref="AddHttpTagsEnricher"/>).
-    /// </summary>
-    public MetricFlowAspNetCoreOptions AddTagsEnricher(Action<Dictionary<string, string>, HttpContext> enricher)
-        => AddHttpTagsEnricher(enricher);
-
-    /// <summary>
-    /// Adds an HTTP tag enrichment delegate (alias for <see cref="AddHttpTagsEnricher"/>).
-    /// </summary>
-    public MetricFlowAspNetCoreOptions AddTagEnricher(Action<Dictionary<string, string>, HttpContext> enricher)
-        => AddHttpTagsEnricher(enricher);
 }

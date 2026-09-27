@@ -1,4 +1,4 @@
-namespace DotnetKit.MetricFlow;
+namespace DotnetKit.MetricFlow.Meters;
 
 /// <summary>
 /// Naming conventions for System.Diagnostics.Metrics instruments.

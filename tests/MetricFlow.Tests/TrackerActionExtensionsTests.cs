@@ -140,11 +140,17 @@ public class TrackerActionExtensionsTests
 
         // Act
         HelperCallingTrackAction(tracker);
+        var syncResult = HelperCallingTrackActionWithResult(tracker);
         await HelperCallingTrackActionAsync(tracker);
+        var asyncResult = await HelperCallingTrackActionAsyncWithResult(tracker);
 
         // Assert
+        syncResult.Should().Be(42);
+        asyncResult.Should().Be("done");
         tracker.GetValues(nameof(HelperCallingTrackAction)).Should().NotBeNull();
+        tracker.GetValues(nameof(HelperCallingTrackActionWithResult)).Should().NotBeNull();
         tracker.GetValues(nameof(HelperCallingTrackActionAsync)).Should().NotBeNull();
+        tracker.GetValues(nameof(HelperCallingTrackActionAsyncWithResult)).Should().NotBeNull();
     }
 
     private static void HelperCallingTrackAction(MetricTracker tracker)
@@ -152,8 +158,22 @@ public class TrackerActionExtensionsTests
         tracker.TrackAction(() => { });
     }
 
+    private static int HelperCallingTrackActionWithResult(MetricTracker tracker)
+    {
+        return tracker.TrackAction(() => 42);
+    }
+
     private static async Task HelperCallingTrackActionAsync(MetricTracker tracker)
     {
         await tracker.TrackActionAsync(async () => { await Task.Yield(); });
+    }
+
+    private static async Task<string> HelperCallingTrackActionAsyncWithResult(MetricTracker tracker)
+    {
+        return await tracker.TrackActionAsync(async () =>
+        {
+            await Task.Yield();
+            return "done";
+        });
     }
 }

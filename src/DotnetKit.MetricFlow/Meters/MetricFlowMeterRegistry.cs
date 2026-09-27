@@ -5,20 +5,14 @@ namespace DotnetKit.MetricFlow.Meters;
 /// <summary>
 /// Registry managing topic-keyed IMetricMeterBridge instances and their associated Meter lifecycles.
 /// </summary>
-public class MetricFlowMeterRegistry : IDisposable
+public class MetricFlowMeterRegistry(
+    MetricFlowMeterOptions? defaultOptions = null,
+    Func<string, MetricFlowMeterOptions>? optionsFactory = null)
+    : IDisposable
 {
     private readonly ConcurrentDictionary<string, IMetricMeterBridge> _bridges = new(StringComparer.OrdinalIgnoreCase);
-    private readonly MetricFlowMeterOptions _defaultOptions;
-    private readonly Func<string, MetricFlowMeterOptions>? _optionsFactory;
+    private readonly MetricFlowMeterOptions _defaultOptions = defaultOptions ?? new MetricFlowMeterOptions();
     private int _disposed;
-
-    public MetricFlowMeterRegistry(
-        MetricFlowMeterOptions? defaultOptions = null,
-        Func<string, MetricFlowMeterOptions>? optionsFactory = null)
-    {
-        _defaultOptions = defaultOptions ?? new MetricFlowMeterOptions();
-        _optionsFactory = optionsFactory;
-    }
 
     /// <summary>
     /// Gets or creates a meter bridge for the specified topic and topic-level tags.
@@ -29,7 +23,7 @@ public class MetricFlowMeterRegistry : IDisposable
 
         return _bridges.GetOrAdd(topic, key =>
         {
-            var options = _optionsFactory != null ? _optionsFactory(key) : _defaultOptions;
+            var options = optionsFactory != null ? optionsFactory(key) : _defaultOptions;
             return new MetricFlowMeterBridge(key, topicTags, options);
         });
     }

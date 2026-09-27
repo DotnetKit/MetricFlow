@@ -166,7 +166,7 @@ To prevent high-cardinality memory leaks from unbounded tag values, MetricFlow h
 2. **Operation / Dynamic Tags (from `EnrichTags` or `tracker.Track(tags)`):**
    Standard performance counters (such as `DurationCounter`, `ThroughputCounter`, `ExceptionCounter`, and `MemoryCounter`) aggregate technical measurements across operations.
    
-   To surface and break down operations by any specific tag (e.g. `tenant_id` from middleware or `country` from an endpoint), register a **`DimensionCounter`** / **`TagBreakdownCounter`**:
+   To surface and break down operations by any specific tag (e.g. `tenant_id` from middleware or `country` from an endpoint), register a **`DimensionCounter`**:
 
    ```csharp
    builder.Services.AddMetricFlow("WebApiExample", options =>
@@ -181,7 +181,7 @@ To prevent high-cardinality memory leaks from unbounded tag values, MetricFlow h
        });
 
        // 2. Break down snapshots by tenant_id (from middleware)
-       options.AddTagBreakdownCounter("tenant_id");
+       options.AddDimensionCounter("tenant_id");
 
        // 3. Break down snapshots by country (from endpoint tracker.Track)
        options.AddDimensionCounter("country");
@@ -191,7 +191,7 @@ To prevent high-cardinality memory leaks from unbounded tag values, MetricFlow h
    When queried (e.g. via `/metrics`), the output automatically includes the dimensional breakdown:
 
    ```text
-   [TagBreakdown:tenant_id] Metric: /weatherforecast
+   [Dimension:tenant_id] Metric: /weatherforecast
    Total Operations       : 10
    Tagged Operations      : 8 (80.0%)
    Breakdown by 'tenant_id':
