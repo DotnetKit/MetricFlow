@@ -344,27 +344,27 @@ app.Run();
 
 #### 6. OpenTelemetry & Cloud Telemetry (`DotnetKit.MetricFlow.OpenTelemetry`)
 
-MetricFlow seamlessly bridges domain metrics and scoped tracking to the standard OpenTelemetry .NET ecosystem. Simply add `.AddMetricFlowInstrumentation()` to your `MeterProviderBuilder`:
+MetricFlow seamlessly bridges domain metrics and scoped tracking to the standard OpenTelemetry .NET ecosystem. You can configure OpenTelemetry directly using the fluent `.WithOpenTelemetry()` sub-builder:
 
 ```csharp
 using DotnetKit.MetricFlow.OpenTelemetry;
 using OpenTelemetry.Metrics;
 
-services.AddOpenTelemetry()
-    .WithMetrics(metrics =>
+services.AddMetricFlow("Billing", options => options.AddThroughputCounter())
+    .WithOpenTelemetry(otel =>
     {
-        metrics
-            // Subscribe to all MetricFlow topics ("DotnetKit.MetricFlow.*")
-            .AddMetricFlowInstrumentation(options =>
-            {
-                options.MeterNamePattern = "DotnetKit.MetricFlow.*";
-                options.RecordActiveOperations = true;
-            })
+        otel.WithMetrics(metrics =>
+        {
             // Export to any OpenTelemetry collector
-            .AddOtlpExporter()
-            .AddPrometheusExporter();
+            metrics.AddOtlpExporter()
+                   .AddPrometheusExporter();
+        });
+        
+        otel.WithTracing();
     });
 ```
+
+You can also use `.AddMetricFlowInstrumentation()` directly on an existing `MeterProviderBuilder`:
 
 ##### Standard BCL Instruments Mapped
 | MetricFlow Concept | Instrument Type | Metric Name | Unit | Tags / Attributes |

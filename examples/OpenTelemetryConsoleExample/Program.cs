@@ -1,7 +1,7 @@
 using DotnetKit.MetricFlow;
-using DotnetKit.MetricFlow.Extensions;
+using DotnetKit.MetricFlow.Abstractions;
 using DotnetKit.MetricFlow.OpenTelemetry;
-using OpenTelemetry;
+using Microsoft.Extensions.DependencyInjection;
 using OpenTelemetry.Metrics;
 
 namespace OpenTelemetryConsoleExample;
@@ -14,44 +14,44 @@ internal class Program
         Console.WriteLine("    MetricFlow + OpenTelemetry .NET Integration Example");
         Console.WriteLine("===================================================================\n");
 
-        // 1. Configure OpenTelemetry MeterProvider with MetricFlow instrumentation
-        using var meterProvider = Sdk.CreateMeterProviderBuilder()
-            .AddMetricFlowInstrumentation(options =>
-            {
-                // Subscribe to all MetricFlow topics (default: "DotnetKit.MetricFlow.*")
-                options.MeterNamePattern = "DotnetKit.MetricFlow.*";
-                options.RecordActiveOperations = true;
-            })
-            // Export directly to console (in production, use .AddOtlpExporter() or .AddPrometheusExporter())
-            .AddConsoleExporter((_, metricReaderOptions) =>
-            {
-                metricReaderOptions.PeriodicExportingMetricReaderOptions.ExportIntervalMilliseconds = 1000;
-            })
-            .Build();
+        // 1. Configure MetricFlow and OpenTelemetry together in DI using .WithOpenTelemetry()
+        var services = new ServiceCollection();
 
-        // 2. Configure MetricFlow options with topic tags and cardinality protection
-        var options = new MetricFlowOptions
+        services.AddMetricFlow("OrderProcessingService", options =>
         {
-            Topic = "OrderProcessingService"
-        };
+            options.AddTagsEnricher(tags =>
+            {
+                tags["environment"] = "Production";
+                tags["datacenter"] = "eu-central-1";
+            });
 
-        options.AddTagsEnricher(tags =>
+            // Add built-in throughput counter for local snapshots
+            options.AddThroughputCounter();
+
+            // Configure meter cardinality protection to protect Prometheus / OTLP collectors
+            options.ConfigureMeters(m =>
+            {
+                m.MaxUniqueTagValues = 3;
+                m.OverflowBucket = "[Other]";
+            });
+        })
+        .WithOpenTelemetry(otel =>
         {
-            tags["environment"] = "Production";
-            tags["datacenter"] = "eu-central-1";
+            otel.WithMetrics(metrics =>
+            {
+                // Export directly to console (in production, use .AddOtlpExporter() or .AddPrometheusExporter())
+                metrics.AddConsoleExporter((_, metricReaderOptions) =>
+                {
+                    metricReaderOptions.PeriodicExportingMetricReaderOptions.ExportIntervalMilliseconds = 1000;
+                });
+            });
         });
 
-        // Add built-in throughput counter for local snapshots
-        options.AddThroughputCounter();
+        using var serviceProvider = services.BuildServiceProvider();
 
-        // Configure meter cardinality protection to protect Prometheus / OTLP collectors
-        options.ConfigureMeters(m =>
-        {
-            m.MaxUniqueTagValues = 3;
-            m.OverflowBucket = "[Other]";
-        });
-
-        var tracker = new MetricTracker(options);
+        // 2. Resolve the tracker and MeterProvider from the DI container
+        var tracker = serviceProvider.GetRequiredService<IMetricTracker>();
+        var meterProvider = serviceProvider.GetRequiredService<MeterProvider>();
 
         Console.WriteLine("1. Executing operations with batch items and regional tags...\n");
 

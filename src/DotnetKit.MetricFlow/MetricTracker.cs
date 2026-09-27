@@ -1,7 +1,6 @@
 using DotnetKit.MetricFlow.Abstractions;
 using DotnetKit.MetricFlow.Configuration;
 using DotnetKit.MetricFlow.Counters;
-using DotnetKit.MetricFlow.Extensions;
 using DotnetKit.MetricFlow.Meters;
 
 namespace DotnetKit.MetricFlow;
