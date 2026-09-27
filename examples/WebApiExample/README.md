@@ -220,10 +220,10 @@ app.UseMetricFlow();
 ```
 
 ### Metrics Exposition Endpoint
-Map the `/metrics` endpoint to expose plain-text metric snapshots across all active topics:
+Map the metrics endpoint to expose plain-text metric snapshots across all active topics (defaults to `"/metrics"` if no route is provided):
 
 ```csharp
-app.MapMetricFlow("/metrics");
+app.MapMetricFlow(); // Or app.MapMetricFlow("/custom-metrics");
 ```
 
 ---
@@ -310,8 +310,8 @@ app.MapGet("/radar/scan", (IMetricFlow metricFlow) =>
 .WithName("ScanRadar")
 .WithOpenApi();
 
-// 3. Expose metrics endpoint
-app.MapMetricFlow("/metrics")
+// 3. Expose metrics endpoint (defaults to "/metrics")
+app.MapMetricFlow()
 .WithOpenApi();
 
 app.Run();

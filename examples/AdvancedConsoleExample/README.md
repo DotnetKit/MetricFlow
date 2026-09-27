@@ -1,115 +1,172 @@
 # Advanced Console Example
 
-This example demonstrates how to use the `MetricFlow` library with the full multi-counter telemetry pipeline: duration, throughput (items/sec and batch sizing), memory allocation, exceptions, and delegate tracking in a .NET application.
+This example demonstrates how to build an end-to-end, multi-counter telemetry pipeline with **MetricFlow** in a standalone .NET application. It highlights duration tracking, throughput analysis (fixed and dynamic batch sizing), memory allocation measurement, exception counting, dimensional slicing, caller member name inference, and programmatic metric snapshot querying.
 
-## Getting Started
+---
 
-### Prerequisites
+## Highlights
 
-- .NET SDK installed on your machine
+- **Multi-Counter Pipeline**: Chains built-in counters fluent-style:
+  - `DurationCounter` (default): Measures operation latency, min, max, avg, and execution counts.
+  - `ThroughputCounter` (`AddThroughputCounter`): Computes processing velocity (`items/sec`), total items, and average batch sizes.
+  - `ExceptionCounter` (`AddExceptionCounter`): Tracks failure rates and categorizes exceptions by type.
+  - `MemoryCounter` (`AddMemoryCounter`): Tracks managed memory allocations per operation without invasive profiling.
+  - `DimensionCounter` (`AddDimensionCounter`): Aggregates operation counts across business dimensions (e.g. `region`) with cardinality protection.
+- **Dynamic Metric Name Inference (`[CallerMemberName]`)**: Infers the metric name directly from the calling method when omitted.
+- **Batch Volume Tracking**:
+  - **Upfront Sizing**: `tracker.TrackItems("BatchIngestion", batchSize)`
+  - **Dynamic Sizing**: `tracker.Track("DynamicProcessor")` followed by `scope.SetItems(count)` (or `scope.SetItemCount(count)`).
+- **Manual vs Scoped Tracking**: Combines scoped `using` disposable blocks with explicit manual tracking (`tracker.In` / `tracker.Out`).
+- **Programmatic Snapshot Access**: Directly queries typed metric snapshots via `tracker.GetThroughputValues(...)` and `tracker.GetDimensionValues(...)`.
 
-### Installation
+---
 
-1. Clone the repository:
+## Code Architecture
 
-    ```sh
-    git clone https://github.com/DotnetKit/MetricFlow.git
-    cd MetricFlow/examples/AdvancedConsoleExample
-    ```
-
-2. Restore dependencies:
-
-    ```sh
-    dotnet restore
-    ```
-
-### Running the Example
-
-To run the example, execute the following command:
-
-```sh
-dotnet run
-```
-
-## Example Overview
-
-The `BenchRunner` class simulates a series of operations and tracks their execution times using the `MetricTracker` class.
-
-### Key Components
-
-- **MetricTracker**: Tracks metrics for different operations.
-  - two way usage: code scoped tracker (disposable pattern) or control tracker directly (with In() and Out() calls)
-- **BenchRunner**: Simulates operations and uses `MetricTracker` to measure their execution times.
-
-### Code Example
+### 1. Initializing the Tracker with Multi-Counter Pipeline
 
 ```csharp
-public static class BenchRunner
-{
-    private const int OPERATION_COUNT = 10;
-
-    public static async Task RunExample()
+var tracker = new MetricTracker("AdvancedConsoleTopic", new()
     {
-        var tracker = new MetricTracker("ExecutionTimeMetricsTopic", new()
+        ["tenant_id"] = "TenantId1",
+        ["session_id"] = Guid.NewGuid().ToString()
+    })
+    .AddThroughputCounter()
+    .AddExceptionCounter()
+    .AddMemoryCounter()
+    .AddDimensionCounter("region");
+```
+
+### 2. Operational Workflows
+
+```csharp
+// 1. CallerMemberName inference & Memory allocation
+internal static async Task ExecuteOperation1Async(MetricTracker tracker, int i)
+{
+    // Metric name resolves automatically to "ExecuteOperation1Async"
+    using var op1 = tracker.Track(tags: new() { ["operation_id"] = $"{i}" });
+    await Task.Delay(2);
+    _ = AllocateMemory((i + 1) * 16, (byte)i); // Exercises MemoryCounter
+}
+
+// 2. Delegate tracking & Exception capture
+internal static async Task ExecuteOperation2Async(MetricTracker tracker, int i)
+{
+    try
+    {
+        await tracker.TrackActionAsync(async () =>
         {
-            ["tenant_id"] = "TenantId1",
-            ["session_id"] = Guid.NewGuid().ToString()
-        });
+            await Task.Delay(4);
+            _ = AllocateMemory((OperationCount - i) * 32, (byte)i);
+            ThrowModuloException(i); // Exercises ExceptionCounter
+        },
+        tags: new() { ["operation_id"] = $"{OperationCount - i}" });
+    }
+    catch
+    {
+        // Handled to let the loop continue
+    }
+}
 
-        tracker.In("GlobalOperation");
+// 3. Upfront batch throughput tracking
+internal static async Task ExecuteBatchIngestionAsync(MetricTracker tracker, int i)
+{
+    var batchSize = (i + 1) * 250;
+    using var scope = tracker.TrackItems("BatchIngestion", batchSize, new() { ["batch_id"] = $"{i}" });
+    await Task.Delay(5);
+}
 
-        for (var i = 0; i < OPERATION_COUNT; i++)
-        {
-            using (var __ = tracker.Track("Operation1", new() { ["operation_id"] = $"{i}" }))
-            {
-                await Task.Delay(2);
-            }
-            using (var __ = tracker.Track("Operation2", new() { ["operation_id"] = $"{OPERATION_COUNT - i}" }))
-            {
-                await Task.Delay(4);
-            }
-        }
+// 4. Dynamic batch throughput & dimensional tagging
+internal static async Task ExecuteDynamicBatchAsync(MetricTracker tracker, int i)
+{
+    var regions = new[] { "US", "EU", "APAC" };
+    using var scope = tracker.Track("DynamicProcessor", new() { ["region"] = regions[i % regions.Length] });
+    await Task.Delay(3);
 
-        tracker.Out("GlobalOperation");
+    long processedCount = (i + 1) * 100;
+    scope.SetItems(processedCount); // Or scope.SetItemCount(processedCount)
+}
+```
 
-        Console.WriteLine(tracker.ToString());
+### 3. Programmatic Telemetry Querying
+
+In addition to `tracker.ToString()`, you can query strongly-typed values directly:
+
+```csharp
+// Query Throughput metrics
+var throughput = tracker.GetThroughputValues("BatchIngestion");
+if (throughput != null)
+{
+    Console.WriteLine($"Rate       : {throughput.ItemsPerSecond:N0} items/sec");
+    Console.WriteLine($"Total Items: {throughput.TotalItems:N0}");
+    Console.WriteLine($"Avg Batch  : {throughput.AverageItemsPerOperation:N1} items/op");
+}
+
+// Query Dimension metrics
+var dimension = tracker.GetDimensionValues("DynamicProcessor", "region");
+if (dimension != null)
+{
+    Console.WriteLine($"Tracked Operations: {dimension.TrackedOperations:N0} ({dimension.TrackedPercentage * 100:F1}%)");
+    foreach (var (region, count) in dimension.Breakdown)
+    {
+        Console.WriteLine($"  - {region}: {count}");
     }
 }
 ```
 
-### Output
+---
 
-The output will display the tracked metrics, including the count, average duration, minimum and maximum durations, and total duration for each operation.
+## Running the Example
 
+From the repository root:
+
+```bash
+dotnet run --project examples/AdvancedConsoleExample/AdvancedConsoleExample.csproj
 ```
-ExecutionTimeMetricsTopic
-Topic Tags:  tenant_id:TenantId1, session_id:74f627d9-5787-42b1-bab6-f1953ac3e215
+
+### Sample Output
+
+```text
+Executing advanced operations with MetricFlow...
+
+AdvancedConsoleTopic
+Topic Tags:
+  - tenant_id: TenantId1
+  - session_id: ...
+
 GlobalOperation
-MetricMetadata:
-Count (in, out): 1 / 1
-Avg duration: 1336323 ms
-Duration (min, max) : 1336323 ms / 1336323 ms
-Total duration: 1336323 ms
+Duration (ms):
+  Avg: 184.21  Min: 184.21  Max: 184.21  Total: 184.21
+  Operations: 1 in / 1 out (0 failed)
 
-Operation1
-MetricMetadata:  operation_id:0
-Count (in, out): 10 / 10
-Avg duration: 29906 ms
-Duration (min, max) : 22745 ms / 182873 ms
-Total duration: 615900 ms
+BatchIngestion
+Duration (ms):
+  Avg: 6.84  Min: 5.92  Max: 9.15  Total: 68.42
+  Operations: 10 in / 10 out (0 failed)
+Throughput:
+  Total Items: 13,750  Rate: 200,964 items/sec  Avg Batch: 1,375.0 items/op
 
-Operation2
-MetricMetadata:  operation_id:10
-Count (in, out): 10 / 10
-Avg duration: 112361 ms
-Duration (min, max) : 41157 ms / 166233 ms
-Total duration: 695333 ms
+DynamicProcessor
+Duration (ms):
+  Avg: 4.12  Min: 3.51  Max: 5.67  Total: 41.20
+  Operations: 10 in / 10 out (0 failed)
+Throughput:
+  Total Items: 5,500  Rate: 133,495 items/sec  Avg Batch: 550.0 items/op
+Dimension Breakdown [region]:
+  Tracked: 10 / 10 (100.0%)
+  - US: 4 (40.0%)
+  - EU: 3 (30.0%)
+  - APAC: 3 (30.0%)
+
+=== Throughput Summary ===
+BatchIngestion Rate  : 200,964 items/sec
+Total Items Processed: 13,750
+Average Batch Size   : 1,375.0 items/op
+
+=== Dimension Summary ===
+Dimension : region
+Tracked Operations: 10 (100.0%)
+  - US: 4
+  - EU: 3
+  - APAC: 3
 ```
-
-## Contributing
-
-Contributions are welcome! Please open an issue or submit a pull request for any improvements or bug fixes.
-
-## License
-
-This project is licensed under the MIT License.
