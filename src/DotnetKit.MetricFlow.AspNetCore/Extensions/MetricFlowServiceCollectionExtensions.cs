@@ -1,3 +1,4 @@
+using DotnetKit.MetricFlow;
 using DotnetKit.MetricFlow.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -11,11 +12,12 @@ public static class MetricFlowServiceCollectionExtensions
 {
     /// <summary>
     /// Registers MetricFlow and its ASP.NET Core services in the dependency injection container.
+    /// Returns an <see cref="IMetricFlowBuilder"/> for fluent chaining.
     /// </summary>
     /// <param name="services">The service collection.</param>
-    /// <param name="configure">Optional configuration action.</param>
-    /// <returns>The service collection for chaining.</returns>
-    public static IServiceCollection AddMetricFlow(
+    /// <param name="configure">Configuration action for ASP.NET Core options.</param>
+    /// <returns>The <see cref="IMetricFlowBuilder"/> instance for fluent chaining.</returns>
+    public static IMetricFlowBuilder AddMetricFlow(
         this IServiceCollection services,
         Action<MetricFlowAspNetCoreOptions> configure)
     {
@@ -28,38 +30,32 @@ public static class MetricFlowServiceCollectionExtensions
         services.TryAddSingleton(options);
         services.TryAddSingleton<MetricFlowOptions>(sp => sp.GetRequiredService<MetricFlowAspNetCoreOptions>());
 
-        services.TryAddSingleton<MetricTracker>(sp =>
+        var builder = services.AddMetricFlow();
+        builder.AddMetricTracker(options.Topic, opt =>
         {
-            var opt = sp.GetRequiredService<MetricFlowAspNetCoreOptions>();
-            var tracker = new MetricTracker(
-                topic: opt.Topic,
-                topicTags: opt.TopicTags,
-                samplingRate: opt.SamplingRate,
-                configObservable: opt.ConfigObservable,
-                additionalCounters: opt.Counters);
-
-            if (opt.AutoAddExceptionCounter)
+            opt.Topic = options.Topic;
+            opt.TopicTags = options.TopicTags;
+            opt.SamplingRate = options.SamplingRate;
+            opt.ConfigObservable = options.ConfigObservable;
+            opt.AutoAddExceptionCounter = options.AutoAddExceptionCounter;
+            foreach (var counter in options.Counters)
             {
-                tracker.AddExceptionCounter();
+                opt.Counters.Add(counter);
             }
-
-            return tracker;
         });
 
-        services.TryAddSingleton<IMetricTracker>(sp => sp.GetRequiredService<MetricTracker>());
-        services.TryAddSingleton<IMetricSnapshotsSource>(sp => sp.GetRequiredService<MetricTracker>());
-
-        return services;
+        return builder;
     }
 
     /// <summary>
     /// Registers MetricFlow with a specific topic name and optional configuration.
+    /// Returns an <see cref="IMetricFlowBuilder"/> for fluent chaining.
     /// </summary>
     /// <param name="services">The service collection.</param>
     /// <param name="topic">The metric topic name.</param>
-    /// <param name="configure">Optional configuration action.</param>
-    /// <returns>The service collection for chaining.</returns>
-    public static IServiceCollection AddMetricFlow(
+    /// <param name="configure">Configuration action for ASP.NET Core options.</param>
+    /// <returns>The <see cref="IMetricFlowBuilder"/> instance for fluent chaining.</returns>
+    public static IMetricFlowBuilder AddMetricFlow(
         this IServiceCollection services,
         string topic,
         Action<MetricFlowAspNetCoreOptions> configure)

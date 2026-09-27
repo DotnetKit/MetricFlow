@@ -22,14 +22,14 @@ public class MetricFlowBuilder : IMetricFlowBuilder
     }
 
     /// <inheritdoc />
-    public IMetricFlowBuilder AddTracker(string topic, Action<MetricFlowOptions>? configure = null)
+    public IMetricFlowBuilder AddMetricTracker(string topic, Action<MetricFlowOptions>? configure = null)
     {
         Current.AddMetricFlowTracker(topic, configure);
         return this;
     }
 
     /// <inheritdoc />
-    public IMetricFlowBuilder AddTracker(Action<MetricFlowOptions>? configure = null)
+    public IMetricFlowBuilder AddMetricTracker(Action<MetricFlowOptions>? configure = null)
     {
         Current.AddMetricFlowTracker(configure);
         return this;

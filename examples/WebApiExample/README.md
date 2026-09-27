@@ -43,7 +43,7 @@ builder.Services.AddMetricFlow("WebApiExample", options =>
         }
     };
 })
-.AddTracker("WeatherRadar", options =>
+.AddMetricTracker("WeatherRadar", options =>
 {
     options.SamplingRate = 1.0;
 });
@@ -134,6 +134,82 @@ app.MapGet("/weatherforecast", (IMetricTracker tracker) =>
 
 ---
 
+## Tag Management
+
+MetricFlow provides a flexible tagging model that allows you to attach context to metrics at three distinct levels, from application-wide static tags down to individual operation scopes.
+
+### The 3 Levels of Tags
+
+| Tag Level | Where Defined | Scope | Example |
+| :--- | :--- | :--- | :--- |
+| **1. Topic Tags** | `options.TopicTags` | Global (entire tracker) | `options.TopicTags = new() { ["env"] = "Production", ["region"] = "us-east" };` |
+| **2. Middleware Enriched Tags** | `options.EnrichTags`<br>`IncludeHttpMethod`<br>`IncludeStatusCode` | All HTTP requests in the pipeline | `options.EnrichTags = (tags, ctx) => tags["tenant_id"] = ...;` |
+| **3. Operation / Scope Tags** | Direct at call-site (`tracker.Track(...)` or `scope.SetTag(...)`) | Individual operation execution | `tracker.Track("GetWeather", new() { ["country"] = country });` |
+
+All tags—whether defined in options, enriched by middleware, or passed dynamically at the call-site—flow through `InContext` and `OutContext` to all active counters.
+
+---
+
+### How Tags Appear in Metric Snapshots
+
+To prevent high-cardinality memory leaks from unbounded tag values, MetricFlow handles snapshot visualization intentionally:
+
+1. **Topic Tags (`options.TopicTags`):**
+   Rendered automatically in the global snapshot header:
+   ```text
+   WebApiExample
+   Topic Tags:
+     - env: Production
+     - region: us-east
+   ```
+
+2. **Operation / Dynamic Tags (from `EnrichTags` or `tracker.Track(tags)`):**
+   Standard performance counters (such as `DurationCounter`, `ThroughputCounter`, `ExceptionCounter`, and `MemoryCounter`) aggregate technical measurements across operations.
+   
+   To surface and break down operations by any specific tag (e.g. `tenant_id` from middleware or `country` from an endpoint), register a **`DimensionCounter`** / **`TagBreakdownCounter`**:
+
+   ```csharp
+   builder.Services.AddMetricFlow("WebApiExample", options =>
+   {
+       // 1. Enrich tags from HTTP headers in middleware
+       options.EnrichTags = (tags, context) =>
+       {
+           if (context.Request.Headers.TryGetValue("X-Tenant-ID", out var tenantId))
+           {
+               tags["tenant_id"] = tenantId!;
+           }
+       };
+
+       // 2. Break down snapshots by tenant_id (from middleware)
+       options.AddTagBreakdownCounter("tenant_id");
+
+       // 3. Break down snapshots by country (from endpoint tracker.Track)
+       options.AddDimensionCounter("country");
+   });
+   ```
+
+   When queried (e.g. via `/metrics`), the output automatically includes the dimensional breakdown:
+
+   ```text
+   [TagBreakdown:tenant_id] Metric: /weatherforecast
+   Total Operations       : 10
+   Tagged Operations      : 8 (80.0%)
+   Breakdown by 'tenant_id':
+     - tenant_alpha: 5 (62.5%)
+     - tenant_beta : 3 (37.5%)
+
+   [Dimension:country] Metric: QueryedByCountryWheather
+   Total Operations       : 5
+   Tagged Operations      : 4 (80.0%)
+   Breakdown by 'country':
+     - US: 3 (75.0%)
+     - DE: 1 (25.0%)
+   ```
+
+> **Cardinality Safeguard:** `DimensionCounter` includes built-in cardinality protection (defaulting to 250 max unique values) with automatic rollup into `[Other]` to safeguard against unbounded memory growth.
+
+---
+
 ## Middleware & Endpoint Configuration
 
 ### Turnkey Tracking Middleware
@@ -175,7 +251,7 @@ builder.Services.AddMetricFlow("WebApiExample", options =>
         }
     };
 })
-.AddTracker("WeatherRadar");
+.AddMetricTracker("WeatherRadar");
 
 var app = builder.Build();
 

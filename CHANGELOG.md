@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.5] - 2026-09-27
+
+### Added
+
+- **Multi-Topic Architecture & Top-Level Facade (`IMetricFlow`)**:
+  - Central `IMetricFlow` facade and `MetricFlowRegistry` for managing multiple metric topics within a single application.
+  - Dynamic topic retrieval by name (`_metricFlow.GetTracker("topic")`) with automatic fallback creation and thread-safe caching.
+  - Indexer syntax (`_metricFlow["topic"]`), existence check (`TryGetTracker`), `DefaultTracker`, and `Trackers` collection enumeration.
+- **Fluent Builder (`IMetricFlowBuilder`)**:
+  - Implements `IFluentBuilder<IServiceCollection>` enabling clean, chained registration of multiple topic trackers via `AddMetricTracker(topic, configure)`.
+  - Transparent `IServiceCollection` delegation allowing continuous chaining with any standard DI service registration.
+- **Keyed Services & Dedicated Tracker Registration**:
+  - Direct keyed dependency injection support in .NET 8+ via `[FromKeyedServices(topic)] IMetricTracker`.
+  - Standalone `services.AddMetricFlowTracker(topic, configure)` extension for modular architectures.
+
+---
+
 ## [1.0.4] - 2026-09-20
 
 ### Added

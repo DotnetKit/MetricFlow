@@ -18,12 +18,12 @@ public interface IMetricFlowBuilder : IFluentBuilder<IServiceCollection>, IServi
     /// <param name="topic">The metric topic name.</param>
     /// <param name="configure">Optional configuration action.</param>
     /// <returns>The builder instance for fluent chaining.</returns>
-    IMetricFlowBuilder AddTracker(string topic, Action<MetricFlowOptions>? configure = null);
+    IMetricFlowBuilder AddMetricTracker(string topic, Action<MetricFlowOptions>? configure = null);
 
     /// <summary>
     /// Adds a default metric tracker.
     /// </summary>
     /// <param name="configure">Optional configuration action.</param>
     /// <returns>The builder instance for fluent chaining.</returns>
-    IMetricFlowBuilder AddTracker(Action<MetricFlowOptions>? configure = null);
+    IMetricFlowBuilder AddMetricTracker(Action<MetricFlowOptions>? configure = null); 
 }

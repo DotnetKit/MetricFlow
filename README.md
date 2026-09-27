@@ -235,6 +235,32 @@ public class QueueWorker(IMetricTracker tracker)
 }
 ```
 
+##### Multi-Topic Support & Fluent Builder
+
+Register multiple isolated topic trackers in the same application via the fluent builder (`AddMetricTracker`) and resolve them via the `IMetricFlow` facade or native keyed injection:
+
+```csharp
+// Fluent builder registration
+services.AddMetricFlow("WebApi", options => ...)
+    .AddMetricTracker("WeatherRadar", options => ...);
+
+// 1. Resolve via IMetricFlow facade
+public class IngestionService(IMetricFlow metricFlow)
+{
+    public void Run()
+    {
+        var tracker = metricFlow.GetTracker("WeatherRadar");
+        using var scope = tracker.Track("ScanRadar");
+    }
+}
+
+// 2. Or resolve via native Keyed Services (.NET 8+)
+public class RadarWorker([FromKeyedServices("WeatherRadar")] IMetricTracker tracker)
+{
+    // ...
+}
+```
+
 ##### ASP.NET Core Integration
 
 Enable automated HTTP request duration, memory allocation, and failure tracking via middleware:

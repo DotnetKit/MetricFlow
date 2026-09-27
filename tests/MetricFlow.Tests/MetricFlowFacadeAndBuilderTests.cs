@@ -16,8 +16,8 @@ public class MetricFlowFacadeAndBuilderTests
 
         // Act - Using fluent builder based on IFluentBuilder
         services.AddMetricFlow(opt => opt.SamplingRate = 0.8)
-            .AddTracker("WebApiExample", opt => opt.SamplingRate = 1.0)
-            .AddTracker("MyPlixConsole", opt =>
+            .AddMetricTracker("WebApiExample", opt => opt.SamplingRate = 1.0)
+            .AddMetricTracker("MyPlixConsole", opt =>
             {
                 opt.SamplingRate = 0.5;
                 opt.AddThroughputCounter();
@@ -130,7 +130,7 @@ public class MetricFlowFacadeAndBuilderTests
         // Arrange
         var services = new ServiceCollection();
         services.AddMetricFlow()
-            .AddTracker("MyPlixConsole");
+            .AddMetricTracker("MyPlixConsole");
 
         using var provider = services.BuildServiceProvider();
         var _metricFlow = provider.GetRequiredService<IMetricFlow>();
