@@ -34,6 +34,26 @@ public interface IMetricFlowOpenTelemetryBuilder : IFluentBuilder<IServiceCollec
         Action<TracerProviderBuilder>? configure = null);
 
     /// <summary>
+    /// Configures the OpenTelemetry metric pipeline and automatically binds MetricFlow instruments (alias for <see cref="WithMetrics"/>).
+    /// </summary>
+    /// <param name="configure">Configuration action for the <see cref="MeterProviderBuilder"/>.</param>
+    /// <param name="configureMetricFlow">Optional configuration action for MetricFlow instrumentation options.</param>
+    /// <returns>The builder instance for fluent chaining.</returns>
+    IMetricFlowOpenTelemetryBuilder ConfigureMetrics(
+        Action<MeterProviderBuilder> configure,
+        Action<MetricFlowInstrumentationOptions>? configureMetricFlow = null)
+        => WithMetrics(configure, configureMetricFlow);
+
+    /// <summary>
+    /// Configures the OpenTelemetry trace pipeline and correlates MetricFlow activity sources (alias for <see cref="WithTracing"/>).
+    /// </summary>
+    /// <param name="configure">Optional configuration action for the <see cref="TracerProviderBuilder"/>.</param>
+    /// <returns>The builder instance for fluent chaining.</returns>
+    IMetricFlowOpenTelemetryBuilder ConfigureTracing(
+        Action<TracerProviderBuilder> configure)
+        => WithTracing(configure);
+
+    /// <summary>
     /// Configures MetricFlow OpenTelemetry instrumentation options.
     /// </summary>
     /// <param name="configure">Configuration delegate for instrumentation options.</param>

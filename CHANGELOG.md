@@ -30,11 +30,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Lifecycle & Resource Cleanup**:
   - `IDisposable` support on `MetricTrackerBase`, `MetricTracker`, `MetricFlowRegistry`, and `IMetricMeterBridge` to ensure clean disposal of `Meter` instances on application shutdown.
 - **OpenTelemetry Integration Package (`DotnetKit.MetricFlow.OpenTelemetry`)**:
-  - New dedicated integration library providing fluent `.AddMetricFlowInstrumentation(...)` extensions for OpenTelemetry `MeterProviderBuilder`.
+  - Unified fluent integration on `IMetricFlowBuilder` via `.WithOpenTelemetry(otel => ...)` preserving the exact `AddMetricFlow(...)` developer experience while configuring OpenTelemetry metrics and tracing in a single chained call.
+  - Sub-fluent builder abstraction (`IMetricFlowOpenTelemetryBuilder` & `MetricFlowOpenTelemetryBuilder`) implementing `IFluentBuilder<IServiceCollection>` with `WithMetrics(...)` (and `ConfigureMetrics(...)`), `WithTracing(...)` (and `ConfigureTracing(...)`), and `ConfigureInstrumentation(...)`.
+  - Factory helpers `MetricFlowTelemetry.CreateMeterProvider(...)` and `MetricFlowTelemetry.CreateMeterProviderBuilder(...)` abstracting `Sdk.CreateMeterProviderBuilder()` and automated MetricFlow meter binding in standalone and console applications.
+  - Low-level `.AddMetricFlowInstrumentation(...)` extensions on standard OpenTelemetry `MeterProviderBuilder` and `TracerProviderBuilder`.
   - Automated subscription to MetricFlow meters by pattern (`DotnetKit.MetricFlow.*`) or explicit topic lists.
   - Seamless export to any OpenTelemetry-compatible collector (Prometheus, OTLP, Grafana, Datadog, AWS CloudWatch, Azure Monitor).
   - Distributed tracing correlation via `WithTraceContext()` attaching `trace_id` and `span_id` to metrics, and `AddMetricFlowInstrumentation()` on `TracerProviderBuilder`.
-  - Comprehensive integration test suite (`MetricFlow.OpenTelemetry.Tests`) with in-memory reader validating export of duration, execution totals, items throughput, and trace correlation.
+  - Comprehensive integration test suite (`MetricFlow.OpenTelemetry.Tests`) validating DI fluent sub-builder, standalone telemetry factory, in-memory exporter reader, and trace correlation.
 - **Automated Tests**:
   - Comprehensive unit and integration tests using `MeterListener` in `MetricMeterBridgeTests` and in-memory OpenTelemetry reader in `MetricFlow.OpenTelemetry.Tests`.
 
