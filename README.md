@@ -235,9 +235,9 @@ using (var scope = tracker.Track("ProcessOrder", new() { ["country"] = "US", ["p
 }
 
 // Inspect snapshots
-var countryDim = tracker.GetDimensionValues("ProcessOrder", "country");
-var paymentDim = tracker.GetDimensionValues("ProcessOrder", "PaymentChannels");
-var tierDim = tracker.GetDimensionValues("ProcessOrder", "CustomerTier");
+var countryDim = tracker.GetDimensionSnapshot("ProcessOrder", "country");
+var paymentDim = tracker.GetDimensionSnapshot("ProcessOrder", "PaymentChannels");
+var tierDim = tracker.GetDimensionSnapshot("ProcessOrder", "CustomerTier");
 ```
 
 ##### Delegate Tracking (`TrackAction` / `TrackActionAsync`)

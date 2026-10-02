@@ -17,7 +17,7 @@ This example demonstrates how to build an end-to-end, multi-counter telemetry pi
   - **Upfront Sizing**: `tracker.TrackItems("BatchIngestion", batchSize)`
   - **Dynamic Sizing**: `tracker.Track("DynamicProcessor")` followed by `scope.SetItems(count)` (or `scope.SetItemCount(count)`).
 - **Manual vs Scoped Tracking**: Combines scoped `using` disposable blocks with explicit manual tracking (`tracker.In` / `tracker.Out`).
-- **Programmatic Snapshot Access**: Directly queries typed metric snapshots via `tracker.GetThroughputSnapshot(...)` and `tracker.GetDimensionValues(...)`.
+- **Programmatic Snapshot Access**: Directly queries typed metric snapshots via `tracker.GetThroughputSnapshot(...)` and `tracker.GetDimensionSnapshot(...)`.
 
 ---
 
@@ -103,7 +103,7 @@ if (throughput != null)
 }
 
 // Query Dimension metrics
-var dimension = tracker.GetDimensionValues("DynamicProcessor", "region");
+var dimension = tracker.GetDimensionSnapshot("DynamicProcessor", "region");
 if (dimension != null)
 {
     Console.WriteLine($"Tracked Operations: {dimension.TrackedOperations:N0} ({dimension.TrackedPercentage * 100:F1}%)");
