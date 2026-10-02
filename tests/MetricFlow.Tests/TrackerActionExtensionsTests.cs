@@ -19,7 +19,7 @@ public class TrackerActionExtensionsTests
 
         // Assert
         executed.Should().BeTrue();
-        var snapshot = tracker.GetValues("SyncOp");
+        var snapshot = tracker.GetDurationSnapshot("SyncOp");
         snapshot.Should().NotBeNull();
         snapshot.InCount.Should().Be(1);
         snapshot.OutCount.Should().Be(1);
@@ -40,7 +40,7 @@ public class TrackerActionExtensionsTests
 
         // Assert
         act.Should().Throw<InvalidOperationException>().WithMessage("Sync error");
-        var snapshot = tracker.GetValues("FailingOp");
+        var snapshot = tracker.GetDurationSnapshot("FailingOp");
         snapshot.Should().NotBeNull();
         snapshot.FailedCount.Should().Be(1);
 
@@ -60,7 +60,7 @@ public class TrackerActionExtensionsTests
 
         // Assert
         result.Should().Be(42);
-        var snapshot = tracker.GetValues("ReturnOp");
+        var snapshot = tracker.GetDurationSnapshot("ReturnOp");
         snapshot.Should().NotBeNull();
         snapshot.OutCount.Should().Be(1);
     }
@@ -81,7 +81,7 @@ public class TrackerActionExtensionsTests
 
         // Assert
         executed.Should().BeTrue();
-        var snapshot = tracker.GetValues("AsyncOp");
+        var snapshot = tracker.GetDurationSnapshot("AsyncOp");
         snapshot.Should().NotBeNull();
         snapshot.InCount.Should().Be(1);
         snapshot.OutCount.Should().Be(1);
@@ -103,7 +103,7 @@ public class TrackerActionExtensionsTests
 
         // Assert
         await act.Should().ThrowAsync<TimeoutException>().WithMessage("Async timeout");
-        var snapshot = tracker.GetValues("FailingAsyncOp");
+        var snapshot = tracker.GetDurationSnapshot("FailingAsyncOp");
         snapshot.Should().NotBeNull();
         snapshot.FailedCount.Should().Be(1);
 
@@ -127,7 +127,7 @@ public class TrackerActionExtensionsTests
 
         // Assert
         result.Should().Be("hello world");
-        var snapshot = tracker.GetValues("AsyncReturnOp");
+        var snapshot = tracker.GetDurationSnapshot("AsyncReturnOp");
         snapshot.Should().NotBeNull();
         snapshot.OutCount.Should().Be(1);
     }
@@ -147,10 +147,10 @@ public class TrackerActionExtensionsTests
         // Assert
         syncResult.Should().Be(42);
         asyncResult.Should().Be("done");
-        tracker.GetValues(nameof(HelperCallingTrackAction)).Should().NotBeNull();
-        tracker.GetValues(nameof(HelperCallingTrackActionWithResult)).Should().NotBeNull();
-        tracker.GetValues(nameof(HelperCallingTrackActionAsync)).Should().NotBeNull();
-        tracker.GetValues(nameof(HelperCallingTrackActionAsyncWithResult)).Should().NotBeNull();
+        tracker.GetDurationSnapshot(nameof(HelperCallingTrackAction)).Should().NotBeNull();
+        tracker.GetDurationSnapshot(nameof(HelperCallingTrackActionWithResult)).Should().NotBeNull();
+        tracker.GetDurationSnapshot(nameof(HelperCallingTrackActionAsync)).Should().NotBeNull();
+        tracker.GetDurationSnapshot(nameof(HelperCallingTrackActionAsyncWithResult)).Should().NotBeNull();
     }
 
     private static void HelperCallingTrackAction(MetricTracker tracker)

@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.Diagnostics.Metrics;
 using System.Runtime.CompilerServices;
 using System.Text;
 using DotnetKit.MetricFlow.Configuration;

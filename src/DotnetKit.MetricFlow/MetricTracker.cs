@@ -55,7 +55,7 @@ public class MetricTracker : MetricTrackerBase
         }
     }
 
-    public DurationSnapshot? GetValues(string metricName)
+    public DurationSnapshot? GetDurationSnapshot(string metricName)
     {
         return this.GetSnapshot<DurationSnapshot>(metricName, DurationCounter.Name);
     }

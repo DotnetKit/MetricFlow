@@ -20,7 +20,7 @@ public class DimensionCounterTests
         using (tracker.Track("ProcessJob", new() { ["tenant"] = "TenantA" })) { }
 
         // Assert
-        var snapshot = tracker.GetDimensionValues("ProcessJob", "tenant");
+        var snapshot = tracker.GetDimensionSnapshot("ProcessJob", "tenant");
         snapshot.Should().NotBeNull();
         snapshot.TotalOperations.Should().Be(3);
         snapshot.TrackedOperations.Should().Be(3);
@@ -44,7 +44,7 @@ public class DimensionCounterTests
         using (tracker.Track("ProcessOrder")) { } // untagged
 
         // Assert
-        var snapshot = tracker.GetDimensionValues("ProcessOrder", "country");
+        var snapshot = tracker.GetDimensionSnapshot("ProcessOrder", "country");
         snapshot.Should().NotBeNull();
         snapshot.TotalOperations.Should().Be(4);
         snapshot.TaggedOperations.Should().Be(3);
@@ -72,7 +72,7 @@ public class DimensionCounterTests
         }
 
         // Assert
-        var snapshot = tracker.GetDimensionValues("CreateShipment", "country");
+        var snapshot = tracker.GetDimensionSnapshot("CreateShipment", "country");
         snapshot.Should().NotBeNull();
         snapshot.TotalOperations.Should().Be(1);
         snapshot.TaggedOperations.Should().Be(1);
@@ -92,7 +92,7 @@ public class DimensionCounterTests
         using (tracker.Track("OrderOp", new() { ["COUNTRY"] = "fr" })) { }
 
         // Assert
-        var snapshot = tracker.GetDimensionValues("OrderOp", "country");
+        var snapshot = tracker.GetDimensionSnapshot("OrderOp", "country");
         snapshot.Should().NotBeNull();
         snapshot.TotalOperations.Should().Be(2);
         snapshot.TaggedOperations.Should().Be(2);
@@ -119,7 +119,7 @@ public class DimensionCounterTests
         }
 
         // Assert
-        var snapshot = tracker.GetDimensionValues("HandleRequest", "status_code");
+        var snapshot = tracker.GetDimensionSnapshot("HandleRequest", "status_code");
         snapshot.Should().NotBeNull();
         snapshot.TotalOperations.Should().Be(2);
         snapshot.TaggedOperations.Should().Be(2);
@@ -145,7 +145,7 @@ public class DimensionCounterTests
         using (tracker.Track("TenantJob", new() { ["tenant_id"] = "Tenant_A" })) { } // existing key
 
         // Assert
-        var snapshot = tracker.GetDimensionValues("TenantJob", "tenant_id");
+        var snapshot = tracker.GetDimensionSnapshot("TenantJob", "tenant_id");
         snapshot.Should().NotBeNull();
         snapshot.TotalOperations.Should().Be(6);
         snapshot.TaggedOperations.Should().Be(6);
@@ -186,7 +186,7 @@ public class DimensionCounterTests
         await Task.WhenAll(tasks);
 
         // Assert
-        var snapshot = tracker.GetDimensionValues("ConcurrOp", "country");
+        var snapshot = tracker.GetDimensionSnapshot("ConcurrOp", "country");
         snapshot.Should().NotBeNull();
         snapshot.TotalOperations.Should().Be(concurrency * iterationsPerTask);
         snapshot.TaggedOperations.Should().Be(concurrency * iterationsPerTask);
@@ -216,13 +216,13 @@ public class DimensionCounterTests
         using (tracker.Track("Checkout", new() { ["country"] = "US", ["order_type"] = "wholesale" })) { }
 
         // Assert - country
-        var countrySnap = tracker.GetDimensionValues("Checkout", "country");
+        var countrySnap = tracker.GetDimensionSnapshot("Checkout", "country");
         countrySnap.Should().NotBeNull();
         countrySnap.Breakdown["US"].Should().Be(2);
         countrySnap.Breakdown["DE"].Should().Be(1);
 
         // Assert - order_type
-        var typeSnap = tracker.GetDimensionValues("Checkout", "order_type");
+        var typeSnap = tracker.GetDimensionSnapshot("Checkout", "order_type");
         typeSnap.Should().NotBeNull();
         typeSnap.Breakdown["retail"].Should().Be(2);
         typeSnap.Breakdown["wholesale"].Should().Be(1);
@@ -241,7 +241,7 @@ public class DimensionCounterTests
         using (tracker.Track("Shipment")) { } // untagged
 
         // Act
-        var snapshot = tracker.GetDimensionValues("Shipment", "country");
+        var snapshot = tracker.GetDimensionSnapshot("Shipment", "country");
         var formatted = snapshot?.ToFormattedString();
 
         // Assert
@@ -267,7 +267,7 @@ public class DimensionCounterTests
         tracker.Clear();
 
         // Assert
-        var snapshot = tracker.GetDimensionValues("ResetOp", "country");
+        var snapshot = tracker.GetDimensionSnapshot("ResetOp", "country");
         snapshot.Should().BeNull();
     }
 
@@ -307,7 +307,7 @@ public class DimensionCounterTests
         using (tracker.Track("Checkout")) { }
 
         // Assert
-        var snapshot = tracker.GetDimensionValues("Checkout", "CountryAndPayment");
+        var snapshot = tracker.GetDimensionSnapshot("Checkout", "CountryAndPayment");
         snapshot.Should().NotBeNull();
         snapshot.TotalOperations.Should().Be(5);
         snapshot.TaggedOperations.Should().Be(4);
@@ -355,7 +355,7 @@ public class DimensionCounterTests
         }
 
         // Assert
-        var snapshot = tracker.GetDimensionValues("ProcessOrder", "CustomerTier");
+        var snapshot = tracker.GetDimensionSnapshot("ProcessOrder", "CustomerTier");
         snapshot.Should().NotBeNull();
         snapshot.TotalOperations.Should().Be(3);
         snapshot.TaggedOperations.Should().Be(3);
@@ -402,7 +402,7 @@ public class DimensionCounterTests
         }
 
         // Assert
-        var snapshot = tracker.GetDimensionValues("PlaceOrder", "HighValueOrders");
+        var snapshot = tracker.GetDimensionSnapshot("PlaceOrder", "HighValueOrders");
         snapshot.Should().NotBeNull();
         snapshot.TotalOperations.Should().Be(3);
         snapshot.TaggedOperations.Should().Be(1);
@@ -429,7 +429,7 @@ public class DimensionCounterTests
         }).Should().NotThrow();
 
         // Assert - operation recorded safely as untagged
-        var snapshot = tracker.GetDimensionValues("FaultyOp", "FaultySelector");
+        var snapshot = tracker.GetDimensionSnapshot("FaultyOp", "FaultySelector");
         snapshot.Should().NotBeNull();
         snapshot.TotalOperations.Should().Be(1);
         snapshot.TaggedOperations.Should().Be(0);

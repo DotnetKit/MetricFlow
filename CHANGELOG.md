@@ -94,7 +94,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `ThroughputSnapshot` providing rich formatted output matching production telemetry (`TotalItems`, `ItemsPerSecond`, `AverageItemsPerOperation`, etc.).
   - `TrackItems` extension methods for upfront item count tracking on `IMetricTracker`.
   - `scope.SetItems()` and `scope.SetItemCount()` methods on tracking scopes for dynamic batch sizing during or upon completion of an operation.
-  - Builder and snapshot querying extensions: `AddThroughputCounter()`, `AddItemCounter()`, and `GetThroughputValues()` on `IMetricTracker`.
+  - Builder and snapshot querying extensions: `AddThroughputCounter()`, `AddItemCounter()`, and `GetThroughputSnapshot()` on `IMetricTracker`.
 - **Dependency Injection for Core Applications (`DotnetKit.MetricFlow`)**:
   - `services.AddMetricFlow(topic, configure)` extension method for registering `MetricTracker`, `IMetricTracker`, and `IMetricSnapshotsSource` in standard Microsoft DI containers (`IServiceCollection`) without requiring ASP.NET Core dependencies.
   - Extracted shared `MetricFlowOptions` base configuration model.

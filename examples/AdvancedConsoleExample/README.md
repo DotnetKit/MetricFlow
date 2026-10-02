@@ -17,7 +17,7 @@ This example demonstrates how to build an end-to-end, multi-counter telemetry pi
   - **Upfront Sizing**: `tracker.TrackItems("BatchIngestion", batchSize)`
   - **Dynamic Sizing**: `tracker.Track("DynamicProcessor")` followed by `scope.SetItems(count)` (or `scope.SetItemCount(count)`).
 - **Manual vs Scoped Tracking**: Combines scoped `using` disposable blocks with explicit manual tracking (`tracker.In` / `tracker.Out`).
-- **Programmatic Snapshot Access**: Directly queries typed metric snapshots via `tracker.GetThroughputValues(...)` and `tracker.GetDimensionValues(...)`.
+- **Programmatic Snapshot Access**: Directly queries typed metric snapshots via `tracker.GetThroughputSnapshot(...)` and `tracker.GetDimensionValues(...)`.
 
 ---
 
@@ -94,7 +94,7 @@ In addition to `tracker.ToString()`, you can query strongly-typed values directl
 
 ```csharp
 // Query Throughput metrics
-var throughput = tracker.GetThroughputValues("BatchIngestion");
+var throughput = tracker.GetThroughputSnapshot("BatchIngestion");
 if (throughput != null)
 {
     Console.WriteLine($"Rate       : {throughput.ItemsPerSecond:N0} items/sec");

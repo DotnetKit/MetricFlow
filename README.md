@@ -61,7 +61,7 @@ It can be used in both ASP.NET Core and non-ASP.NET Core applications.
 - **Throughput & Item Tracking**: Measure batch sizes, entity counts, and processing rates (items/sec) with `ThroughputCounter`.
 - **Dimensional Breakdown & Slicing**: Slice and compute operation distributions by business dimensions, tags, or computed rules with `DimensionCounter` and built-in cardinality safeguards.
 - **Memory Tracking**: Measure per-operation heap allocations with `MemoryCounter`.
-- **Exception & Failure Tracking**: Capture errors, exceptions, and failure counts with `ExceptionCounter`.
+- **Exception & Failure Tracking**: Capture runtime exceptions with `ExceptionCounter` and track logical versus exception failure distributions with `FailureCounter`.
 - **System.Diagnostics.Metrics Bridge**: Automatic zero-allocation mapping to standard .NET BCL instruments (`Histogram`, `Counter`, `UpDownCounter`) with cardinality protection.
 - **OpenTelemetry Integration**: Turnkey `DotnetKit.MetricFlow.OpenTelemetry` package with `.AddMetricFlowInstrumentation()` for exporting to Prometheus, Grafana, Datadog, and OTLP collectors.
 - **CLI Diagnostics**: Live real-time inspection in terminal via standard `dotnet-counters monitor`.
@@ -199,7 +199,7 @@ using (var scope = tracker.Track("IngestMessages"))
 }
 
 // Inspect results
-var throughput = tracker.GetThroughputValues("ImportChannels");
+var throughput = tracker.GetThroughputSnapshot("ImportChannels");
 // throughput.TotalItems -> 500
 // throughput.ItemsPerSecond -> e.g. 2,500 items/sec
 ```
@@ -270,6 +270,7 @@ MetricFlow allows you to retrieve strongly-typed telemetry snapshots programmati
 DurationSnapshot? duration   = tracker.GetSnapshot<DurationSnapshot>("ProcessOrder");
 ThroughputSnapshot? items     = tracker.GetSnapshot<ThroughputSnapshot>("ProcessOrder");
 ExceptionSnapshot? errors    = tracker.GetSnapshot<ExceptionSnapshot>("ProcessOrder");
+FailureSnapshot? failures    = tracker.GetSnapshot<FailureSnapshot>("ProcessOrder");
 MemorySnapshot? memory       = tracker.GetSnapshot<MemorySnapshot>("ProcessOrder");
 
 // With an explicit counter name (e.g. for custom counters or specific dimensions)
@@ -282,11 +283,12 @@ IEnumerable<DimensionSnapshot> allDims = tracker.GetSnapshots<DimensionSnapshot>
 IEnumerable<ExceptionSnapshot> allErrors = tracker.GetAllSnapshots<ExceptionSnapshot>();
 
 // 4. Dedicated typed helper methods (internally powered by GetSnapshot<T>)
-DurationSnapshot? duration2   = tracker.GetDurationValues("ProcessOrder"); // or tracker.GetValues("ProcessOrder")
-ThroughputSnapshot? items2    = tracker.GetThroughputValues("ProcessOrder");
-ExceptionSnapshot? errors2   = tracker.GetExceptionValues("ProcessOrder");
-MemorySnapshot? memory2      = tracker.GetMemoryValues("ProcessOrder");
-DimensionSnapshot? dimension = tracker.GetDimensionValues("ProcessOrder", "region");
+DurationSnapshot? duration2   = tracker.GetDurationSnapshot("ProcessOrder");
+ThroughputSnapshot? items2    = tracker.GetThroughputSnapshot("ProcessOrder");
+ExceptionSnapshot? errors2   = tracker.GetExceptionSnapshot("ProcessOrder");
+FailureSnapshot? failures2   = tracker.GetFailureSnapshot("ProcessOrder");
+MemorySnapshot? memory2      = tracker.GetMemorySnapshot("ProcessOrder");
+DimensionSnapshot? dimension = tracker.GetDimensionSnapshot("ProcessOrder", "region");
 ```
 
 ##### Dependency Injection (Console Apps, Workers & Daemons)

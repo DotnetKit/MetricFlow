@@ -212,7 +212,7 @@ public class MetricSnapshotTests
             MetricName: "DatabaseQuery",
             CounterName: "Exception",
             TotalOperations: 20,
-            TotalFailures: 4,
+            TotalExceptions: 4,
             ExceptionsByType: breakdown,
             Timestamp: now
         );
@@ -225,8 +225,10 @@ public class MetricSnapshotTests
 
         // Assert record properties
         snapshot.TotalOperations.Should().Be(20);
-        snapshot.TotalFailures.Should().Be(4);
-        snapshot.FailureRate.Should().Be(0.2); // 4 / 20
+        snapshot.TotalExceptions.Should().Be(4);
+        snapshot.TotalFailures.Should().Be(4); // backward compat
+        snapshot.ExceptionRate.Should().Be(0.2); // 4 / 20
+        snapshot.FailureRate.Should().Be(0.2);
         snapshot.ExceptionsByType.Should().BeEquivalentTo(breakdown);
     }
 
@@ -238,12 +240,13 @@ public class MetricSnapshotTests
             MetricName: "IdleOp",
             CounterName: "Exception",
             TotalOperations: 0,
-            TotalFailures: 0,
+            TotalExceptions: 0,
             ExceptionsByType: new Dictionary<string, long>(),
             Timestamp: DateTime.UtcNow
         );
 
         // Assert
+        snapshot.ExceptionRate.Should().Be(0.0);
         snapshot.FailureRate.Should().Be(0.0);
     }
 
@@ -261,7 +264,7 @@ public class MetricSnapshotTests
             MetricName: "HttpCall",
             CounterName: "Exception",
             TotalOperations: 10,
-            TotalFailures: 3,
+            TotalExceptions: 3,
             ExceptionsByType: breakdown,
             Timestamp: DateTime.UtcNow
         );
@@ -272,7 +275,7 @@ public class MetricSnapshotTests
 
         // Assert
         formatted.Should().Contain("[Exception] Metric: HttpCall");
-        formatted.Should().Contain($"Failures / Operations: 3 / 10 ({snapshot.FailureRate:P2})");
+        formatted.Should().Contain($"Exceptions / Operations: 3 / 10 ({snapshot.ExceptionRate:P2})");
         formatted.Should().Contain("Exceptions Breakdown:");
         formatted.Should().Contain("  - TimeoutException: 2");
         formatted.Should().Contain("  - HttpRequestException: 1");
@@ -287,7 +290,7 @@ public class MetricSnapshotTests
             MetricName: "SuccessfulOp",
             CounterName: "Exception",
             TotalOperations: 10,
-            TotalFailures: 0,
+            TotalExceptions: 0,
             ExceptionsByType: new Dictionary<string, long>(),
             Timestamp: DateTime.UtcNow
         );
@@ -297,9 +300,58 @@ public class MetricSnapshotTests
 
         // Assert
         formatted.Should().Contain("[Exception] Metric: SuccessfulOp");
-        formatted.Should().Contain($"Failures / Operations: 0 / 10 ({snapshot.FailureRate:P2})");
+        formatted.Should().Contain($"Exceptions / Operations: 0 / 10 ({snapshot.ExceptionRate:P2})");
         formatted.Should().NotContain("Exceptions Breakdown:");
     }
+
+    #endregion
+
+    #region FailureSnapshot Tests
+
+    [Fact]
+    public void FailureSnapshot_ShouldImplementIMetricSnapshot_AndDistinguishFailureTypes()
+    {
+        // Arrange
+        var now = DateTime.UtcNow;
+        var snapshot = new FailureSnapshot(
+            MetricName: "Checkout",
+            CounterName: "Failure",
+            TotalOperations: 100,
+            TotalFailures: 15,
+            LogicalFailures: 10,
+            ExceptionFailures: 5,
+            Timestamp: now
+        );
+
+        // Assert
+        IMetricSnapshot metricSnapshot = snapshot;
+        metricSnapshot.MetricName.Should().Be("Checkout");
+        metricSnapshot.CounterName.Should().Be("Failure");
+
+        snapshot.TotalOperations.Should().Be(100);
+        snapshot.TotalFailures.Should().Be(15);
+        snapshot.LogicalFailures.Should().Be(10);
+        snapshot.ExceptionFailures.Should().Be(5);
+        snapshot.FailureRate.Should().Be(0.15);
+        snapshot.LogicalFailureRate.Should().Be(0.10);
+        snapshot.ExceptionFailureRate.Should().Be(0.05);
+
+        var formatted = snapshot.ToFormattedString();
+        formatted.Should().Contain("[Failure] Metric: Checkout");
+        formatted.Should().Contain($"Failures / Operations: 15 / 100 ({snapshot.FailureRate:P2})");
+        formatted.Should().Contain($"Logical Failures   : 10 ({snapshot.LogicalFailureRate:P2})");
+        formatted.Should().Contain($"Exception Failures : 5 ({snapshot.ExceptionFailureRate:P2})");
+    }
+
+    [Fact]
+    public void FailureSnapshot_Rates_WhenTotalOperationsIsZero_ShouldReturnZero()
+    {
+        var snapshot = new FailureSnapshot("Op", "Failure", 0, 0, 0, 0, DateTime.UtcNow);
+        snapshot.FailureRate.Should().Be(0.0);
+        snapshot.LogicalFailureRate.Should().Be(0.0);
+        snapshot.ExceptionFailureRate.Should().Be(0.0);
+    }
+
 
     [Fact]
     public void ExceptionSnapshot_RecordEquality_ShouldWorkAsExpected()
@@ -309,7 +361,7 @@ public class MetricSnapshotTests
         var dict = new Dictionary<string, long> { { "Ex", 1 } };
         var snapshot1 = new ExceptionSnapshot("Op", "Exception", 5, 1, dict, timestamp);
         var snapshot2 = new ExceptionSnapshot("Op", "Exception", 5, 1, dict, timestamp);
-        var snapshot3 = snapshot1 with { TotalFailures = 2 };
+        var snapshot3 = snapshot1 with { TotalExceptions = 2 };
 
         // Assert
         snapshot1.Should().Be(snapshot2);
@@ -608,6 +660,7 @@ public class MetricSnapshotTests
         var tracker = new MetricTracker("HelpersTopic")
             .AddThroughputCounter()
             .AddExceptionCounter()
+            .AddFailureCounter()
             .AddMemoryCounter()
             .AddDimensionCounter("tenant");
 
@@ -615,11 +668,12 @@ public class MetricSnapshotTests
         tracker.Out("Checkout", new() { ["tenant"] = "Acme" }, failed: true, exception: new InvalidOperationException());
 
         // Act - Dedicated helper methods from Solution 1.A (using Solution 2.A internally)
-        var duration = tracker.GetDurationValues("Checkout");
-        var throughput = tracker.GetThroughputValues("Checkout");
-        var exception = tracker.GetExceptionValues("Checkout");
-        var memory = tracker.GetMemoryValues("Checkout");
-        var dimension = tracker.GetDimensionValues("Checkout", "tenant");
+        var duration = TrackerCounterExtensions.GetDurationSnapshot(tracker, "Checkout");
+        var throughput = tracker.GetThroughputSnapshot("Checkout");
+        var exception = tracker.GetExceptionSnapshot("Checkout");
+        var failure = tracker.GetFailureShapshot("Checkout");
+        var memory = tracker.GetMemorySnapshot("Checkout");
+        var dimension = tracker.GetDimensionSnapshot("Checkout", "tenant");
 
         // Assert
         duration.Should().NotBeNull();
@@ -631,6 +685,11 @@ public class MetricSnapshotTests
         exception.Should().NotBeNull();
         exception!.MetricName.Should().Be("Checkout");
 
+        failure.Should().NotBeNull();
+        failure!.MetricName.Should().Be("Checkout");
+        failure.TotalFailures.Should().Be(1);
+        failure.ExceptionFailures.Should().Be(1);
+
         memory.Should().NotBeNull();
         memory!.MetricName.Should().Be("Checkout");
 
@@ -639,7 +698,7 @@ public class MetricSnapshotTests
     }
 
     [Fact]
-    public void GetValues_OnIMetricTracker_ShouldResolveDurationSnapshot()
+    public void GetDurationSnapshot_OnIMetricTracker_ShouldResolveDurationSnapshot()
     {
         // Arrange
         IMetricTracker tracker = new MetricTracker("InterfaceTopic");
@@ -647,7 +706,7 @@ public class MetricSnapshotTests
         tracker.Out("Action");
 
         // Act - Calls extension method on IMetricTracker
-        var snapshot = tracker.GetValues("Action");
+        var snapshot = tracker.GetDurationSnapshot("Action");
 
         // Assert
         snapshot.Should().NotBeNull();

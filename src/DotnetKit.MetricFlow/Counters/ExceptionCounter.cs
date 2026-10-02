@@ -25,7 +25,7 @@ public class ExceptionCounter : ICounter
         if (!IsEnabled) return;
 
         var metricState = _states.GetOrAdd(context.MetricName, static name => new MetricExceptionState(name));
-        metricState.Record(context.Failed, context.Exception);
+        metricState.Record(context.Exception);
     }
 
     public IMetricSnapshot? GetSnapshot(string metricName)
@@ -52,23 +52,24 @@ public class ExceptionCounter : ICounter
     public class MetricExceptionState(string metricName)
     {
         private long _totalOperations;
-        private long _totalFailures;
+        private long _totalExceptions;
         private readonly ConcurrentDictionary<string, long> _exceptionsByType = new();
 
         public string MetricName => metricName;
         public long TotalOperations => Interlocked.Read(ref _totalOperations);
-        public long TotalFailures => Interlocked.Read(ref _totalFailures);
+        public long TotalExceptions => Interlocked.Read(ref _totalExceptions);
+        public long TotalFailures => TotalExceptions;
         public IReadOnlyDictionary<string, long> ExceptionsByType => new Dictionary<string, long>(_exceptionsByType);
 
-        public void Record(bool failed, Exception? exception)
+        public void Record(Exception? exception)
         {
             Interlocked.Increment(ref _totalOperations);
 
-            if (failed || exception != null)
+            if (exception != null)
             {
-                Interlocked.Increment(ref _totalFailures);
+                Interlocked.Increment(ref _totalExceptions);
 
-                var exType = exception?.GetType().Name ?? "UnspecifiedError";
+                var exType = exception.GetType().Name;
                 _exceptionsByType.AddOrUpdate(exType, 1, (_, count) => count + 1);
             }
         }
@@ -79,7 +80,7 @@ public class ExceptionCounter : ICounter
                 MetricName: metricName,
                 CounterName: counterName,
                 TotalOperations: TotalOperations,
-                TotalFailures: TotalFailures,
+                TotalExceptions: TotalExceptions,
                 ExceptionsByType: ExceptionsByType,
                 Timestamp: DateTime.UtcNow
             );
@@ -91,18 +92,19 @@ public record ExceptionSnapshot(
     string MetricName,
     string CounterName,
     long TotalOperations,
-    long TotalFailures,
+    long TotalExceptions,
     IReadOnlyDictionary<string, long> ExceptionsByType,
     DateTime Timestamp) : IMetricSnapshot
 {
-
-    public double FailureRate => TotalOperations > 0 ? (double)TotalFailures / TotalOperations : 0.0;
+    public long TotalFailures => TotalExceptions;
+    public double ExceptionRate => TotalOperations > 0 ? (double)TotalExceptions / TotalOperations : 0.0;
+    public double FailureRate => ExceptionRate;
 
     public string ToFormattedString()
     {
         var sb = new StringBuilder();
         sb.AppendLine($"[{CounterName}] Metric: {MetricName}");
-        sb.AppendLine($"Failures / Operations: {TotalFailures} / {TotalOperations} ({FailureRate:P2})");
+        sb.AppendLine($"Exceptions / Operations: {TotalExceptions} / {TotalOperations} ({ExceptionRate:P2})");
         if (ExceptionsByType.Count > 0)
         {
             sb.AppendLine("Exceptions Breakdown:");
