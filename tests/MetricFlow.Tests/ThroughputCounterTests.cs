@@ -22,7 +22,7 @@ public class ThroughputCounterTests
         }
 
         // Assert
-        var snapshot = tracker.GetThroughputValues("SingleItemOp");
+        var snapshot = tracker.GetThroughputSnapshot("SingleItemOp");
         snapshot.Should().NotBeNull();
         snapshot.TotalOperations.Should().Be(1);
         snapshot.TotalItems.Should().Be(1);
@@ -46,7 +46,7 @@ public class ThroughputCounterTests
         }
 
         // Assert
-        var snapshot = tracker.GetThroughputValues("BatchOp");
+        var snapshot = tracker.GetThroughputSnapshot("BatchOp");
         snapshot.Should().NotBeNull();
         snapshot.TotalOperations.Should().Be(1);
         snapshot.TotalItems.Should().Be(100);
@@ -72,7 +72,7 @@ public class ThroughputCounterTests
         }
 
         // Assert
-        var snapshot = tracker.GetThroughputValues("AlternativeTagsOp");
+        var snapshot = tracker.GetThroughputSnapshot("AlternativeTagsOp");
         snapshot.Should().NotBeNull();
         snapshot.TotalItems.Should().Be(expectedCount);
         snapshot.TotalOperations.Should().Be(1);
@@ -92,7 +92,7 @@ public class ThroughputCounterTests
         }
 
         // Assert
-        var snapshot = tracker.GetThroughputValues("IngestChannels");
+        var snapshot = tracker.GetThroughputSnapshot("IngestChannels");
         snapshot.Should().NotBeNull();
         snapshot.TotalOperations.Should().Be(1);
         snapshot.TotalItems.Should().Be(250);
@@ -110,7 +110,7 @@ public class ThroughputCounterTests
         HelperTrackItemsCaller(tracker, 150);
 
         // Assert
-        var snapshot = tracker.GetThroughputValues(nameof(HelperTrackItemsCaller));
+        var snapshot = tracker.GetThroughputSnapshot(nameof(HelperTrackItemsCaller));
         snapshot.Should().NotBeNull();
         snapshot.TotalItems.Should().Be(150);
         snapshot.TotalOperations.Should().Be(1);
@@ -139,7 +139,7 @@ public class ThroughputCounterTests
         }
 
         // Assert
-        var snapshot = tracker.GetThroughputValues("DynamicBatchOp");
+        var snapshot = tracker.GetThroughputSnapshot("DynamicBatchOp");
         snapshot.Should().NotBeNull();
         snapshot.TotalOperations.Should().Be(1);
         snapshot.TotalItems.Should().Be(42);
@@ -160,7 +160,7 @@ public class ThroughputCounterTests
         }
 
         // Assert
-        var snapshot = tracker.GetThroughputValues("TagBatchOp");
+        var snapshot = tracker.GetThroughputSnapshot("TagBatchOp");
         snapshot.Should().NotBeNull();
         snapshot.TotalItems.Should().Be(88);
     }
@@ -178,7 +178,7 @@ public class ThroughputCounterTests
         using (tracker.TrackItems("MultiBatch", 200)) { }
 
         // Assert
-        var snapshot = tracker.GetThroughputValues("MultiBatch");
+        var snapshot = tracker.GetThroughputSnapshot("MultiBatch");
         snapshot.Should().NotBeNull();
         snapshot.TotalOperations.Should().Be(3);
         snapshot.TotalItems.Should().Be(600);
@@ -221,7 +221,7 @@ public class ThroughputCounterTests
         }
 
         // Assert
-        var snapshot = tracker.GetThroughputValues("FailTest");
+        var snapshot = tracker.GetThroughputSnapshot("FailTest");
         snapshot.Should().NotBeNull();
         snapshot.TotalOperations.Should().Be(3);
         snapshot.TotalItems.Should().Be(100);
@@ -241,7 +241,7 @@ public class ThroughputCounterTests
         tracker.Out("ManualOp", tags: new() { ["items"] = "500" });
 
         // Assert
-        var snapshot = tracker.GetThroughputValues("ManualOp");
+        var snapshot = tracker.GetThroughputSnapshot("ManualOp");
         snapshot.Should().NotBeNull();
         snapshot.TotalOperations.Should().Be(1);
         snapshot.TotalItems.Should().Be(500);
@@ -272,7 +272,7 @@ public class ThroughputCounterTests
         });
 
         // Assert
-        var snapshot = tracker.GetThroughputValues("ConcurrentMetric");
+        var snapshot = tracker.GetThroughputSnapshot("ConcurrentMetric");
         snapshot.Should().NotBeNull();
         snapshot.TotalOperations.Should().Be(threads * opsPerThread);
         snapshot.TotalItems.Should().Be((long)threads * opsPerThread * itemsPerOp);
@@ -287,13 +287,13 @@ public class ThroughputCounterTests
             .AddThroughputCounter();
 
         using (tracker.TrackItems("OpToReset", 50)) { }
-        tracker.GetThroughputValues("OpToReset").Should().NotBeNull();
+        tracker.GetThroughputSnapshot("OpToReset").Should().NotBeNull();
 
         // Act
         tracker.Clear();
 
         // Assert
-        tracker.GetThroughputValues("OpToReset").Should().BeNull();
+        tracker.GetThroughputSnapshot("OpToReset").Should().BeNull();
         tracker.GetAllSnapshots().Should().BeEmpty();
     }
 
@@ -310,7 +310,7 @@ public class ThroughputCounterTests
         using (tracker.TrackItems("DisabledMetric", 100)) { }
 
         // Assert
-        tracker.GetThroughputValues("DisabledMetric").Should().BeNull();
+        tracker.GetThroughputSnapshot("DisabledMetric").Should().BeNull();
     }
 
     [Fact]
@@ -369,7 +369,7 @@ public class ThroughputCounterTests
         using (tracker.TrackItems("InterfaceOp", 123)) { }
 
         // Assert
-        var snapshot = tracker.GetThroughputValues("InterfaceOp");
+        var snapshot = tracker.GetThroughputSnapshot("InterfaceOp");
         snapshot.Should().NotBeNull();
         snapshot.TotalItems.Should().Be(123);
         snapshot.TotalOperations.Should().Be(1);
@@ -403,7 +403,7 @@ public class ThroughputCounterTests
         capturedMetadata.Should().NotBeNull();
         capturedMetadata!.Should().ContainKey("items").WhoseValue.Should().Be(250);
 
-        var snapshot = tracker.GetThroughputValues("IsolatedOp");
+        var snapshot = tracker.GetThroughputSnapshot("IsolatedOp");
         snapshot.Should().NotBeNull();
         snapshot!.TotalItems.Should().Be(250);
     }
@@ -421,7 +421,7 @@ public class ThroughputCounterTests
         tracker.Out("ManualOp", metadata: new() { ["items"] = 750 });
 
         // Assert
-        var snapshot = tracker.GetThroughputValues("ManualOp");
+        var snapshot = tracker.GetThroughputSnapshot("ManualOp");
         snapshot.Should().NotBeNull();
         snapshot!.TotalOperations.Should().Be(1);
         snapshot.TotalItems.Should().Be(750);
@@ -443,7 +443,7 @@ public class ThroughputCounterTests
         }
 
         // Assert
-        var snapshot = tracker.GetThroughputValues("DynamicMetaOp");
+        var snapshot = tracker.GetThroughputSnapshot("DynamicMetaOp");
         snapshot.Should().NotBeNull();
         snapshot!.TotalOperations.Should().Be(1);
         snapshot.TotalItems.Should().Be(333);
@@ -467,7 +467,7 @@ public class ThroughputCounterTests
         }
 
         // Assert
-        var snapshot = tracker.GetThroughputValues("AlternativeMetaOp");
+        var snapshot = tracker.GetThroughputSnapshot("AlternativeMetaOp");
         snapshot.Should().NotBeNull();
         snapshot!.TotalItems.Should().Be(expectedCount);
         snapshot.TotalOperations.Should().Be(1);

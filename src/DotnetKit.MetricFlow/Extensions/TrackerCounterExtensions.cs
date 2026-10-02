@@ -70,19 +70,150 @@ public static class TrackerCounterExtensions
     }
 
     /// <summary>
+    /// Registers a <see cref="FailureCounter"/> on the metric tracker to record logical and exception operation failures.
+    /// </summary>
+    /// <typeparam name="T">The metric tracker type.</typeparam>
+    /// <param name="tracker">The tracker instance.</param>
+    /// <param name="name">Optional custom counter name. Defaults to <see cref="FailureCounter.DefaultCounterName"/>.</param>
+    /// <returns>The same tracker instance for method chaining.</returns>
+    public static T AddFailureCounter<T>(this T tracker, string name = FailureCounter.DefaultCounterName)
+        where T : IMetricTracker
+    {
+        ArgumentNullException.ThrowIfNull(tracker);
+        tracker.RegisterCounter(new FailureCounter(name));
+        return tracker;
+    }
+
+    /// <summary>
+    /// Retrieves a typed snapshot of type <typeparamref name="TSnapshot"/> for a specific metric name,
+    /// optionally filtered by counter name.
+    /// </summary>
+    /// <typeparam name="TSnapshot">The type of metric snapshot to return.</typeparam>
+    /// <param name="tracker">The tracker instance.</param>
+    /// <param name="metricName">The name of the metric.</param>
+    /// <param name="counterName">Optional counter name. When omitted or null, returns the first snapshot matching <typeparamref name="TSnapshot"/>.</param>
+    /// <returns>The typed metric snapshot, or <c>null</c> if not found or not tracked.</returns>
+    public static TSnapshot? GetSnapshot<TSnapshot>(
+        this IMetricTracker tracker,
+        string metricName,
+        string? counterName = null) where TSnapshot : class, IMetricSnapshot
+    {
+        ArgumentNullException.ThrowIfNull(tracker);
+
+        if (!string.IsNullOrEmpty(counterName))
+        {
+            return tracker.GetSnapshot(metricName, counterName) as TSnapshot;
+        }
+
+        return tracker.GetSnapshots(metricName).OfType<TSnapshot>().FirstOrDefault();
+    }
+
+    /// <summary>
+    /// Retrieves all snapshots of type <typeparamref name="TSnapshot"/> for a specific metric name.
+    /// </summary>
+    /// <typeparam name="TSnapshot">The type of metric snapshot to filter by.</typeparam>
+    /// <param name="tracker">The tracker instance.</param>
+    /// <param name="metricName">The name of the metric.</param>
+    /// <returns>An enumerable collection of typed snapshots.</returns>
+    public static IEnumerable<TSnapshot> GetSnapshots<TSnapshot>(
+        this IMetricTracker tracker,
+        string metricName) where TSnapshot : class, IMetricSnapshot
+    {
+        ArgumentNullException.ThrowIfNull(tracker);
+        return tracker.GetSnapshots(metricName).OfType<TSnapshot>();
+    }
+
+    /// <summary>
+    /// Retrieves all snapshots of type <typeparamref name="TSnapshot"/> collected by this source.
+    /// </summary>
+    /// <typeparam name="TSnapshot">The type of metric snapshot to filter by.</typeparam>
+    /// <param name="source">The metric snapshots source.</param>
+    /// <returns>An enumerable collection of typed snapshots.</returns>
+    public static IEnumerable<TSnapshot> GetAllSnapshots<TSnapshot>(
+        this IMetricSnapshotsSource source) where TSnapshot : class, IMetricSnapshot
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        return source.GetAllSnapshots().OfType<TSnapshot>();
+    }
+
+    /// <summary>
+    /// Retrieves the <see cref="DurationSnapshot"/> for a specific metric name, or <c>null</c> if not tracked.
+    /// </summary>
+    /// <param name="tracker">The tracker instance.</param>
+    /// <param name="metricName">The name of the metric.</param>
+    /// <param name="counterName">Optional counter name. Defaults to <see cref="DurationCounter.DefaultCounterName"/>.</param>
+    /// <returns>The duration snapshot or null.</returns>
+    public static DurationSnapshot? GetDurationSnapshot(
+        this IMetricTracker tracker,
+        string metricName,
+        string counterName = DurationCounter.DefaultCounterName)
+    {
+        ArgumentNullException.ThrowIfNull(tracker);
+        return tracker.GetSnapshot<DurationSnapshot>(metricName, counterName);
+    }
+
+    /// <summary>
     /// Retrieves the <see cref="ThroughputSnapshot"/> for a specific metric name, or <c>null</c> if not tracked.
     /// </summary>
     /// <param name="tracker">The tracker instance.</param>
     /// <param name="metricName">The name of the metric.</param>
     /// <param name="counterName">Optional counter name. Defaults to <see cref="ThroughputCounter.DefaultCounterName"/>.</param>
     /// <returns>The throughput snapshot or null.</returns>
-    public static ThroughputSnapshot? GetThroughputValues(
+    public static ThroughputSnapshot? GetThroughputSnapshot(
         this IMetricTracker tracker,
         string metricName,
         string counterName = ThroughputCounter.DefaultCounterName)
     {
         ArgumentNullException.ThrowIfNull(tracker);
-        return tracker.GetSnapshot(metricName, counterName) as ThroughputSnapshot;
+        return tracker.GetSnapshot<ThroughputSnapshot>(metricName, counterName);
+    }
+
+    /// <summary>
+    /// Retrieves the <see cref="ExceptionSnapshot"/> for a specific metric name, or <c>null</c> if not tracked.
+    /// </summary>
+    /// <param name="tracker">The tracker instance.</param>
+    /// <param name="metricName">The name of the metric.</param>
+    /// <param name="counterName">Optional counter name. Defaults to <see cref="ExceptionCounter.DefaultCounterName"/>.</param>
+    /// <returns>The exception snapshot or null.</returns>
+    public static ExceptionSnapshot? GetExceptionSnapshot(
+        this IMetricTracker tracker,
+        string metricName,
+        string counterName = ExceptionCounter.DefaultCounterName)
+    {
+        ArgumentNullException.ThrowIfNull(tracker);
+        return tracker.GetSnapshot<ExceptionSnapshot>(metricName, counterName);
+    }
+
+    /// <summary>
+    /// Retrieves the <see cref="MemorySnapshot"/> for a specific metric name, or <c>null</c> if not tracked.
+    /// </summary>
+    /// <param name="tracker">The tracker instance.</param>
+    /// <param name="metricName">The name of the metric.</param>
+    /// <param name="counterName">Optional counter name. Defaults to <see cref="MemoryCounter.DefaultCounterName"/>.</param>
+    /// <returns>The memory snapshot or null.</returns>
+    public static MemorySnapshot? GetMemorySnapshot(
+        this IMetricTracker tracker,
+        string metricName,
+        string counterName = MemoryCounter.DefaultCounterName)
+    {
+        ArgumentNullException.ThrowIfNull(tracker);
+        return tracker.GetSnapshot<MemorySnapshot>(metricName, counterName);
+    }
+
+    /// <summary>
+    /// Retrieves the <see cref="FailureSnapshot"/> for a specific metric name, or <c>null</c> if not tracked.
+    /// </summary>
+    /// <param name="tracker">The tracker instance.</param>
+    /// <param name="metricName">The name of the metric.</param>
+    /// <param name="counterName">Optional counter name. Defaults to <see cref="FailureCounter.DefaultCounterName"/>.</param>
+    /// <returns>The failure snapshot or null.</returns>
+    public static FailureSnapshot? GetFailureShapshot(
+        this IMetricTracker tracker,
+        string metricName,
+        string counterName = FailureCounter.DefaultCounterName)
+    {
+        ArgumentNullException.ThrowIfNull(tracker);
+        return tracker.GetSnapshot<FailureSnapshot>(metricName, counterName);
     }
 
     /// <summary>
@@ -160,28 +291,21 @@ public static class TrackerCounterExtensions
     }
 
     /// <summary>
-    /// Retrieves the <see cref="DimensionSnapshot"/> for a specific metric name and dimension or counter name, or <c>null</c> if not tracked.
+    /// Retrieves the <see cref="DimensionSnapshot"/> for a specific metric and dimension name, or <c>null</c> if not tracked.
     /// </summary>
     /// <param name="tracker">The tracker instance.</param>
     /// <param name="metricName">The name of the metric.</param>
-    /// <param name="dimensionOrCounterName">The dimension or tag key that was tracked, or explicit counter name.</param>
-    /// <param name="counterName">Optional explicit counter name override if different from <paramref name="dimensionOrCounterName"/>.</param>
+    /// <param name="dimensionName">The dimension tag key (e.g. "region") or explicit counter name.</param>
     /// <returns>The dimension snapshot or null.</returns>
-    public static DimensionSnapshot? GetDimensionValues(
+    public static DimensionSnapshot? GetDimensionSnapshot(
         this IMetricTracker tracker,
         string metricName,
-        string dimensionOrCounterName,
-        string? counterName = null)
+        string dimensionName)
     {
         ArgumentNullException.ThrowIfNull(tracker);
 
-        if (!string.IsNullOrEmpty(counterName))
-        {
-            return tracker.GetSnapshot(metricName, counterName) as DimensionSnapshot;
-        }
-
-        return (tracker.GetSnapshot(metricName, $"Dimension:{dimensionOrCounterName}") ??
-                tracker.GetSnapshot(metricName, dimensionOrCounterName) ??
-                tracker.GetSnapshot(metricName, $"TagBreakdown:{dimensionOrCounterName}")) as DimensionSnapshot;
+        return tracker.GetSnapshot<DimensionSnapshot>(metricName, $"Dimension:{dimensionName}") ??
+               tracker.GetSnapshot<DimensionSnapshot>(metricName, dimensionName) ??
+               tracker.GetSnapshot<DimensionSnapshot>(metricName, $"TagBreakdown:{dimensionName}");
     }
 }

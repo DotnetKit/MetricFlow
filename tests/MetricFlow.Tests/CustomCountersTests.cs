@@ -115,7 +115,7 @@ public class CustomCountersTests
         }
 
         // Assert - All 4 counters captured metrics
-        var durationSnapshot = tracker.GetValues("QuadMetricOp");
+        var durationSnapshot = tracker.GetDurationSnapshot("QuadMetricOp");
         durationSnapshot.Should().NotBeNull();
         durationSnapshot.InCount.Should().Be(3);
         durationSnapshot.OutCount.Should().Be(3);
@@ -131,7 +131,7 @@ public class CustomCountersTests
         exceptionSnapshot.TotalOperations.Should().Be(3);
         exceptionSnapshot.TotalFailures.Should().Be(1);
 
-        var throughputSnapshot = tracker.GetThroughputValues("QuadMetricOp");
+        var throughputSnapshot = tracker.GetThroughputSnapshot("QuadMetricOp");
         throughputSnapshot.Should().NotBeNull();
         throughputSnapshot.TotalOperations.Should().Be(3);
         throughputSnapshot.TotalItems.Should().Be(175);
@@ -164,11 +164,11 @@ public class CustomCountersTests
         }
 
         // Assert - All 5 counters captured data
-        var duration = tracker.GetValues("PentaMetricOp");
+        var duration = tracker.GetDurationSnapshot("PentaMetricOp");
         duration.Should().NotBeNull();
         duration.InCount.Should().Be(2);
 
-        var throughput = tracker.GetThroughputValues("PentaMetricOp");
+        var throughput = tracker.GetThroughputSnapshot("PentaMetricOp");
         throughput.Should().NotBeNull();
         throughput!.TotalItems.Should().Be(150);
 
@@ -181,7 +181,7 @@ public class CustomCountersTests
         exceptions!.TotalOperations.Should().Be(2);
         exceptions.TotalFailures.Should().Be(0);
 
-        var dimensionSnapshot = tracker.GetDimensionValues("PentaMetricOp", "country");
+        var dimensionSnapshot = tracker.GetDimensionSnapshot("PentaMetricOp", "country");
         dimensionSnapshot.Should().NotBeNull();
         dimensionSnapshot!.TotalOperations.Should().Be(2);
         dimensionSnapshot.TrackedOperations.Should().Be(2);
@@ -199,7 +199,7 @@ public class CustomCountersTests
 
         // Act 1: Initial state (both enabled)
         tracker.In("DynamicMetric");
-        tracker.Out("DynamicMetric", failed: true);
+        tracker.Out("DynamicMetric", failed: true, exception: new InvalidOperationException("err"));
 
         var exSnapshot1 = tracker.GetSnapshot("DynamicMetric", ExceptionCounter.DefaultCounterName) as ExceptionSnapshot;
         exSnapshot1.Should().NotBeNull();
@@ -209,14 +209,14 @@ public class CustomCountersTests
         configNotifier.NotifyChanged(ExceptionCounter.DefaultCounterName, enabled: false);
 
         tracker.In("DynamicMetric");
-        tracker.Out("DynamicMetric", failed: true);
+        tracker.Out("DynamicMetric", failed: true, exception: new InvalidOperationException("err"));
 
         var exSnapshot2 = tracker.GetSnapshot("DynamicMetric", ExceptionCounter.DefaultCounterName) as ExceptionSnapshot;
         exSnapshot2.Should().NotBeNull();
         exSnapshot2.TotalFailures.Should().Be(1); // Should not increase because counter is disabled
 
         // DurationCounter is still enabled and should track
-        var durationSnapshot = tracker.GetValues("DynamicMetric");
+        var durationSnapshot = tracker.GetDurationSnapshot("DynamicMetric");
         durationSnapshot.Should().NotBeNull();
         durationSnapshot.InCount.Should().Be(2);
 
@@ -224,7 +224,7 @@ public class CustomCountersTests
         configNotifier.NotifyChanged(ExceptionCounter.DefaultCounterName, enabled: true);
 
         tracker.In("DynamicMetric");
-        tracker.Out("DynamicMetric", failed: true);
+        tracker.Out("DynamicMetric", failed: true, exception: new InvalidOperationException("err"));
 
         var exSnapshot3 = tracker.GetSnapshot("DynamicMetric", ExceptionCounter.DefaultCounterName) as ExceptionSnapshot;
         exSnapshot3.Should().NotBeNull();
@@ -258,7 +258,7 @@ public class CustomCountersTests
         await Task.WhenAll(tasks);
 
         // Assert
-        var duration = tracker.GetValues("ConcurrentMetric");
+        var duration = tracker.GetDurationSnapshot("ConcurrentMetric");
         duration.Should().NotBeNull();
         duration.InCount.Should().Be(concurrency);
         duration.OutCount.Should().Be(concurrency);

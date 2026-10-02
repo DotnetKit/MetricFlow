@@ -12,7 +12,7 @@ This example demonstrates how to integrate **MetricFlow** into a .NET console ap
 - **Multi-Counter Pipeline**: Chains `ThroughputCounter`, `ExceptionCounter`, `MemoryCounter`, and `DimensionCounter`.
 - **Keyed Services (`[FromKeyedServices("AuditWorker")]`)**: Direct injection of named topic trackers into domain services.
 - **Top-Level Facade (`IMetricFlow`)**: Unified enumeration, inspection, and snapshot reporting across all registered trackers.
-- **Programmatic Snapshot Queries**: Directly retrieves typed metrics (`GetThroughputValues`, `GetDimensionValues`) from trackers.
+- **Programmatic Snapshot Queries**: Directly retrieves typed metrics (`GetThroughputSnapshot`, `GetDimensionSnapshot`) from trackers.
 
 ---
 
@@ -58,6 +58,7 @@ services.AddTransient<AuditService>();
 ### 2. Service Injections
 
 #### Primary Service (Default `IMetricTracker`)
+
 Resolves the primary default tracker (`AdvancedConsoleDITopic`):
 
 ```csharp
@@ -90,6 +91,7 @@ public class BatchProcessorService(IMetricTracker tracker)
 ```
 
 #### Keyed Service Injection (`[FromKeyedServices]`)
+
 Resolves the secondary tracker (`AuditWorker`):
 
 ```csharp
@@ -118,8 +120,8 @@ foreach (var tracker in metricFlow.Trackers)
 
 // Access the default tracker directly for typed snapshot queries
 var defaultTracker = metricFlow.DefaultTracker!;
-var throughput = defaultTracker.GetThroughputValues("BatchIngestion");
-var dimension = defaultTracker.GetDimensionValues("DynamicProcessor", "region");
+var throughput = defaultTracker.GetThroughputSnapshot("BatchIngestion");
+var dimension = defaultTracker.GetDimensionSnapshot("DynamicProcessor", "region");
 ```
 
 ---

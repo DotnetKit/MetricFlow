@@ -127,6 +127,17 @@ public class MetricFlowOptions
     }
 
     /// <summary>
+    /// Adds a <see cref="FailureCounter"/> to the configured counters.
+    /// </summary>
+    /// <param name="name">Optional custom counter name. Defaults to <see cref="FailureCounter.DefaultCounterName"/>.</param>
+    /// <returns>The options instance for chaining.</returns>
+    public MetricFlowOptions AddFailureCounter(string name = FailureCounter.DefaultCounterName)
+    {
+        Counters.Add(new FailureCounter(name));
+        return this;
+    }
+
+    /// <summary>
     /// Adds a <see cref="DimensionCounter"/> to the configured counters.
     /// </summary>
     /// <param name="dimensionKey">The target tag or metadata key to aggregate on.</param>
