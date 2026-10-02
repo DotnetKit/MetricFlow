@@ -477,4 +477,183 @@ public class MetricSnapshotTests
     }
 
     #endregion
+
+    #region Typed Snapshot Retrieval Tests
+
+    [Fact]
+    public void GetSnapshot_Generic_WithoutCounterName_ShouldResolveMatchingSnapshotType()
+    {
+        // Arrange
+        var tracker = new MetricTracker("GenericSnapshotTopic")
+            .AddThroughputCounter()
+            .AddExceptionCounter()
+            .AddMemoryCounter();
+
+        tracker.In("ProcessPayment");
+        tracker.Out("ProcessPayment", failed: true, exception: new InvalidOperationException("Test error"));
+
+        // Act
+        var duration = tracker.GetSnapshot<DurationSnapshot>("ProcessPayment");
+        var throughput = tracker.GetSnapshot<ThroughputSnapshot>("ProcessPayment");
+        var exception = tracker.GetSnapshot<ExceptionSnapshot>("ProcessPayment");
+        var memory = tracker.GetSnapshot<MemorySnapshot>("ProcessPayment");
+
+        // Assert
+        duration.Should().NotBeNull();
+        duration!.MetricName.Should().Be("ProcessPayment");
+        duration.InCount.Should().Be(1);
+
+        throughput.Should().NotBeNull();
+        throughput!.MetricName.Should().Be("ProcessPayment");
+        throughput.TotalOperations.Should().Be(1);
+        throughput.FailedOperations.Should().Be(1);
+
+        exception.Should().NotBeNull();
+        exception!.MetricName.Should().Be("ProcessPayment");
+        exception.TotalFailures.Should().Be(1);
+
+        memory.Should().NotBeNull();
+        memory!.MetricName.Should().Be("ProcessPayment");
+    }
+
+    [Fact]
+    public void GetSnapshot_Generic_WithExplicitCounterName_ShouldResolveMatchingSnapshot()
+    {
+        // Arrange
+        var tracker = new MetricTracker("GenericExplicitTopic")
+            .AddThroughputCounter("CustomThroughput")
+            .AddDimensionCounter("region");
+
+        tracker.In("OrderFulfillment", new() { ["region"] = "EU" });
+        tracker.Out("OrderFulfillment", new() { ["region"] = "EU" });
+
+        // Act
+        var throughput = tracker.GetSnapshot<ThroughputSnapshot>("OrderFulfillment", "CustomThroughput");
+        var dimension = tracker.GetSnapshot<DimensionSnapshot>("OrderFulfillment", "Dimension:region");
+        var wrongName = tracker.GetSnapshot<ThroughputSnapshot>("OrderFulfillment", "NonExistentCounter");
+
+        // Assert
+        throughput.Should().NotBeNull();
+        throughput!.CounterName.Should().Be("CustomThroughput");
+
+        dimension.Should().NotBeNull();
+        dimension!.DimensionName.Should().Be("region");
+
+        wrongName.Should().BeNull();
+    }
+
+    [Fact]
+    public void GetSnapshot_Generic_WithMismatchedTypeOrMissingMetric_ShouldReturnNull()
+    {
+        // Arrange
+        var tracker = new MetricTracker("MismatchTopic")
+            .AddThroughputCounter();
+
+        tracker.In("ValidOp");
+        tracker.Out("ValidOp");
+
+        // Act & Assert
+        // Metric exists, but counter name points to Throughput, requested DurationSnapshot -> returns null
+        tracker.GetSnapshot<DurationSnapshot>("ValidOp", ThroughputCounter.DefaultCounterName).Should().BeNull();
+
+        // Metric does not exist
+        tracker.GetSnapshot<ThroughputSnapshot>("NonExistentOp").Should().BeNull();
+    }
+
+    [Fact]
+    public void GetSnapshots_Generic_ShouldFilterSnapshotsByRequestedType()
+    {
+        // Arrange
+        var tracker = new MetricTracker("FilterTopic")
+            .AddDimensionCounter("region")
+            .AddDimensionCounter("env");
+
+        tracker.In("Login", new() { ["region"] = "US", ["env"] = "Prod" });
+        tracker.Out("Login", new() { ["region"] = "US", ["env"] = "Prod" });
+
+        // Act
+        var dimensionSnapshots = tracker.GetSnapshots<DimensionSnapshot>("Login").ToList();
+        var durationSnapshots = tracker.GetSnapshots<DurationSnapshot>("Login").ToList();
+
+        // Assert
+        dimensionSnapshots.Should().HaveCount(2);
+        durationSnapshots.Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void GetAllSnapshots_Generic_ShouldFilterAllSnapshotsByRequestedType()
+    {
+        // Arrange
+        var tracker = new MetricTracker("AllFilterTopic")
+            .AddExceptionCounter();
+
+        tracker.In("Op1");
+        tracker.Out("Op1", failed: true, exception: new Exception("err"));
+        tracker.In("Op2");
+        tracker.Out("Op2");
+
+        // Act
+        IMetricSnapshotsSource source = tracker;
+        var exceptions = source.GetAllSnapshots<ExceptionSnapshot>().ToList();
+
+        // Assert
+        exceptions.Should().HaveCount(2);
+        exceptions.Select(e => e.MetricName).Should().Contain(["Op1", "Op2"]);
+    }
+
+    [Fact]
+    public void DedicatedHelperMethods_ShouldReturnExpectedTypedSnapshots()
+    {
+        // Arrange
+        var tracker = new MetricTracker("HelpersTopic")
+            .AddThroughputCounter()
+            .AddExceptionCounter()
+            .AddMemoryCounter()
+            .AddDimensionCounter("tenant");
+
+        tracker.In("Checkout", new() { ["tenant"] = "Acme" });
+        tracker.Out("Checkout", new() { ["tenant"] = "Acme" }, failed: true, exception: new InvalidOperationException());
+
+        // Act - Dedicated helper methods from Solution 1.A (using Solution 2.A internally)
+        var duration = tracker.GetDurationValues("Checkout");
+        var throughput = tracker.GetThroughputValues("Checkout");
+        var exception = tracker.GetExceptionValues("Checkout");
+        var memory = tracker.GetMemoryValues("Checkout");
+        var dimension = tracker.GetDimensionValues("Checkout", "tenant");
+
+        // Assert
+        duration.Should().NotBeNull();
+        duration!.MetricName.Should().Be("Checkout");
+
+        throughput.Should().NotBeNull();
+        throughput!.MetricName.Should().Be("Checkout");
+
+        exception.Should().NotBeNull();
+        exception!.MetricName.Should().Be("Checkout");
+
+        memory.Should().NotBeNull();
+        memory!.MetricName.Should().Be("Checkout");
+
+        dimension.Should().NotBeNull();
+        dimension!.DimensionName.Should().Be("tenant");
+    }
+
+    [Fact]
+    public void GetValues_OnIMetricTracker_ShouldResolveDurationSnapshot()
+    {
+        // Arrange
+        IMetricTracker tracker = new MetricTracker("InterfaceTopic");
+        tracker.In("Action");
+        tracker.Out("Action");
+
+        // Act - Calls extension method on IMetricTracker
+        var snapshot = tracker.GetValues("Action");
+
+        // Assert
+        snapshot.Should().NotBeNull();
+        snapshot!.MetricName.Should().Be("Action");
+        snapshot.InCount.Should().Be(1);
+    }
+
+    #endregion
 }

@@ -261,6 +261,34 @@ async Task ProcessOrderAsync()
 }
 ```
 
+##### Querying Typed Snapshots (`GetSnapshot<T>` & Value Helpers)
+
+MetricFlow allows you to retrieve strongly-typed telemetry snapshots programmatically using either generic queries or dedicated helper methods:
+
+```csharp
+// 1. Generic snapshot queries by snapshot type
+DurationSnapshot? duration   = tracker.GetSnapshot<DurationSnapshot>("ProcessOrder");
+ThroughputSnapshot? items     = tracker.GetSnapshot<ThroughputSnapshot>("ProcessOrder");
+ExceptionSnapshot? errors    = tracker.GetSnapshot<ExceptionSnapshot>("ProcessOrder");
+MemorySnapshot? memory       = tracker.GetSnapshot<MemorySnapshot>("ProcessOrder");
+
+// With an explicit counter name (e.g. for custom counters or specific dimensions)
+DimensionSnapshot? regionDim = tracker.GetSnapshot<DimensionSnapshot>("ProcessOrder", "Dimension:region");
+
+// 2. Query multiple snapshots of the same type (e.g. all dimension breakdowns for an operation)
+IEnumerable<DimensionSnapshot> allDims = tracker.GetSnapshots<DimensionSnapshot>("ProcessOrder");
+
+// 3. Query all snapshots of a given type across the entire tracker
+IEnumerable<ExceptionSnapshot> allErrors = tracker.GetAllSnapshots<ExceptionSnapshot>();
+
+// 4. Dedicated typed helper methods (internally powered by GetSnapshot<T>)
+DurationSnapshot? duration2   = tracker.GetDurationValues("ProcessOrder"); // or tracker.GetValues("ProcessOrder")
+ThroughputSnapshot? items2    = tracker.GetThroughputValues("ProcessOrder");
+ExceptionSnapshot? errors2   = tracker.GetExceptionValues("ProcessOrder");
+MemorySnapshot? memory2      = tracker.GetMemoryValues("ProcessOrder");
+DimensionSnapshot? dimension = tracker.GetDimensionValues("ProcessOrder", "region");
+```
+
 ##### Dependency Injection (Console Apps, Workers & Daemons)
 
 Register `MetricFlow` in any .NET application using `Microsoft.Extensions.DependencyInjection` without ASP.NET Core dependencies:
