@@ -202,9 +202,9 @@ public class MetricFlowServiceCollectionExtensionsTests
         }
 
         // Assert
-        tracker.GetThroughputValues("OrderCreated").Should().NotBeNull();
+        tracker.GetThroughputSnapshot("OrderCreated").Should().NotBeNull();
         tracker.GetSnapshot("OrderCreated", MemoryCounter.DefaultCounterName).Should().NotBeNull();
-        tracker.GetDimensionValues("OrderCreated", "country").Should().NotBeNull();
-        tracker.GetDimensionValues("OrderCreated", "tenant").Should().NotBeNull();
+        tracker.GetDimensionSnapshot("OrderCreated", "country").Should().NotBeNull();
+        tracker.GetDimensionSnapshot("OrderCreated", "tenant").Should().NotBeNull();
     }
 }

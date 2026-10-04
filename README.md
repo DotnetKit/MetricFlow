@@ -61,7 +61,7 @@ It can be used in both ASP.NET Core and non-ASP.NET Core applications.
 - **Throughput & Item Tracking**: Measure batch sizes, entity counts, and processing rates (items/sec) with `ThroughputCounter`.
 - **Dimensional Breakdown & Slicing**: Slice and compute operation distributions by business dimensions, tags, or computed rules with `DimensionCounter` and built-in cardinality safeguards.
 - **Memory Tracking**: Measure per-operation heap allocations with `MemoryCounter`.
-- **Exception & Failure Tracking**: Capture errors, exceptions, and failure counts with `ExceptionCounter`.
+- **Exception & Failure Tracking**: Capture runtime exceptions with `ExceptionCounter` and track logical versus exception failure distributions with `FailureCounter`.
 - **System.Diagnostics.Metrics Bridge**: Automatic zero-allocation mapping to standard .NET BCL instruments (`Histogram`, `Counter`, `UpDownCounter`) with cardinality protection.
 - **OpenTelemetry Integration**: Turnkey `DotnetKit.MetricFlow.OpenTelemetry` package with `.AddMetricFlowInstrumentation()` for exporting to Prometheus, Grafana, Datadog, and OTLP collectors.
 - **CLI Diagnostics**: Live real-time inspection in terminal via standard `dotnet-counters monitor`.
@@ -199,7 +199,7 @@ using (var scope = tracker.Track("IngestMessages"))
 }
 
 // Inspect results
-var throughput = tracker.GetThroughputValues("ImportChannels");
+var throughput = tracker.GetThroughputSnapshot("ImportChannels");
 // throughput.TotalItems -> 500
 // throughput.ItemsPerSecond -> e.g. 2,500 items/sec
 ```
@@ -235,9 +235,9 @@ using (var scope = tracker.Track("ProcessOrder", new() { ["country"] = "US", ["p
 }
 
 // Inspect snapshots
-var countryDim = tracker.GetDimensionValues("ProcessOrder", "country");
-var paymentDim = tracker.GetDimensionValues("ProcessOrder", "PaymentChannels");
-var tierDim = tracker.GetDimensionValues("ProcessOrder", "CustomerTier");
+var countryDim = tracker.GetDimensionSnapshot("ProcessOrder", "country");
+var paymentDim = tracker.GetDimensionSnapshot("ProcessOrder", "PaymentChannels");
+var tierDim = tracker.GetDimensionSnapshot("ProcessOrder", "CustomerTier");
 ```
 
 ##### Delegate Tracking (`TrackAction` / `TrackActionAsync`)
@@ -259,6 +259,36 @@ async Task ProcessOrderAsync()
 {
     await tracker.TrackActionAsync(async () => await DoWorkAsync());
 }
+```
+
+##### Querying Typed Snapshots (`GetSnapshot<T>` & Value Helpers)
+
+MetricFlow allows you to retrieve strongly-typed telemetry snapshots programmatically using either generic queries or dedicated helper methods:
+
+```csharp
+// 1. Generic snapshot queries by snapshot type
+DurationSnapshot? duration   = tracker.GetSnapshot<DurationSnapshot>("ProcessOrder");
+ThroughputSnapshot? items     = tracker.GetSnapshot<ThroughputSnapshot>("ProcessOrder");
+ExceptionSnapshot? errors    = tracker.GetSnapshot<ExceptionSnapshot>("ProcessOrder");
+FailureSnapshot? failures    = tracker.GetSnapshot<FailureSnapshot>("ProcessOrder");
+MemorySnapshot? memory       = tracker.GetSnapshot<MemorySnapshot>("ProcessOrder");
+
+// With an explicit counter name (e.g. for custom counters or specific dimensions)
+DimensionSnapshot? regionDim = tracker.GetSnapshot<DimensionSnapshot>("ProcessOrder", "Dimension:region");
+
+// 2. Query multiple snapshots of the same type (e.g. all dimension breakdowns for an operation)
+IEnumerable<DimensionSnapshot> allDims = tracker.GetSnapshots<DimensionSnapshot>("ProcessOrder");
+
+// 3. Query all snapshots of a given type across the entire tracker
+IEnumerable<ExceptionSnapshot> allErrors = tracker.GetAllSnapshots<ExceptionSnapshot>();
+
+// 4. Dedicated typed helper methods (internally powered by GetSnapshot<T>)
+DurationSnapshot? duration2   = tracker.GetDurationSnapshot("ProcessOrder");
+ThroughputSnapshot? items2    = tracker.GetThroughputSnapshot("ProcessOrder");
+ExceptionSnapshot? errors2   = tracker.GetExceptionSnapshot("ProcessOrder");
+FailureSnapshot? failures2   = tracker.GetFailureSnapshot("ProcessOrder");
+MemorySnapshot? memory2      = tracker.GetMemorySnapshot("ProcessOrder");
+DimensionSnapshot? dimension = tracker.GetDimensionSnapshot("ProcessOrder", "region");
 ```
 
 ##### Dependency Injection (Console Apps, Workers & Daemons)

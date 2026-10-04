@@ -38,7 +38,7 @@ internal class Program
         Console.WriteLine(tracker.ToString());
 
         // 2. Direct programmatic access to throughput metrics
-        var throughput = tracker.GetThroughputValues("BatchIngestion");
+        var throughput = tracker.GetThroughputSnapshot("BatchIngestion");
         if (throughput != null)
         {
             Console.WriteLine("=== Throughput Summary ===");
@@ -48,7 +48,7 @@ internal class Program
         }
 
         // 3. Direct programmatic access to dimension breakdown metrics
-        var dimension = tracker.GetDimensionValues("DynamicProcessor", "region");
+        var dimension = tracker.GetDimensionSnapshot("DynamicProcessor", "region");
         if (dimension != null)
         {
             Console.WriteLine("=== Dimension Summary ===");

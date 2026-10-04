@@ -53,10 +53,10 @@ public class MetricFlowMiddlewareTests
         response2.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Must track route pattern, not raw URLs
-        tracker.GetValues("/items/101").Should().BeNull();
-        tracker.GetValues("/items/202").Should().BeNull();
+        tracker.GetDurationSnapshot("/items/101").Should().BeNull();
+        tracker.GetDurationSnapshot("/items/202").Should().BeNull();
 
-        var snapshot = tracker.GetValues("/items/{id}");
+        var snapshot = tracker.GetDurationSnapshot("/items/{id}");
         snapshot.Should().NotBeNull();
         snapshot.InCount.Should().Be(2);
         snapshot.OutCount.Should().Be(2);
@@ -102,7 +102,7 @@ public class MetricFlowMiddlewareTests
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var snapshot = tracker.GetValues("GetWeatherForecast");
+        var snapshot = tracker.GetDurationSnapshot("GetWeatherForecast");
         snapshot.Should().NotBeNull();
         snapshot.InCount.Should().Be(1);
         snapshot.OutCount.Should().Be(1);
@@ -146,11 +146,11 @@ public class MetricFlowMiddlewareTests
         badResp.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         notFoundResp.StatusCode.Should().Be(HttpStatusCode.NotFound);
 
-        var badSnapshot = tracker.GetValues("/bad");
+        var badSnapshot = tracker.GetDurationSnapshot("/bad");
         badSnapshot.Should().NotBeNull();
         badSnapshot.FailedCount.Should().Be(1);
 
-        var notFoundSnapshot = tracker.GetValues("/notfound");
+        var notFoundSnapshot = tracker.GetDurationSnapshot("/notfound");
         notFoundSnapshot.Should().NotBeNull();
         notFoundSnapshot.FailedCount.Should().Be(1);
     }
@@ -191,7 +191,7 @@ public class MetricFlowMiddlewareTests
         var act = async () => await client.GetAsync("/crash");
         await act.Should().ThrowAsync<InvalidOperationException>();
 
-        var snapshot = tracker.GetValues("/crash");
+        var snapshot = tracker.GetDurationSnapshot("/crash");
         snapshot.Should().NotBeNull();
         snapshot.FailedCount.Should().Be(1);
         snapshot.InCount.Should().Be(1);
@@ -377,7 +377,7 @@ public class MetricFlowMiddlewareTests
         await client.PostAsync("/orders", null);
 
         // Assert
-        var snapshot = tracker.GetValues("POST /orders");
+        var snapshot = tracker.GetDurationSnapshot("POST /orders");
         snapshot.Should().NotBeNull();
         snapshot.InCount.Should().Be(1);
     }
@@ -419,7 +419,7 @@ public class MetricFlowMiddlewareTests
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // Controller route pattern should be tracked (normalized with leading /)
-        var snapshot = tracker.GetValues("/api/TestProducts/{id}");
+        var snapshot = tracker.GetDurationSnapshot("/api/TestProducts/{id}");
         snapshot.Should().NotBeNull();
         snapshot.InCount.Should().Be(1);
         snapshot.OutCount.Should().Be(1);

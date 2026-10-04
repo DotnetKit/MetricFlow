@@ -174,11 +174,11 @@ public class MetricFlowOptionsTests
         }
 
         // Assert - Dimension snapshots
-        var tenantSnapshot = tracker.GetDimensionValues("InvoiceCreated", "tenant");
+        var tenantSnapshot = tracker.GetDimensionSnapshot("InvoiceCreated", "tenant");
         tenantSnapshot.Should().NotBeNull();
         tenantSnapshot.Breakdown.Should().ContainKey("AcmeCorp").WhoseValue.Should().Be(1);
 
-        var compositeSnapshot = tracker.GetDimensionValues("InvoiceCreated", "CountryPayment");
+        var compositeSnapshot = tracker.GetDimensionSnapshot("InvoiceCreated", "CountryPayment");
         compositeSnapshot.Should().NotBeNull();
         compositeSnapshot.Breakdown.Should().ContainKey("DE / SEPA").WhoseValue.Should().Be(1);
     }

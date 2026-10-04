@@ -66,7 +66,7 @@ internal class Program
 
         // 6. Programmatic access to specific snapshots via default tracker
         var defaultTracker = metricFlow.DefaultTracker!;
-        var throughput = defaultTracker.GetThroughputValues("BatchIngestion");
+        var throughput = defaultTracker.GetThroughputSnapshot("BatchIngestion");
         if (throughput != null)
         {
             Console.WriteLine("=== Programmatic Throughput Query ===");
@@ -75,7 +75,7 @@ internal class Program
             Console.WriteLine($"Average Batch Size    : {throughput.AverageItemsPerOperation:N1} items/op\n");
         }
 
-        var dimension = defaultTracker.GetDimensionValues("DynamicProcessor", "region");
+        var dimension = defaultTracker.GetDimensionSnapshot("DynamicProcessor", "region");
         if (dimension != null)
         {
             Console.WriteLine("=== Programmatic Dimension Query ===");

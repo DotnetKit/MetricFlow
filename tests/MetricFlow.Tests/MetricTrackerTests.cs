@@ -1,7 +1,5 @@
 using DotnetKit.MetricFlow;
 using DotnetKit.MetricFlow.Abstractions;
-using DotnetKit.MetricFlow.Counters;
-using DotnetKit.MetricFlow.Extensions;
 using FluentAssertions;
 using Xunit;
 
@@ -35,7 +33,7 @@ public class MetricTrackerTests
         tracker.Out("TestMetric");
 
         // Assert
-        var values = tracker.GetValues("TestMetric");
+        var values = TrackerCounterExtensions.GetDurationSnapshot(tracker, "TestMetric");
         values.Should().NotBeNull();
         values.InCount.Should().Be(1);
         values.OutCount.Should().Be(1);
@@ -53,7 +51,7 @@ public class MetricTrackerTests
         tracker.Out("TestMetric");
 
         // Assert
-        var values = tracker.GetValues("TestMetric");
+        var values = TrackerCounterExtensions.GetDurationSnapshot(tracker, "TestMetric");
         values.Should().BeNull(); // No metrics should be tracked
     }
 
@@ -70,7 +68,7 @@ public class MetricTrackerTests
         }
 
         // Assert
-        var values = tracker.GetValues("TestMetric");
+        var values = TrackerCounterExtensions.GetDurationSnapshot(tracker, "TestMetric");
         values.Should().NotBeNull();
         values?.InCount.Should().Be(1);
         values?.OutCount.Should().Be(1);
@@ -89,7 +87,7 @@ public class MetricTrackerTests
         tracker.Out("TestMetric", failed: true);
 
         // Assert
-        var values = tracker.GetValues("TestMetric");
+        var values = TrackerCounterExtensions.GetDurationSnapshot(tracker, "TestMetric");
         values.Should().NotBeNull();
         values.InCount.Should().Be(2);
         values.OutCount.Should().Be(2);
@@ -109,7 +107,7 @@ public class MetricTrackerTests
         }
 
         // Assert
-        var values = tracker.GetValues("DelayedMetric");
+        var values = TrackerCounterExtensions.GetDurationSnapshot(tracker, "DelayedMetric");
         values.Should().NotBeNull();
         values.TotalDuration.TotalMilliseconds.Should().BeInRange(30, 500);
         values.AverageDuration.TotalMilliseconds.Should().BeInRange(30, 500);
@@ -134,7 +132,7 @@ public class MetricTrackerTests
         await Task.WhenAll(tasks);
 
         // Assert
-        var values = tracker.GetValues("ConcurrentMetric");
+        var values = TrackerCounterExtensions.GetDurationSnapshot(tracker, "ConcurrentMetric");
         values.Should().NotBeNull();
         values.InCount.Should().Be(concurrency);
         values.OutCount.Should().Be(concurrency);
@@ -152,7 +150,7 @@ public class MetricTrackerTests
         tracker.Out("TestMetric");
 
         // Assert
-        var values = tracker.GetValues("TestMetric");
+        var values = TrackerCounterExtensions.GetDurationSnapshot(tracker, "TestMetric");
         values.Should().NotBeNull();
         values.InCount.Should().Be(1);
         values.OutCount.Should().Be(1);
@@ -163,7 +161,8 @@ public class MetricTrackerTests
     {
         // Arrange
         var tracker = new MetricTracker("TestTopic")
-            .AddExceptionCounter();
+            .AddExceptionCounter()
+            .AddFailureCounter();
 
         // Act
         using (var scope = tracker.Track("LogicalFailureOp"))
@@ -173,18 +172,27 @@ public class MetricTrackerTests
         }
 
         // Assert DurationCounter records failed: true
-        var durationValues = tracker.GetValues("LogicalFailureOp");
+        var durationValues = TrackerCounterExtensions.GetDurationSnapshot(tracker, "LogicalFailureOp");
         durationValues.Should().NotBeNull();
         durationValues.InCount.Should().Be(1);
         durationValues.OutCount.Should().Be(1);
         durationValues.FailedCount.Should().Be(1);
 
-        // Assert ExceptionCounter records failure with "UnspecifiedError" category
-        var exceptionSnapshot = tracker.GetSnapshot("LogicalFailureOp", ExceptionCounter.DefaultCounterName) as ExceptionSnapshot;
+        // Assert ExceptionCounter does NOT record an exception because no Exception was thrown
+        var exceptionSnapshot = tracker.GetExceptionSnapshot("LogicalFailureOp");
         exceptionSnapshot.Should().NotBeNull();
-        exceptionSnapshot.TotalOperations.Should().Be(1);
-        exceptionSnapshot.TotalFailures.Should().Be(1);
-        exceptionSnapshot.ExceptionsByType.Should().ContainKey("UnspecifiedError").WhoseValue.Should().Be(1);
+        exceptionSnapshot!.TotalOperations.Should().Be(1);
+        exceptionSnapshot.TotalExceptions.Should().Be(0);
+        exceptionSnapshot.ExceptionsByType.Should().BeEmpty();
+
+        // Assert FailureCounter records the logical failure
+        var failureSnapshot = tracker.GetFailureShapshot("LogicalFailureOp");
+        failureSnapshot.Should().NotBeNull();
+        failureSnapshot!.TotalOperations.Should().Be(1);
+        failureSnapshot.TotalFailures.Should().Be(1);
+        failureSnapshot.LogicalFailures.Should().Be(1);
+        failureSnapshot.ExceptionFailures.Should().Be(0);
+        failureSnapshot.FailureRate.Should().Be(1.0);
     }
 
     [Fact]
@@ -200,7 +208,7 @@ public class MetricTrackerTests
         }
 
         // Assert
-        var values = tracker.GetValues("SuccessfulOp");
+        var values = tracker.GetDurationSnapshot("SuccessfulOp");
         values.Should().NotBeNull();
         values.InCount.Should().Be(1);
         values.OutCount.Should().Be(1);
@@ -252,7 +260,7 @@ public class MetricTrackerTests
         HelperCallingMethodForTrack(tracker);
 
         // Assert
-        var snapshot = tracker.GetValues(nameof(HelperCallingMethodForTrack));
+        var snapshot = tracker.GetDurationSnapshot(nameof(HelperCallingMethodForTrack));
         snapshot.Should().NotBeNull();
         snapshot.InCount.Should().Be(1);
         snapshot.OutCount.Should().Be(1);
@@ -276,7 +284,7 @@ public class MetricTrackerTests
         HelperCallingMethodWithTags(tracker, tags);
 
         // Assert
-        var snapshot = tracker.GetValues(nameof(HelperCallingMethodWithTags));
+        var snapshot = tracker.GetDurationSnapshot(nameof(HelperCallingMethodWithTags));
         snapshot.Should().NotBeNull();
         snapshot.InCount.Should().Be(1);
         snapshot.OutCount.Should().Be(1);
@@ -299,7 +307,7 @@ public class MetricTrackerTests
         HelperCallingMethodForInOut(tracker);
 
         // Assert
-        var snapshot = tracker.GetValues(nameof(HelperCallingMethodForInOut));
+        var snapshot = tracker.GetDurationSnapshot(nameof(HelperCallingMethodForInOut));
         snapshot.Should().NotBeNull();
         snapshot.InCount.Should().Be(1);
         snapshot.OutCount.Should().Be(1);
