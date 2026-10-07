@@ -35,6 +35,23 @@ public class MetricFlowBuilder : IMetricFlowBuilder
         return this;
     }
 
+    /// <inheritdoc />
+    public IMetricFlowBuilder AddConsoleSink(Action<DotnetKit.MetricFlow.Sinks.Console.ConsoleMetricSinkOptions>? configure = null)
+    {
+        var options = new DotnetKit.MetricFlow.Sinks.Console.ConsoleMetricSinkOptions();
+        configure?.Invoke(options);
+        return AddSink(new DotnetKit.MetricFlow.Sinks.Console.ConsoleMetricSink(options));
+    }
+
+    /// <inheritdoc />
+    public IMetricFlowBuilder AddSink(DotnetKit.MetricFlow.Sinks.IMetricSink sink)
+    {
+        ArgumentNullException.ThrowIfNull(sink);
+        Current.AddSingleton(sink);
+        return this;
+    }
+
+
     #region IServiceCollection delegation
 
     int ICollection<ServiceDescriptor>.Count => Current.Count;

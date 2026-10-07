@@ -25,5 +25,20 @@ public interface IMetricFlowBuilder : IFluentBuilder<IServiceCollection>, IServi
     /// </summary>
     /// <param name="configure">Optional configuration action.</param>
     /// <returns>The builder instance for fluent chaining.</returns>
-    IMetricFlowBuilder AddMetricTracker(Action<MetricFlowOptions>? configure = null); 
+    IMetricFlowBuilder AddMetricTracker(Action<MetricFlowOptions>? configure = null);
+
+    /// <summary>
+    /// Adds a <see cref="DotnetKit.MetricFlow.Sinks.Console.ConsoleMetricSink"/> for structured console logging.
+    /// </summary>
+    /// <param name="configure">Optional configuration for console output formatting.</param>
+    /// <returns>The builder instance for fluent chaining.</returns>
+    IMetricFlowBuilder AddConsoleSink(Action<DotnetKit.MetricFlow.Sinks.Console.ConsoleMetricSinkOptions>? configure = null);
+
+    /// <summary>
+    /// Adds a custom metric sink to receive snapshot emissions.
+    /// </summary>
+    /// <param name="sink">The metric sink instance.</param>
+    /// <returns>The builder instance for fluent chaining.</returns>
+    IMetricFlowBuilder AddSink(DotnetKit.MetricFlow.Sinks.IMetricSink sink);
 }
+

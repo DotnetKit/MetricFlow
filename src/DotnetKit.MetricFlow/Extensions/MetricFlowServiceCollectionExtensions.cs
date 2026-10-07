@@ -1,6 +1,7 @@
 using DotnetKit.MetricFlow;
 using DotnetKit.MetricFlow.Abstractions;
 using DotnetKit.MetricFlow.Meters;
+using DotnetKit.MetricFlow.Sinks;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 // ReSharper disable once CheckNamespace
@@ -56,6 +57,8 @@ public static class MetricFlowServiceCollectionExtensions
                     }
 
                     var meterBridge = meterRegistry.GetOrCreateBridge(topic, defaultOptions.TopicTags);
+                    var diSinks = sp.GetServices<IMetricSink>();
+                    var allSinks = defaultOptions.Sinks.Concat(diSinks).Distinct();
 
                     var tracker = new MetricTracker(
                         topic: topic,
@@ -63,7 +66,9 @@ public static class MetricFlowServiceCollectionExtensions
                         samplingRate: defaultOptions.SamplingRate,
                         configObservable: defaultOptions.ConfigObservable,
                         additionalCounters: defaultOptions.Counters,
-                        meterBridge: meterBridge);
+                        meterBridge: meterBridge,
+                        sinks: allSinks,
+                        sinkTriggers: defaultOptions.SinkTriggers);
 
                     if (defaultOptions.AutoAddExceptionCounter)
                     {
@@ -72,6 +77,7 @@ public static class MetricFlowServiceCollectionExtensions
 
                     return tracker;
                 });
+
 
             // Register all statically configured topic trackers into the registry
             var registrations = sp.GetServices<MetricTrackerRegistration>();
@@ -136,6 +142,11 @@ public static class MetricFlowServiceCollectionExtensions
             opt.ConfigObservable = trackerOptions.ConfigObservable;
             opt.AutoAddExceptionCounter = trackerOptions.AutoAddExceptionCounter;
             opt.MeterOptions = trackerOptions.MeterOptions;
+            opt.SinkTriggers = trackerOptions.SinkTriggers;
+            foreach (var sink in trackerOptions.Sinks)
+            {
+                opt.Sinks.Add(sink);
+            }
             foreach (var counter in trackerOptions.Counters)
             {
                 opt.Counters.Add(counter);
@@ -150,6 +161,8 @@ public static class MetricFlowServiceCollectionExtensions
         {
             var meterRegistry = sp.GetRequiredService<MetricFlowMeterRegistry>();
             var meterBridge = meterRegistry.GetOrCreateBridge(trackerOptions.Topic, trackerOptions.TopicTags);
+            var diSinks = sp.GetServices<IMetricSink>();
+            var allSinks = trackerOptions.Sinks.Concat(diSinks).Distinct();
 
             var tracker = new MetricTracker(
                 topic: trackerOptions.Topic,
@@ -157,7 +170,9 @@ public static class MetricFlowServiceCollectionExtensions
                 samplingRate: trackerOptions.SamplingRate,
                 configObservable: trackerOptions.ConfigObservable,
                 additionalCounters: trackerOptions.Counters,
-                meterBridge: meterBridge);
+                meterBridge: meterBridge,
+                sinks: allSinks,
+                sinkTriggers: trackerOptions.SinkTriggers);
 
             if (trackerOptions.AutoAddExceptionCounter)
             {
@@ -166,6 +181,7 @@ public static class MetricFlowServiceCollectionExtensions
 
             return tracker;
         });
+
 
         services.AddKeyedSingleton<IMetricTracker>(topic, (sp, key) => sp.GetRequiredKeyedService<MetricTracker>(key));
         services.AddKeyedSingleton<IMetricSnapshotsSource>(topic, (sp, key) => sp.GetRequiredKeyedService<MetricTracker>(key));
