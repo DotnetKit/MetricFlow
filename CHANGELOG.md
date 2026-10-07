@@ -7,7 +7,69 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.53] - 2026-10-07
+
+### Added
+
+- **Pluggable Metric Sink Pipeline (`IMetricSink`)**:
+  - Core `IMetricSink` abstraction supporting synchronous `Emit(IReadOnlyList<IMetricSnapshot>)` and asynchronous `EmitAsync(...)` with bidirectional default interface implementations.
+  - In-process snapshot dispatching for centralized logging, file writes, and local persistence.
+- **Reactive Observable Pattern (`ObservableMetricSink`)**:
+  - Implementation of `IMetricSink` and `IObservable<IReadOnlyList<IMetricSnapshot>>` enabling standard reactive subscriptions (`sink.Subscribe(...)`) for piping metric snapshots to Rx.NET queries, event channels, or custom log writers.
+- **Timer-Free Sampling Triggers (`MetricSinkTriggerOptions`)**:
+  - First-class support for execution-lifecycle triggers evaluated during operation completion (`Out` / `Dispose`), completely avoiding mandatory background timers or polling threads:
+    - *Stride Sampling*: Emit snapshots every $N$ executions (`EmitEveryNExecutions`).
+    - *Tail / Outlier Sampling*: Immediately emit on operation failure (`EmitOnFailure`) or when duration exceeds latency thresholds (`EmitOnSlowDurationThreshold`).
+    - *Probabilistic Sampling*: Random percentage sampling (`EmitSampleRate`).
+  - Zero idle CPU and thread overhead; ideal for serverless (AWS Lambda), CLI utilities, and short-lived batch jobs.
+- **Structured Console Log Sink (`ConsoleMetricSink` & `ConsoleMetricSinkOptions`)**:
+  - High-performance console sink formatting metric snapshots into human-readable single-line structured log entries.
+  - Configurable ANSI colorization (`Colorize`), timestamps, custom prefixes, and redirection to any `TextWriter` for testing.
+  - Dedicated formatting for throughput rates, execution counts, and failure rates.
+- **Fluent Builder & DI Extensions**:
+  - Registered sinks on `MetricFlowOptions`: `options.AddSink(...)`, `options.AddConsoleSink(...)`, `options.AddObservableSink(...)`, and `options.ConfigureSinkTriggers(...)`.
+  - Fluent builder chaining: `builder.AddConsoleSink(...)` and `builder.AddSink(...)`.
+  - Automatic dependency injection discovery: automatically resolves any registered `IMetricSink` services from the DI container into metric trackers.
+  - Manual and asynchronous flush support: `tracker.FlushSinks()` and `tracker.FlushSinksAsync()`.
+- **Roadmap Updates (`ROADMAP.md`)**:
+  - Updated Section 2 to reflect `IMetricSink`, `ObservableMetricSink`, timer-free sampling, and the console sink.
+  - Realigned Section 3 to clarify that cloud APMs (AWS CloudWatch, Azure Monitor, Datadog, Prometheus) are natively handled via OpenTelemetry and `System.Diagnostics.Metrics`.
+
+---
+
+## [1.0.52] - 2026-10-03
+
+### Added
+
+- **Failure Counter & Snapshot (`FailureCounter` & `FailureSnapshot`)**:
+  - Dedicated counter distinguishing logical failures (`failed: true`) from unhandled exception failures.
+  - Computes `TotalOperations`, `TotalFailures`, `LogicalFailures`, `ExceptionFailures`, `FailureRate`, `LogicalFailureRate`, and `ExceptionFailureRate`.
+  - Fluent registration helper `options.AddFailureCounter(name)` on `MetricFlowOptions`.
+- **Strongly-Typed Snapshot Retrieval Extensions (`TrackerCounterExtensions`)**:
+  - Generic retrieval APIs:
+    - `tracker.GetSnapshot<TSnapshot>(metricName, counterName)`
+    - `tracker.GetSnapshots<TSnapshot>(metricName)`
+    - `source.GetAllSnapshots<TSnapshot>()`
+  - Strongly-typed convenience extension methods:
+    - `tracker.GetDurationSnapshot(metricName)`
+    - `tracker.GetThroughputSnapshot(metricName)`
+    - `tracker.GetExceptionSnapshot(metricName)`
+    - `tracker.GetMemorySnapshot(metricName)`
+    - `tracker.GetFailureSnapshot(metricName)`
+    - `tracker.GetDimensionSnapshot(metricName, dimensionName)`
+
+### Changed (Breaking Changes)
+
+- **Standardized Snapshot Retrieval Naming**:
+  - Renamed `GetThroughputValues(...)` to `GetThroughputSnapshot(...)` for consistency with snapshot terminology.
+  - Renamed `GetDimensionValues(...)` to `GetDimensionSnapshot(...)`.
+  - Updated example applications, documentation, and middleware to use the unified `*Snapshot` extension methods.
+
+---
+
 ## [1.0.51] - 2026-09-27
+
+
 
 ### Added
 
