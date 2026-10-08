@@ -316,3 +316,41 @@ All metric tracking data is accessible via the `IMetricSnapshotsSource` abstract
 - **`IMetricSnapshotsSource`**: Unified interface implemented by trackers to expose snapshots across all registered active counters (`GetAllSnapshots()`, `GetSnapshot(metricName)`).
 - **Operation-Grouped Formatting**: Snapshot formatting extensions group multidimensional measurements (`Duration`, `Memory`, `Exception`) by operation name to produce human-readable summaries (min/max/avg, failure rates, allocated memory deltas).
 
+---
+
+## 11. Under the Hood: System.Diagnostics Bridge
+
+MetricFlow connects domain tracking with the .NET runtime using a lightweight, built-in bridge to the standard BCL `System.Diagnostics.Metrics` APIs:
+
+- **Decoupled, Zero-Dependency Core**:
+  - The core `DotnetKit.MetricFlow` library has **no external dependency on the OpenTelemetry SDK**.
+  - It creates standard BCL `System.Diagnostics.Metrics.Meter` instances per topic via `IMetricMeterBridge` and `MetricFlowMeterRegistry`.
+  - External exporters (Prometheus, OTLP, Datadog) or the `DotnetKit.MetricFlow.OpenTelemetry` package plug into these native .NET meters without requiring custom adapters.
+
+- **Hot-Path Lifecycle Dispatch**:
+  - **Operation Start (`In`)**: Atomically increments an in-flight concurrency gauge (`UpDownCounter<long>` named `{metricName}.active`).
+  - **Operation Completion (`Out` / `Dispose`)**:
+    - Records latency in milliseconds into a `Histogram<double>` (`{metricName}.duration`).
+    - Increments the total execution count (`Counter<long>` named `{metricName}.total`) tagged with operation status (`"ok"` or `"error"`).
+    - If items/records were processed (via `TrackItems` or `scope.SetItems`), records batch volume into a `Counter<long>` (`{metricName}.items`).
+    - If an exception was thrown, records the error into a `Counter<long>` (`{metricName}.exceptions`) with the `exception.type` attribute.
+    - Decrements the in-flight concurrency gauge.
+
+- **Standard BCL Instruments Mapped**:
+
+| MetricFlow Concept          | Instrument Type       | Metric Name               | Unit           | Tags / Attributes                                    |
+| --------------------------- | --------------------- | ------------------------- | -------------- | ---------------------------------------------------- |
+| **DurationCounter**         | `Histogram<double>`   | `{metricName}.duration`   | `ms`           | `operation`, `status` ("ok"/"error"), sanitized tags |
+| **Execution Counts**        | `Counter<long>`       | `{metricName}.total`      | `{operations}` | `operation`, `status` ("ok"/"error"), sanitized tags |
+| **Throughput / Items**      | `Counter<long>`       | `{metricName}.items`      | `{items}`      | `operation`, sanitized tags                          |
+| **ExceptionCounter**        | `Counter<long>`       | `{metricName}.exceptions` | `{exceptions}` | `operation`, `exception.type`, sanitized tags        |
+| **In-Flight / Concurrency** | `UpDownCounter<long>` | `{metricName}.active`     | `{operations}` | `operation`, sanitized tags                          |
+
+- **Tag Cardinality Guard (`TagCardinalityGuard`)**:
+  - High-cardinality tags (such as user IDs or order numbers) can quickly cause metric explosion and memory leaks in downstream time-series databases.
+  - The bridge tracks distinct values per tag key and clamps any values exceeding `MaxUniqueTagValues` (default `100`, configurable via `options.ConfigureMeters(...)`) into a safe fallback bucket (`[Other]`).
+
+- **Dual-Mode Telemetry**:
+  - **Streaming BCL Metrics**: Emitted immediately to any registered `MeterListener`, `dotnet-counters`, or OpenTelemetry `MeterProvider`.
+  - **Aggregated Local Snapshots**: Maintained concurrently in memory for local logging, diagnostics, health checks, or the `/metrics` endpoint (`tracker.ToString()`).
+
