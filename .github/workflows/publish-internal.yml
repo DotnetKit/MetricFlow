@@ -13,6 +13,9 @@ env:
 jobs:
   gh-build-and-deploy-internal:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       # Checkout the repo
       - uses: actions/checkout@v4
