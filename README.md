@@ -21,6 +21,7 @@ It can be used in both ASP.NET Core and non-ASP.NET Core applications.
 | :-------------------------------- | :---------------------------------------------------------- | :--------------------------------- | :----------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------- |
 | **Simple Implementation**         | Targeted method/loop profiling, CLI jobs, algorithms        | Standalone instantiation           | `new MetricTracker(...)`                               | [BasicConsoleExample](examples/BasicConsoleExample) & [AdvancedConsoleExample](examples/AdvancedConsoleExample) |
 | **DI-Based Implementation**       | Background workers, daemons, multi-tenant                   | Standard DI (`IServiceCollection`) | `IMetricTracker`, `[FromKeyedServices]`, `IMetricFlow` | [AdvancedConsoleWithDIExample](examples/AdvancedConsoleWithDIExample)                                           |
+| **Console Log Sink & Triggers**   | Real-time formatted console logging, timer-free sampling    | Standalone or DI                   | `AddConsoleSink(...)`, `ConfigureSinkTriggers(...)`    | [ConsoleSinkExample](examples/ConsoleSinkExample)                                                               |
 | **Web Implementation**            | Web APIs, microservices, HTTP routing                       | ASP.NET Core pipeline              | `app.UseMetricFlow()`, `app.MapMetricFlow("/metrics")` | [WebApiExample](examples/WebApiExample)                                                                         |
 | **OpenTelemetry & Observability** | Prometheus, Grafana, Datadog, OTLP collectors, CLI counters | OpenTelemetry SDK / BCL            | `.AddMetricFlowInstrumentation()`, `dotnet-counters`   | [OpenTelemetryConsoleExample](examples/OpenTelemetryConsoleExample)                                             |
 
@@ -385,6 +386,7 @@ For detailed architecture, hot-path dispatch mechanics, the `System.Diagnostics`
 - **[BasicConsoleExample](examples/BasicConsoleExample)**: Simplest implementation demonstrating minimal tracker setup and duration measurement with zero optional counters.
 - **[AdvancedConsoleExample](examples/AdvancedConsoleExample)**: Full multi-counter demonstration including duration, throughput (items/sec and batch sizing), memory allocation, exceptions, and delegate tracking.
 - **[AdvancedConsoleWithDIExample](examples/AdvancedConsoleWithDIExample)**: Standard Microsoft DI integration demonstrating fluent builder (`AddMetricTracker`), `AddTagsEnricher`, multi-topic tracking, keyed services (`[FromKeyedServices]`), worker pipelines, and programmatic telemetry queries.
+- **[ConsoleSinkExample](examples/ConsoleSinkExample)**: Structured console log sink (`ConsoleMetricSink`) featuring ANSI color coding, prefixes, timestamps, and timer-free execution-lifecycle sampling triggers (stride, latency thresholds, and failure triggers).
 - **[OpenTelemetryConsoleExample](examples/OpenTelemetryConsoleExample)**: Complete OpenTelemetry integration demonstrating `.AddMetricFlowInstrumentation()`, raw console metric export, cardinality protection, batch items throughput, and trace correlation.
 - **[WebApiExample](examples/WebApiExample)**: Demonstrates ASP.NET Core integration, middleware, and `/metrics` endpoint.
 - **[CustomCounters](examples/CustomCounters)**: Demonstrates extension capabilities by implementing custom counters and trackers.
@@ -400,6 +402,9 @@ dotnet run --project examples/AdvancedConsoleExample
 
 # Dependency injection console example (DI, AddTagsEnricher, keyed services)
 dotnet run --project examples/AdvancedConsoleWithDIExample
+
+# Structured console log sink example (ConsoleMetricSink, timer-free lifecycle triggers)
+dotnet run --project examples/ConsoleSinkExample
 
 # OpenTelemetry console example (OpenTelemetry SDK, BCL bridge, console exporter)
 dotnet run --project examples/OpenTelemetryConsoleExample

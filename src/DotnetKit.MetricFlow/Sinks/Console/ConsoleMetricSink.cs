@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using DotnetKit.MetricFlow.Abstractions;
 using DotnetKit.MetricFlow.Counters;
@@ -104,7 +105,7 @@ public class ConsoleMetricSink : IMetricSink
             case ThroughputSnapshot tp:
                 sb.Append("TotalItems: ").Append(tp.TotalItems)
                   .Append(", Operations: ").Append(tp.TotalOperations)
-                  .Append(", Rate: ").Append(tp.ItemsPerSecond.ToString("F1")).Append(" items/s");
+                  .Append(", Rate: ").Append(tp.ItemsPerSecond.ToString("F1", CultureInfo.InvariantCulture)).Append(" items/s");
 
                 if (tp.FailedOperations > 0)
                 {
@@ -122,7 +123,7 @@ public class ConsoleMetricSink : IMetricSink
                 if (f.TotalFailures > 0)
                 {
                     if (color) sb.Append(AnsiRed);
-                    sb.Append(f.TotalFailures).Append(" (").Append((f.FailureRate * 100).ToString("F1")).Append("%)");
+                    sb.Append(f.TotalFailures).Append(" (").Append((f.FailureRate * 100).ToString("F1", CultureInfo.InvariantCulture)).Append("%)");
                     if (color) sb.Append(AnsiReset);
                 }
                 else
