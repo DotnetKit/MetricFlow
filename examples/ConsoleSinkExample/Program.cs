@@ -1,13 +1,12 @@
 using DotnetKit.MetricFlow;
 using DotnetKit.MetricFlow.Abstractions;
-using DotnetKit.MetricFlow.Sinks.Console;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace ConsoleSinkExample;
 
 internal class Program
 {
-    private static async Task Main(string[] args)
+    private static async Task Main()
     {
         Console.WriteLine("================================================================");
         Console.WriteLine("        MetricFlow - Structured Console Log Sink Example        ");
@@ -86,7 +85,7 @@ internal class Program
         using var warehouseTracker = new MetricTracker(standaloneOptions);
 
         Console.WriteLine("Tracking operations in standalone tracker (no automatic triggers configured)...");
-        for (int i = 1; i <= 3; i++)
+        for (var i = 1; i <= 3; i++)
         {
             using (warehouseTracker.TrackItems("InventoryRestock", itemCount: i * 25))
             {
@@ -96,49 +95,42 @@ internal class Program
 
         Console.WriteLine("Notice no sink lines were emitted yet because no triggers were set.");
         Console.WriteLine("Now manually flushing sinks at application shutdown via FlushSinks()...\n");
-        warehouseTracker.FlushSinks();
+        await warehouseTracker.FlushSinksAsync();
 
         Console.WriteLine("\nStructured console log sink example completed successfully!");
     }
 }
 
-internal class OrderFulfillmentService
+internal class OrderFulfillmentService(IMetricTracker tracker)
 {
-    private readonly IMetricTracker _tracker;
-
-    public OrderFulfillmentService(IMetricTracker tracker)
-    {
-        _tracker = tracker;
-    }
-
     public async Task ProcessOrdersAsync()
     {
         Console.WriteLine("Step 1: Processing 10 regular orders (triggers every 5 executions via EmitEveryNExecutions)...");
-        for (int i = 1; i <= 10; i++)
+        for (var i = 1; i <= 10; i++)
         {
-            using (_tracker.TrackItems("ProcessOrder", itemCount: i * 10, additionalTags: new() { ["tier"] = "standard" }))
+            using (tracker.TrackItems("ProcessOrder", itemCount: i * 10, additionalTags: new() { ["tier"] = "standard" }))
             {
                 await Task.Delay(10);
             }
         }
 
         Console.WriteLine("\nStep 2: Processing slow order (triggers immediately via EmitOnSlowDurationThreshold > 100ms)...");
-        using (_tracker.Track("ProcessOrder", tags: new() { ["tier"] = "slow_backend" }))
+        using (tracker.Track("ProcessOrder", tags: new() { ["tier"] = "slow_backend" }))
         {
             await Task.Delay(125); // Exceeds the 100ms threshold
         }
 
         Console.WriteLine("\nStep 3: Processing order with logical failure (triggers immediately via EmitOnFailure)...");
-        using (var scope = _tracker.Track("ProcessOrder", tags: new() { ["tier"] = "payment_declined" }))
+        using (var scope = tracker.Track("ProcessOrder", tags: new() { ["tier"] = "payment_declined" }))
         {
             await Task.Delay(10);
-            scope.SetFailed(true); // Flag logical failure without exception
+            scope.SetFailed(); // Flag logical failure without exception
         }
 
         Console.WriteLine("\nStep 4: Processing order that throws an exception (triggers immediately via EmitOnFailure)...");
         try
         {
-            await _tracker.TrackActionAsync("ProcessOrder", async () =>
+            await tracker.TrackActionAsync("ProcessOrder", async () =>
             {
                 await Task.Delay(10);
                 throw new InvalidOperationException("External payment gateway connection timeout");

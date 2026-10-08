@@ -21,13 +21,13 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
     private readonly AsyncLocal<Dictionary<string, Stack<InOperationState>>?> _asyncOperations = new();
     private readonly AsyncLocal<Dictionary<string, int>?> _asyncDroppedCounts = new();
 
-    private readonly string _topic;
-    private readonly Dictionary<string, string>? _topicTags;
     private readonly double? _samplingRate;
     private readonly IMetricMeterBridge? _meterBridge;
 
-    public string Topic => _topic;
-    public Dictionary<string, string>? TopicTags => _topicTags;
+    public string Topic { get; }
+
+    public Dictionary<string, string>? TopicTags { get; }
+
     public IMetricMeterBridge? MeterBridge => _meterBridge;
 
     protected MetricTrackerBase(
@@ -58,8 +58,8 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
         IEnumerable<IMetricSink>? sinks,
         MetricSinkTriggerOptions? sinkTriggers)
     {
-        _topic = topic;
-        _topicTags = topicTags;
+        Topic = topic;
+        TopicTags = topicTags;
         _samplingRate = samplingRate;
         _meterBridge = meterBridge ?? new MetricFlowMeterBridge(topic, topicTags, new MetricFlowMeterOptions());
         _sinkTriggers = sinkTriggers ?? new MetricSinkTriggerOptions();
@@ -148,13 +148,13 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
         var states = new object?[active.Length];
         var inContext = new InContext(metricName, tags, metadata);
 
-        for (int i = 0; i < active.Length; i++)
+        for (var i = 0; i < active.Length; i++)
         {
             states[i] = active[i].OnIn(in inContext);
         }
 
         TagList? inFlightTags = null;
-        if (_meterBridge != null && _meterBridge.IsEnabled)
+        if (_meterBridge is { IsEnabled: true })
         {
             inFlightTags = _meterBridge.RecordOperationIn(metricName, tags, metadata);
         }
@@ -164,66 +164,6 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
 
     public void In(Dictionary<string, string>? tags = null, Dictionary<string, long>? metadata = null, [CallerMemberName] string metricName = "")
         => In(metricName, tags, metadata);
-
-    public void Out(
-        string metricName,
-        Dictionary<string, string>? tags = null,
-        bool failed = false,
-        Exception? exception = null,
-        TimeSpan? duration = null,
-        Dictionary<string, long>? metadata = null)
-    {
-        if (TryConsumeDropped(metricName))
-        {
-            return;
-        }
-
-        InOperationState? opState = TryPopInOperation(metricName);
-
-        if (!duration.HasValue && opState != null)
-        {
-            duration = Stopwatch.GetElapsedTime(opState.StartTimestamp);
-        }
-
-        if (opState?.InFlightTags.HasValue == true)
-        {
-            _meterBridge?.RecordOperationInFlightEnd(metricName, opState.InFlightTags.Value);
-        }
-
-        var outContext = new OutContext(metricName, failed, exception, duration, tags, metadata);
-
-        if (opState != null)
-        {
-            for (int i = 0; i < opState.Counters.Length; i++)
-            {
-                if (opState.Counters[i].IsEnabled)
-                {
-                    opState.Counters[i].OnOut(opState.States[i], in outContext);
-                }
-            }
-        }
-        else
-        {
-            // Fallback: If Out was called without a preceding In on this async context
-            var active = _activeCounters;
-            for (int i = 0; i < active.Length; i++)
-            {
-                if (active[i].IsEnabled)
-                {
-                    active[i].OnOut(null, in outContext);
-                }
-            }
-        }
-
-        if (_meterBridge != null && _meterBridge.IsEnabled)
-        {
-            var opDuration = duration ?? TimeSpan.Zero;
-            _meterBridge.RecordOperationOut(metricName, opDuration, failed, exception, tags, metadata);
-        }
-
-        HandleOperationCompleted(metricName, duration ?? TimeSpan.Zero, failed, exception);
-    }
-
     internal void HandleOperationCompleted(string metricName, TimeSpan duration, bool failed, Exception? exception)
     {
         if (!_sinks.IsEmpty && _sinkTriggers.HasTriggers)
@@ -245,6 +185,65 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
         Dictionary<string, long>? metadata = null,
         [CallerMemberName] string metricName = "")
         => Out(metricName, tags, failed, exception, duration, metadata);
+
+    public void Out(
+        string metricName,
+        Dictionary<string, string>? tags = null,
+        bool failed = false,
+        Exception? exception = null,
+        TimeSpan? duration = null,
+        Dictionary<string, long>? metadata = null)
+    {
+        if (TryConsumeDropped(metricName))
+        {
+            return;
+        }
+
+        var opState = TryPopInOperation(metricName);
+
+        if (!duration.HasValue && opState != null)
+        {
+            duration = Stopwatch.GetElapsedTime(opState.StartTimestamp);
+        }
+
+        if (opState?.InFlightTags.HasValue == true)
+        {
+            _meterBridge?.RecordOperationInFlightEnd(metricName, opState.InFlightTags.Value);
+        }
+
+        var outContext = new OutContext(metricName, failed, exception, duration, tags, metadata);
+
+        if (opState != null)
+        {
+            for (var i = 0; i < opState.Counters.Length; i++)
+            {
+                if (opState.Counters[i].IsEnabled)
+                {
+                    opState.Counters[i].OnOut(opState.States[i], in outContext);
+                }
+            }
+        }
+        else
+        {
+            // Fallback: If Out was called without a preceding In on this async context
+            var active = _activeCounters;
+            foreach (var t in active)
+            {
+                if (t.IsEnabled)
+                {
+                    t.OnOut(null, in outContext);
+                }
+            }
+        }
+
+        if (_meterBridge is { IsEnabled: true })
+        {
+            var opDuration = duration ?? TimeSpan.Zero;
+            _meterBridge.RecordOperationOut(metricName, opDuration, failed, exception, tags, metadata);
+        }
+
+        HandleOperationCompleted(metricName, duration ?? TimeSpan.Zero, failed, exception);
+    }
 
     public IMetricSnapshot? GetSnapshot(string metricName, string counterName)
     {
@@ -373,7 +372,7 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
                     {
                         disposable.Dispose();
                     }
-                    catch (Exception)
+                    catch
                     {
                         // Sinks should not prevent other resources from disposing
                     }
@@ -405,7 +404,7 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
 
     private void RebuildActiveCounters()
     {
-        _activeCounters = _counters.Values.Where(c => c.IsEnabled).ToArray();
+        _activeCounters = [.. _counters.Values.Where(c => c.IsEnabled)];
     }
 
     private static bool ShouldDrop(double? rate)

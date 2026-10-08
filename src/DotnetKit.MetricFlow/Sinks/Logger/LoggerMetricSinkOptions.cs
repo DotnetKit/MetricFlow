@@ -43,7 +43,7 @@ public class LoggerMetricSinkOptions
     /// <summary>
     /// Whether to include timestamps in log message text. Defaults to false because most logging providers (such as Serilog or ConsoleLogger) already provide timestamps.
     /// </summary>
-    public bool IncludeTimestamp { get; set; } = false;
+    public bool IncludeTimestamp { get; set; }
 
     /// <summary>
     /// Custom timestamp format string when <see cref="IncludeTimestamp"/> is enabled. Defaults to "HH:mm:ss.fff".
