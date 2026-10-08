@@ -44,6 +44,31 @@ public class MetricFlowBuilder : IMetricFlowBuilder
     }
 
     /// <inheritdoc />
+    public IMetricFlowBuilder AddLoggerSink(Action<DotnetKit.MetricFlow.Sinks.Logger.LoggerMetricSinkOptions>? configure = null)
+    {
+        Current.AddSingleton<DotnetKit.MetricFlow.Sinks.IMetricSink>(sp =>
+        {
+            var options = new DotnetKit.MetricFlow.Sinks.Logger.LoggerMetricSinkOptions();
+            configure?.Invoke(options);
+            var logger = options.Logger
+                ?? sp.GetService<Microsoft.Extensions.Logging.ILoggerFactory>()?.CreateLogger(options.CategoryName)
+                ?? sp.GetService<Microsoft.Extensions.Logging.ILogger>()
+                ?? Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
+            return new DotnetKit.MetricFlow.Sinks.Logger.LoggerMetricSink(logger, options);
+        });
+        return this;
+    }
+
+    /// <inheritdoc />
+    public IMetricFlowBuilder AddLoggerSink(Microsoft.Extensions.Logging.ILogger logger, Action<DotnetKit.MetricFlow.Sinks.Logger.LoggerMetricSinkOptions>? configure = null)
+    {
+        ArgumentNullException.ThrowIfNull(logger);
+        var options = new DotnetKit.MetricFlow.Sinks.Logger.LoggerMetricSinkOptions();
+        configure?.Invoke(options);
+        return AddSink(new DotnetKit.MetricFlow.Sinks.Logger.LoggerMetricSink(logger, options));
+    }
+
+    /// <inheritdoc />
     public IMetricFlowBuilder AddSink(DotnetKit.MetricFlow.Sinks.IMetricSink sink)
     {
         ArgumentNullException.ThrowIfNull(sink);

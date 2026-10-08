@@ -4,6 +4,8 @@ using DotnetKit.MetricFlow.Counters;
 using DotnetKit.MetricFlow.Meters;
 using DotnetKit.MetricFlow.Sinks;
 using DotnetKit.MetricFlow.Sinks.Console;
+using DotnetKit.MetricFlow.Sinks.Logger;
+using Microsoft.Extensions.Logging;
 
 namespace DotnetKit.MetricFlow;
 
@@ -106,6 +108,49 @@ public class MetricFlowOptions
         var options = new ConsoleMetricSinkOptions();
         configure?.Invoke(options);
         Sinks.Add(new ConsoleMetricSink(options));
+        return this;
+    }
+
+    /// <summary>
+    /// Registers a <see cref="LoggerMetricSink"/> for structured ILogger logging of metric snapshots.
+    /// </summary>
+    /// <param name="configure">Optional configuration for logger output formatting and log levels.</param>
+    /// <returns>This options instance for fluent chaining.</returns>
+    public MetricFlowOptions AddLoggerSink(Action<LoggerMetricSinkOptions>? configure = null)
+    {
+        var options = new LoggerMetricSinkOptions();
+        configure?.Invoke(options);
+        Sinks.Add(new LoggerMetricSink(options));
+        return this;
+    }
+
+    /// <summary>
+    /// Registers a <see cref="LoggerMetricSink"/> for structured ILogger logging of metric snapshots using a specific <see cref="ILogger"/>.
+    /// </summary>
+    /// <param name="logger">The logger instance.</param>
+    /// <param name="configure">Optional configuration for logger output formatting and log levels.</param>
+    /// <returns>This options instance for fluent chaining.</returns>
+    public MetricFlowOptions AddLoggerSink(ILogger logger, Action<LoggerMetricSinkOptions>? configure = null)
+    {
+        ArgumentNullException.ThrowIfNull(logger);
+        var options = new LoggerMetricSinkOptions();
+        configure?.Invoke(options);
+        Sinks.Add(new LoggerMetricSink(logger, options));
+        return this;
+    }
+
+    /// <summary>
+    /// Registers a <see cref="LoggerMetricSink"/> for structured ILogger logging of metric snapshots using an <see cref="ILoggerFactory"/>.
+    /// </summary>
+    /// <param name="loggerFactory">The logger factory.</param>
+    /// <param name="configure">Optional configuration for logger output formatting and log levels.</param>
+    /// <returns>This options instance for fluent chaining.</returns>
+    public MetricFlowOptions AddLoggerSink(ILoggerFactory loggerFactory, Action<LoggerMetricSinkOptions>? configure = null)
+    {
+        ArgumentNullException.ThrowIfNull(loggerFactory);
+        var options = new LoggerMetricSinkOptions();
+        configure?.Invoke(options);
+        Sinks.Add(new LoggerMetricSink(loggerFactory, options));
         return this;
     }
 

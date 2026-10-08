@@ -3,8 +3,10 @@ using DotnetKit.MetricFlow.Abstractions;
 using DotnetKit.MetricFlow.Counters;
 using DotnetKit.MetricFlow.Sinks;
 using DotnetKit.MetricFlow.Sinks.Console;
+using DotnetKit.MetricFlow.Sinks.Logger;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Xunit;
 
 namespace MetricFlow.Tests;
@@ -282,6 +284,116 @@ public class MetricSinkTests
         // Assert
         tracker.GetSinks().Should().Contain(s => s.Name == "Console");
         tracker.GetSinks().Should().Contain(s => s.Name == "Custom");
+    }
+
+    [Fact]
+    public void LoggerMetricSink_EmitsSnapshot_UsesInformationLogLevelByDefault()
+    {
+        // Arrange
+        var testLogger = new TestLogger();
+        var sink = new LoggerMetricSink(testLogger, new LoggerMetricSinkOptions
+        {
+            Prefix = "[AppLogger]"
+        });
+
+        var snapshot = new ThroughputSnapshot(
+            MetricName: "OrderIngest",
+            CounterName: "Throughput",
+            TotalItems: 500,
+            TotalOperations: 10,
+            TotalDuration: TimeSpan.FromSeconds(1),
+            ItemsPerSecond: 500.0,
+            AverageItemsPerOperation: 50.0,
+            Timestamp: DateTime.UtcNow,
+            FailedOperations: 0);
+
+        // Act
+        sink.Emit(new[] { snapshot });
+
+        // Assert
+        testLogger.Logs.Should().HaveCount(1);
+        var entry = testLogger.Logs[0];
+        entry.Level.Should().Be(LogLevel.Information);
+        entry.Message.Should().Contain("[AppLogger]");
+        entry.Message.Should().Contain("[Throughput:OrderIngest]");
+        entry.Message.Should().Contain("TotalItems: 500");
+        entry.Message.Should().Contain("Rate: 500.0 items/s");
+    }
+
+    [Fact]
+    public void LoggerMetricSink_WithFailures_UsesFailureLogLevel()
+    {
+        // Arrange
+        var testLogger = new TestLogger();
+        var sink = new LoggerMetricSink(testLogger, new LoggerMetricSinkOptions
+        {
+            FailureLogLevel = LogLevel.Error
+        });
+
+        var failureSnapshot = new FailureSnapshot(
+            MetricName: "ProcessPayment",
+            CounterName: "Failure",
+            TotalOperations: 10,
+            TotalFailures: 2,
+            LogicalFailures: 1,
+            ExceptionFailures: 1,
+            Timestamp: DateTime.UtcNow);
+
+        // Act
+        sink.Emit(new[] { failureSnapshot });
+
+        // Assert
+        testLogger.Logs.Should().HaveCount(1);
+        var entry = testLogger.Logs[0];
+        entry.Level.Should().Be(LogLevel.Error);
+        entry.Message.Should().Contain("[Failure:ProcessPayment]");
+        entry.Message.Should().Contain("Failed: 2 (20.0%)");
+    }
+
+    [Fact]
+    public void DependencyInjection_AddMetricFlow_WiresLoggerSink()
+    {
+        // Arrange
+        var testLogger = new TestLogger();
+        var services = new ServiceCollection();
+
+        services.AddMetricFlow(opt =>
+        {
+            opt.Topic = "BillingService";
+        })
+        .AddLoggerSink(testLogger, opt =>
+        {
+            opt.Prefix = "[Billing]";
+        });
+
+        using var provider = services.BuildServiceProvider();
+        var tracker = provider.GetRequiredService<IMetricTracker>();
+
+        // Act
+        tracker.FlushSinks();
+
+        // Assert
+        tracker.GetSinks().Should().Contain(s => s.Name == "Logger");
+    }
+
+    private sealed class TestLogger : ILogger
+    {
+        public List<(LogLevel Level, EventId EventId, string Message, Exception? Exception)> Logs { get; } = new();
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            var message = formatter(state, exception);
+            Logs.Add((logLevel, eventId, message, exception));
+        }
     }
 
     private sealed class RecordingMetricSink : IMetricSink

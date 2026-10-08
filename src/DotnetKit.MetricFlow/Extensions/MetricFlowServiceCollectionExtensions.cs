@@ -58,7 +58,19 @@ public static class MetricFlowServiceCollectionExtensions
 
                     var meterBridge = meterRegistry.GetOrCreateBridge(topic, defaultOptions.TopicTags);
                     var diSinks = sp.GetServices<IMetricSink>();
-                    var allSinks = defaultOptions.Sinks.Concat(diSinks).Distinct();
+                    var allSinks = defaultOptions.Sinks.Concat(diSinks).Distinct().ToList();
+
+                    var loggerFactory = sp.GetService<Microsoft.Extensions.Logging.ILoggerFactory>();
+                    if (loggerFactory != null)
+                    {
+                        foreach (var sink in allSinks)
+                        {
+                            if (sink is DotnetKit.MetricFlow.Sinks.Logger.LoggerMetricSink loggerSink && loggerSink.NeedsLogger)
+                            {
+                                loggerSink.SetLogger(loggerFactory.CreateLogger(loggerSink.Options.CategoryName));
+                            }
+                        }
+                    }
 
                     var tracker = new MetricTracker(
                         topic: topic,
@@ -162,7 +174,19 @@ public static class MetricFlowServiceCollectionExtensions
             var meterRegistry = sp.GetRequiredService<MetricFlowMeterRegistry>();
             var meterBridge = meterRegistry.GetOrCreateBridge(trackerOptions.Topic, trackerOptions.TopicTags);
             var diSinks = sp.GetServices<IMetricSink>();
-            var allSinks = trackerOptions.Sinks.Concat(diSinks).Distinct();
+            var allSinks = trackerOptions.Sinks.Concat(diSinks).Distinct().ToList();
+
+            var loggerFactory = sp.GetService<Microsoft.Extensions.Logging.ILoggerFactory>();
+            if (loggerFactory != null)
+            {
+                foreach (var sink in allSinks)
+                {
+                    if (sink is DotnetKit.MetricFlow.Sinks.Logger.LoggerMetricSink loggerSink && loggerSink.NeedsLogger)
+                    {
+                        loggerSink.SetLogger(loggerFactory.CreateLogger(loggerSink.Options.CategoryName));
+                    }
+                }
+            }
 
             var tracker = new MetricTracker(
                 topic: trackerOptions.Topic,
