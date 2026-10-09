@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.54] - 2026-10-09
+
+### Fixed
+
+- **XML Documentation Packaging**:
+  - Enabled `<GenerateDocumentationFile>true</GenerateDocumentationFile>` in exported project files (`DotnetKit.MetricFlow`, `DotnetKit.MetricFlow.AspNetCore`, and `DotnetKit.MetricFlow.OpenTelemetry`).
+  - Ensures compiler embeds triple-slash XML doc comments (`/// <summary>`) in the generated NuGet packages for developer IntelliSense and API documentation.
+
+---
+
 ## [1.0.53] - 2026-10-07
 
 ### Added
