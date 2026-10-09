@@ -7,6 +7,9 @@ namespace DotnetKit.MetricFlow.OpenTelemetry;
 /// </summary>
 public static class MetricFlowTracingExtensions
 {
+    /// <summary>
+    /// The default <see cref="ActivitySource"/> name used by MetricFlow.
+    /// </summary>
     public const string DefaultActivitySourceName = "DotnetKit.MetricFlow";
 
     /// <summary>
