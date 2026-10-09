@@ -1,5 +1,6 @@
 using DotnetKit.MetricFlow.Abstractions;
 using DotnetKit.MetricFlow.Counters;
+using DotnetKit.MetricFlow.Hierarchy;
 
 // ReSharper disable once CheckNamespace
 namespace DotnetKit.MetricFlow;
@@ -81,6 +82,21 @@ public static class TrackerCounterExtensions
     {
         ArgumentNullException.ThrowIfNull(tracker);
         tracker.RegisterCounter(new FailureCounter(name));
+        return tracker;
+    }
+
+    /// <summary>
+    /// Registers a <see cref="HierarchyCounter"/> on the metric tracker to automatically correlate parent-child operations across async contexts.
+    /// </summary>
+    /// <typeparam name="T">The metric tracker type.</typeparam>
+    /// <param name="tracker">The tracker instance.</param>
+    /// <param name="name">Optional custom counter name. Defaults to <see cref="HierarchyCounter.DefaultCounterName"/>.</param>
+    /// <returns>The same tracker instance for method chaining.</returns>
+    public static T AddHierarchyCounter<T>(this T tracker, string name = HierarchyCounter.DefaultCounterName)
+        where T : IMetricTracker
+    {
+        ArgumentNullException.ThrowIfNull(tracker);
+        tracker.RegisterCounter(new HierarchyCounter(name));
         return tracker;
     }
 
@@ -214,6 +230,22 @@ public static class TrackerCounterExtensions
     {
         ArgumentNullException.ThrowIfNull(tracker);
         return tracker.GetSnapshot<FailureSnapshot>(metricName, counterName);
+    }
+
+    /// <summary>
+    /// Retrieves the <see cref="HierarchyTreeSnapshot"/> for a specific metric name, or <c>null</c> if not tracked.
+    /// </summary>
+    /// <param name="tracker">The tracker instance.</param>
+    /// <param name="metricName">The name of the metric.</param>
+    /// <param name="counterName">Optional counter name. Defaults to <see cref="HierarchyCounter.DefaultCounterName"/>.</param>
+    /// <returns>The hierarchy tree snapshot or null.</returns>
+    public static HierarchyTreeSnapshot? GetHierarchySnapshot(
+        this IMetricTracker tracker,
+        string metricName,
+        string counterName = HierarchyCounter.DefaultCounterName)
+    {
+        ArgumentNullException.ThrowIfNull(tracker);
+        return tracker.GetSnapshot<HierarchyTreeSnapshot>(metricName, counterName);
     }
 
     /// <summary>

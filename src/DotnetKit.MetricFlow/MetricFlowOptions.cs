@@ -246,6 +246,31 @@ public class MetricFlowOptions
     }
 
     /// <summary>
+    /// Adds a <see cref="HierarchyCounter"/> to track hierarchical parent-child operations across async execution contexts.
+    /// </summary>
+    /// <param name="name">Optional custom counter name. Defaults to <see cref="HierarchyCounter.DefaultCounterName"/>.</param>
+    /// <returns>The options instance for chaining.</returns>
+    public MetricFlowOptions AddHierarchyCounter(string name = HierarchyCounter.DefaultCounterName)
+    {
+        Counters.Add(new HierarchyCounter(name));
+        return this;
+    }
+
+    /// <summary>
+    /// Enables hierarchical parent-child scope tracking (alias for <see cref="AddHierarchyCounter"/>).
+    /// </summary>
+    /// <param name="enabled">Whether to add the hierarchy counter.</param>
+    /// <returns>The options instance for chaining.</returns>
+    public MetricFlowOptions EnableHierarchical(bool enabled = true)
+    {
+        if (enabled && !Counters.Any(c => c is HierarchyCounter))
+        {
+            AddHierarchyCounter();
+        }
+        return this;
+    }
+
+    /// <summary>
     /// Adds a <see cref="DimensionCounter"/> to the configured counters.
     /// </summary>
     /// <param name="dimensionKey">The target tag or metadata key to aggregate on.</param>

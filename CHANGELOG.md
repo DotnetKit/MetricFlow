@@ -19,7 +19,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added native extension methods `TrackStream<T>` on `IAsyncEnumerable<T>` and `IEnumerable<T>` for seamless streaming telemetry.
   - Automatically measures execution duration across the stream lifetime, counts yielded items into `scope.SetItems(count)` for throughput calculation, and catches/records exceptions via `scope.SetException(ex)` without requiring manual `try/catch` or `using` blocks in business logic.
   - Supports custom operation names, `[CallerMemberName]` resolution, custom tags, and metadata dictionaries.
-  - Full cancellation token propagation via `[EnumeratorCancellation]` and `.WithCancellation(ct).ConfigureAwait(false)`.
+- **Hierarchical Metrics & Scope Correlation (`HierarchyCounter` & Execution Tree Rendering)**:
+  - Added native `HierarchyCounter` that correlates parent and child tracking scopes across asynchronous execution contexts (`AsyncLocal`) with zero manual token passing.
+  - Automatically calculates exclusive self-duration (`SelfDuration`) and self-allocated memory (`SelfAllocatedBytes`) by subtracting child metrics from total parent values.
+  - Generates strongly-typed `HierarchyTreeSnapshot` implementing `IMetricSnapshot` with tree formatting (`▼`, `├─`, `└─`, `│`).
+  - First-class tree rendering in `ConsoleMetricSink` with threshold color coding and dynamic color selectors per node.
+  - Automatic integration with OpenTelemetry `ActivitySource` (`"DotnetKit.MetricFlow"`), creating correlated parent-child distributed tracing spans with tags for duration, items, allocated bytes, and exception details.
+  - Fluent configuration via `options.AddHierarchyCounter()` and `tracker.GetHierarchySnapshot("MetricName")`.
 
 ### Fixed
 

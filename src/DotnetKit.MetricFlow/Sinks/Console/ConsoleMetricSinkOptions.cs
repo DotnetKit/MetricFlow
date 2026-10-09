@@ -39,6 +39,11 @@ public class ConsoleMetricSinkOptions
     /// </summary>
     public string Prefix { get; set; } = "[MetricFlow]";
 
+    /// <summary>
+    /// Whether to render hierarchical parent-child execution trees when a hierarchy snapshot is emitted. Defaults to true.
+    /// </summary>
+    public bool ShowHierarchicalTree { get; set; } = true;
+
     private readonly List<Func<IMetricSnapshot, ConsoleColor?>> _thresholdRules = new();
 
     /// <summary>
