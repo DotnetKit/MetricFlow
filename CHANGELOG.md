@@ -26,6 +26,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - First-class tree rendering in `ConsoleMetricSink` with threshold color coding and dynamic color selectors per node.
   - Automatic integration with OpenTelemetry `ActivitySource` (`"DotnetKit.MetricFlow"`), creating correlated parent-child distributed tracing spans with tags for duration, items, allocated bytes, and exception details.
   - Fluent configuration via `options.AddHierarchyCounter()` and `tracker.GetHierarchySnapshot("MetricName")`.
+- **Configurable Counter Units & Custom Formatters (`ConsoleMetricSinkOptions`)**:
+  - Configurable unit representation and scaling for durations (`DurationUnit`: `Milliseconds`, `Seconds`, `Minutes`, `Hours`, `Auto`) and decimal precision (`DurationDecimals`).
+  - Configurable memory units (`MemoryUnit`: `Bytes`, `Kilobytes`, `Megabytes`, `Gigabytes`, `Auto`) and decimal precision (`MemoryDecimals`).
+  - Configurable throughput unit label (`ThroughputUnit`, e.g. `"req/s"` or `"items/s"`).
+  - Strongly-typed custom snapshot formatters via `opt.AddFormatter<TSnapshot>(Func<TSnapshot, string>)` and counter name formatters `opt.AddFormatter(string counterName, Func<IMetricSnapshot, string>)` for seamless custom counter support without overriding sinks.
+  - Automatic propagation of unit formatters to tree rendering in `HierarchyTreeSnapshot`.
 
 ### Fixed
 

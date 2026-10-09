@@ -1,3 +1,4 @@
+using System.Globalization;
 using DotnetKit.MetricFlow.Abstractions;
 using DotnetKit.MetricFlow.Counters;
 
@@ -44,7 +45,45 @@ public class ConsoleMetricSinkOptions
     /// </summary>
     public bool ShowHierarchicalTree { get; set; } = true;
 
+    /// <summary>
+    /// The unit used to format durations. Defaults to <see cref="DurationUnit.Milliseconds"/>.
+    /// </summary>
+    public DurationUnit DurationUnit { get; set; } = DurationUnit.Milliseconds;
+
+    /// <summary>
+    /// The number of decimal places used when formatting durations. Defaults to 2.
+    /// </summary>
+    public int DurationDecimals { get; set; } = 2;
+
+    /// <summary>
+    /// Custom delegate to format <see cref="TimeSpan"/> durations. When specified, this overrides <see cref="DurationUnit"/>.
+    /// </summary>
+    public Func<TimeSpan, string>? DurationFormatter { get; set; }
+
+    /// <summary>
+    /// The unit label displayed for throughput rates. Defaults to "items/s".
+    /// Can be customized to domain units like "req/s", "msg/s", "orders/s", etc.
+    /// </summary>
+    public string ThroughputUnit { get; set; } = "items/s";
+
+    /// <summary>
+    /// The unit used to format memory allocations. Defaults to <see cref="MemoryUnit.Auto"/>.
+    /// </summary>
+    public MemoryUnit MemoryUnit { get; set; } = MemoryUnit.Auto;
+
+    /// <summary>
+    /// The number of decimal places used when formatting memory byte values. Defaults to 2.
+    /// </summary>
+    public int MemoryDecimals { get; set; } = 2;
+
+    /// <summary>
+    /// Custom delegate to format memory byte values. When specified, this overrides <see cref="MemoryUnit"/>.
+    /// </summary>
+    public Func<long, string>? MemoryFormatter { get; set; }
+
     private readonly List<Func<IMetricSnapshot, ConsoleColor?>> _thresholdRules = new();
+    private readonly Dictionary<Type, Func<IMetricSnapshot, string>> _typedFormatters = new();
+    private readonly Dictionary<string, Func<IMetricSnapshot, string>> _namedFormatters = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Gets or sets a custom delegate to dynamically select a <see cref="ConsoleColor"/> (or null to use default/threshold styling) for a given metric snapshot.
@@ -357,5 +396,144 @@ public class ConsoleMetricSinkOptions
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Formats a <see cref="TimeSpan"/> duration according to configured <see cref="DurationUnit"/>, <see cref="DurationDecimals"/>, or <see cref="DurationFormatter"/>.
+    /// </summary>
+    /// <param name="duration">The duration to format.</param>
+    /// <returns>The formatted duration string.</returns>
+    public string FormatDuration(TimeSpan duration)
+    {
+        if (DurationFormatter != null)
+        {
+            return DurationFormatter(duration);
+        }
+
+        var culture = CultureInfo.InvariantCulture;
+        var format = $"F{DurationDecimals}";
+
+        return DurationUnit switch
+        {
+            DurationUnit.Milliseconds => $"{duration.TotalMilliseconds.ToString(format, culture)} ms",
+            DurationUnit.Seconds => $"{duration.TotalSeconds.ToString(format, culture)} s",
+            DurationUnit.Minutes => $"{duration.TotalMinutes.ToString(format, culture)} m",
+            DurationUnit.Hours => $"{duration.TotalHours.ToString(format, culture)} h",
+            DurationUnit.Auto => FormatDurationAuto(duration, format, culture),
+            _ => $"{duration.TotalMilliseconds.ToString(format, culture)} ms"
+        };
+    }
+
+    private static string FormatDurationAuto(TimeSpan duration, string format, CultureInfo culture)
+    {
+        if (duration.TotalMilliseconds < 1000)
+        {
+            return $"{duration.TotalMilliseconds.ToString(format, culture)} ms";
+        }
+        if (duration.TotalSeconds < 60)
+        {
+            return $"{duration.TotalSeconds.ToString(format, culture)} s";
+        }
+        if (duration.TotalMinutes < 60)
+        {
+            return $"{duration.TotalMinutes.ToString(format, culture)} m";
+        }
+        return $"{duration.TotalHours.ToString(format, culture)} h";
+    }
+
+    /// <summary>
+    /// Formats a byte count according to configured <see cref="MemoryUnit"/>, <see cref="MemoryDecimals"/>, or <see cref="MemoryFormatter"/>.
+    /// </summary>
+    /// <param name="bytes">The byte count to format.</param>
+    /// <returns>The formatted memory string.</returns>
+    public string FormatMemory(long bytes)
+    {
+        if (MemoryFormatter != null)
+        {
+            return MemoryFormatter(bytes);
+        }
+
+        var culture = CultureInfo.InvariantCulture;
+        var format = $"F{MemoryDecimals}";
+
+        return MemoryUnit switch
+        {
+            MemoryUnit.Bytes => $"{bytes} B",
+            MemoryUnit.Kilobytes => $"{(bytes / 1024.0).ToString(format, culture)} KB",
+            MemoryUnit.Megabytes => $"{(bytes / (1024.0 * 1024.0)).ToString(format, culture)} MB",
+            MemoryUnit.Gigabytes => $"{(bytes / (1024.0 * 1024.0 * 1024.0)).ToString(format, culture)} GB",
+            _ => FormatMemoryAuto(bytes, format, culture)
+        };
+    }
+
+    private static string FormatMemoryAuto(long bytes, string format, CultureInfo culture)
+    {
+        if (bytes < 1024)
+        {
+            return $"{bytes} B";
+        }
+        if (bytes < 1024 * 1024)
+        {
+            return $"{(bytes / 1024.0).ToString(format, culture)} KB";
+        }
+        if (bytes < 1024 * 1024 * 1024)
+        {
+            return $"{(bytes / (1024.0 * 1024.0)).ToString(format, culture)} MB";
+        }
+        return $"{(bytes / (1024.0 * 1024.0 * 1024.0)).ToString(format, culture)} GB";
+    }
+
+    /// <summary>
+    /// Registers a custom formatting delegate for snapshots of type <typeparamref name="TSnapshot"/>.
+    /// </summary>
+    /// <typeparam name="TSnapshot">The type of metric snapshot to format.</typeparam>
+    /// <param name="formatter">The custom formatting delegate.</param>
+    /// <returns>This options instance for fluent chaining.</returns>
+    public ConsoleMetricSinkOptions AddFormatter<TSnapshot>(Func<TSnapshot, string> formatter)
+        where TSnapshot : class, IMetricSnapshot
+    {
+        ArgumentNullException.ThrowIfNull(formatter);
+        _typedFormatters[typeof(TSnapshot)] = snap => formatter((TSnapshot)snap);
+        return this;
+    }
+
+    /// <summary>
+    /// Registers a custom formatting delegate for snapshots matching a specific counter name.
+    /// </summary>
+    /// <param name="counterName">The counter name to match.</param>
+    /// <param name="formatter">The custom formatting delegate.</param>
+    /// <returns>This options instance for fluent chaining.</returns>
+    public ConsoleMetricSinkOptions AddFormatter(string counterName, Func<IMetricSnapshot, string> formatter)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(counterName);
+        ArgumentNullException.ThrowIfNull(formatter);
+        _namedFormatters[counterName] = formatter;
+        return this;
+    }
+
+    /// <summary>
+    /// Attempts to format a metric snapshot using registered custom formatters.
+    /// </summary>
+    /// <param name="snapshot">The snapshot to format.</param>
+    /// <param name="formatted">The formatted string if a custom formatter was found, otherwise null.</param>
+    /// <returns>True if a custom formatter was applied, false otherwise.</returns>
+    public bool TryFormatCustom(IMetricSnapshot snapshot, out string? formatted)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+
+        if (_namedFormatters.TryGetValue(snapshot.CounterName, out var named))
+        {
+            formatted = named(snapshot);
+            return true;
+        }
+
+        if (_typedFormatters.TryGetValue(snapshot.GetType(), out var typed))
+        {
+            formatted = typed(snapshot);
+            return true;
+        }
+
+        formatted = null;
+        return false;
     }
 }

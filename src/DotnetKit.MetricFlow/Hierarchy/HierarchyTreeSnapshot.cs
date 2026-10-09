@@ -32,11 +32,17 @@ public record HierarchyTreeSnapshot(
     /// </summary>
     /// <param name="colorize">Whether to apply ANSI color sequences.</param>
     /// <param name="colorSelector">Optional delegate to choose colors for specific nodes.</param>
+    /// <param name="durationFormatter">Optional delegate to format durations.</param>
+    /// <param name="memoryFormatter">Optional delegate to format memory byte values.</param>
     /// <returns>A multi-line formatted string representing the execution tree.</returns>
-    public string ToFormattedString(bool colorize, Func<HierarchyNode, ConsoleColor?>? colorSelector = null)
+    public string ToFormattedString(
+        bool colorize,
+        Func<HierarchyNode, ConsoleColor?>? colorSelector = null,
+        Func<TimeSpan, string>? durationFormatter = null,
+        Func<long, string>? memoryFormatter = null)
     {
         var sb = new StringBuilder();
-        FormatNode(sb, Root, indent: "", isLast: true, isRoot: true, colorize: colorize, colorSelector: colorSelector);
+        FormatNode(sb, Root, indent: "", isLast: true, isRoot: true, colorize: colorize, colorSelector: colorSelector, durationFormatter: durationFormatter, memoryFormatter: memoryFormatter);
         return sb.ToString();
     }
 
@@ -47,7 +53,9 @@ public record HierarchyTreeSnapshot(
         bool isLast,
         bool isRoot,
         bool colorize,
-        Func<HierarchyNode, ConsoleColor?>? colorSelector)
+        Func<HierarchyNode, ConsoleColor?>? colorSelector,
+        Func<TimeSpan, string>? durationFormatter,
+        Func<long, string>? memoryFormatter)
     {
         var nodeColor = colorize && colorSelector != null ? colorSelector(node) : null;
 
@@ -88,14 +96,21 @@ public record HierarchyTreeSnapshot(
         sb.Append(" (");
 
         // Duration
+        var formattedDuration = durationFormatter != null
+            ? durationFormatter(node.Duration)
+            : $"{node.Duration.TotalMilliseconds.ToString("F2", CultureInfo.InvariantCulture)} ms";
+
         if (colorize && nodeColor.HasValue) sb.Append(ToAnsi(nodeColor.Value));
-        sb.Append(node.Duration.TotalMilliseconds.ToString("F2", CultureInfo.InvariantCulture)).Append(" ms");
+        sb.Append(formattedDuration);
         if (colorize && nodeColor.HasValue) sb.Append(AnsiReset);
 
         // Self-duration (only when node has children)
         if (node.Children.Count > 0)
         {
-            sb.Append(", self: ").Append(node.SelfDuration.TotalMilliseconds.ToString("F2", CultureInfo.InvariantCulture)).Append(" ms");
+            var formattedSelf = durationFormatter != null
+                ? durationFormatter(node.SelfDuration)
+                : $"{node.SelfDuration.TotalMilliseconds.ToString("F2", CultureInfo.InvariantCulture)} ms";
+            sb.Append(", self: ").Append(formattedSelf);
         }
 
         // Items
@@ -107,10 +122,12 @@ public record HierarchyTreeSnapshot(
         // Allocated bytes
         if (node.AllocatedBytes > 0)
         {
-            sb.Append(" | alloc: ").Append(FormatBytes(node.AllocatedBytes));
+            var formattedAlloc = memoryFormatter != null ? memoryFormatter(node.AllocatedBytes) : FormatBytes(node.AllocatedBytes);
+            sb.Append(" | alloc: ").Append(formattedAlloc);
             if (node.Children.Count > 0 && node.SelfAllocatedBytes > 0)
             {
-                sb.Append(", self: ").Append(FormatBytes(node.SelfAllocatedBytes));
+                var formattedSelfAlloc = memoryFormatter != null ? memoryFormatter(node.SelfAllocatedBytes) : FormatBytes(node.SelfAllocatedBytes);
+                sb.Append(", self: ").Append(formattedSelfAlloc);
             }
         }
 
@@ -150,7 +167,7 @@ public record HierarchyTreeSnapshot(
         for (int i = 0; i < children.Count; i++)
         {
             bool isLastChild = i == children.Count - 1;
-            FormatNode(sb, children[i], childIndent, isLastChild, isRoot: false, colorize: colorize, colorSelector: colorSelector);
+            FormatNode(sb, children[i], childIndent, isLastChild, isRoot: false, colorize: colorize, colorSelector: colorSelector, durationFormatter: durationFormatter, memoryFormatter: memoryFormatter);
         }
     }
 

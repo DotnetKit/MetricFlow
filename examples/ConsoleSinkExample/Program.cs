@@ -1,6 +1,7 @@
 using DotnetKit.MetricFlow;
 using DotnetKit.MetricFlow.Abstractions;
 using DotnetKit.MetricFlow.Counters;
+using DotnetKit.MetricFlow.Sinks.Console;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace ConsoleSinkExample;
@@ -188,6 +189,11 @@ internal class Program
                 MemorySnapshot m when m.AverageAllocatedBytes > 10 * 1024 * 1024 => ConsoleColor.DarkYellow,
                 _ => ConsoleColor.Green
             };
+
+            // 4. Unit customization (Duration, Memory, Throughput)
+            opt.DurationUnit = DurationUnit.Auto; // Automatically scales between ms, s, m, h
+            opt.MemoryUnit = MemoryUnit.Auto;     // Automatically scales between B, KB, MB, GB
+            opt.ThroughputUnit = "epg_items/s";
         });
 
         using var catalogTracker = new MetricTracker(hierarchyOptions);

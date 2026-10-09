@@ -137,17 +137,25 @@ public class ConsoleMetricSink : IMetricSink
         ConsoleColor? resolvedColor,
         ConsoleMetricSinkOptions options)
     {
+        if (options.TryFormatCustom(snapshot, out var customDetails))
+        {
+            if (color && resolvedColor.HasValue) sb.Append(ToAnsi(resolvedColor.Value));
+            sb.Append(customDetails);
+            if (color && resolvedColor.HasValue) sb.Append(AnsiReset);
+            return;
+        }
+
         switch (snapshot)
         {
             case DurationSnapshot d:
                 sb.Append("Avg: ");
                 if (color && resolvedColor.HasValue) sb.Append(ToAnsi(resolvedColor.Value));
-                sb.Append(d.AverageDuration.TotalMilliseconds.ToString("F2", CultureInfo.InvariantCulture)).Append(" ms");
+                sb.Append(options.FormatDuration(d.AverageDuration));
                 if (color && resolvedColor.HasValue) sb.Append(AnsiReset);
 
-                sb.Append(", Min: ").Append(d.MinDuration.TotalMilliseconds.ToString("F2", CultureInfo.InvariantCulture)).Append(" ms")
-                  .Append(", Max: ").Append(d.MaxDuration.TotalMilliseconds.ToString("F2", CultureInfo.InvariantCulture)).Append(" ms")
-                  .Append(", Total: ").Append(d.TotalDuration.TotalMilliseconds.ToString("F2", CultureInfo.InvariantCulture)).Append(" ms");
+                sb.Append(", Min: ").Append(options.FormatDuration(d.MinDuration))
+                  .Append(", Max: ").Append(options.FormatDuration(d.MaxDuration))
+                  .Append(", Total: ").Append(options.FormatDuration(d.TotalDuration));
 
                 if (d.FailedCount > 0)
                 {
@@ -163,7 +171,7 @@ public class ConsoleMetricSink : IMetricSink
                   .Append(", Operations: ").Append(tp.TotalOperations)
                   .Append(", Rate: ");
                 if (color && resolvedColor.HasValue) sb.Append(ToAnsi(resolvedColor.Value));
-                sb.Append(tp.ItemsPerSecond.ToString("F1", CultureInfo.InvariantCulture)).Append(" items/s");
+                sb.Append(tp.ItemsPerSecond.ToString("F1", CultureInfo.InvariantCulture)).Append(' ').Append(options.ThroughputUnit);
                 if (color && resolvedColor.HasValue) sb.Append(AnsiReset);
 
                 if (tp.FailedOperations > 0)
@@ -215,22 +223,26 @@ public class ConsoleMetricSink : IMetricSink
                 sb.Append("Operations: ").Append(m.OperationCount)
                   .Append(", Avg: ");
                 if (color && resolvedColor.HasValue) sb.Append(ToAnsi(resolvedColor.Value));
-                sb.Append(FormatBytes(m.AverageAllocatedBytes));
+                sb.Append(options.FormatMemory(m.AverageAllocatedBytes));
                 if (color && resolvedColor.HasValue) sb.Append(AnsiReset);
-                sb.Append(", Total: ").Append(FormatBytes(m.TotalAllocatedBytes));
+                sb.Append(", Total: ").Append(options.FormatMemory(m.TotalAllocatedBytes));
                 break;
 
             case HierarchyTreeSnapshot tree:
                 if (options.ShowHierarchicalTree)
                 {
                     sb.AppendLine();
-                    var formattedTree = tree.ToFormattedString(color, node => ResolveNodeColor(node, options));
+                    var formattedTree = tree.ToFormattedString(
+                        color,
+                        node => ResolveNodeColor(node, options),
+                        options.FormatDuration,
+                        options.FormatMemory);
                     sb.Append(formattedTree.TrimEnd('\r', '\n'));
                 }
                 else
                 {
                     sb.Append("Root: ").Append(tree.Root.MetricName)
-                      .Append(", Duration: ").Append(tree.Root.Duration.TotalMilliseconds.ToString("F2", CultureInfo.InvariantCulture)).Append(" ms")
+                      .Append(", Duration: ").Append(options.FormatDuration(tree.Root.Duration))
                       .Append(", Nodes: ").Append(CountNodes(tree.Root));
                 }
                 break;
@@ -251,13 +263,6 @@ public class ConsoleMetricSink : IMetricSink
                 }
                 break;
         }
-    }
-
-    private static string FormatBytes(long bytes)
-    {
-        if (bytes < 1024) return $"{bytes} B";
-        if (bytes < 1024 * 1024) return $"{(bytes / 1024.0).ToString("F2", CultureInfo.InvariantCulture)} KB";
-        return $"{(bytes / (1024.0 * 1024.0)).ToString("F2", CultureInfo.InvariantCulture)} MB";
     }
 
     private static ConsoleColor? ResolveNodeColor(HierarchyNode node, ConsoleMetricSinkOptions options)
