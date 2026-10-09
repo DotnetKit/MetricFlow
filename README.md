@@ -235,6 +235,26 @@ async Task ProcessOrderAsync()
 }
 ```
 
+##### Stream Tracking (`TrackStream` for `IAsyncEnumerable<T>` / `IEnumerable<T>`)
+
+Seamlessly track asynchronous or synchronous data streams with automatic duration measurement, yielded items counting for throughput calculation, and exception capture:
+
+```csharp
+// In an adapter, repository, or use-case:
+return _programmesClient.FindManyAsync(...)
+    .Select(item => item.ToProgram())
+    .TrackStream(_tracker, "TableStorage.GetProgrammesForChannel");
+
+// With cancellation support and CallerMemberName:
+public async IAsyncEnumerable<Item> GetItemsAsync([EnumeratorCancellation] CancellationToken ct = default)
+{
+    await foreach (var item in source.TrackStream(_tracker, ct))
+    {
+        yield return item;
+    }
+}
+```
+
 ##### Querying Typed Snapshots (`GetSnapshot<T>` & Value Helpers)
 
 MetricFlow allows you to retrieve strongly-typed telemetry snapshots programmatically using either generic queries or dedicated helper methods:

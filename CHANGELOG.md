@@ -15,7 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Declarative threshold rules via `opt.AddThreshold<DurationSnapshot>(warn, critical, ...)` to color-code snapshots based on latency thresholds (warning in DarkYellow/Orange, critical in Red, normal in Green).
   - Generalized threshold overloads for `TimeSpan`, `double`, `long`, and custom predicate rules across snapshot types (`FailureSnapshot`, `ExceptionSnapshot`, `MemorySnapshot`, `ThroughputSnapshot`).
   - Dynamic pattern-matching color selection via `opt.ColorSelector = snapshot => snapshot switch { ... }`.
-  - ANSI color mapping utility (`ConsoleMetricSink.ToAnsi(ConsoleColor)`) with full color formatting on target badges and primary metrics.
+- **Native Asynchronous Stream Tracking (`TrackStream` for `IAsyncEnumerable<T>` and `IEnumerable<T>`)**:
+  - Added native extension methods `TrackStream<T>` on `IAsyncEnumerable<T>` and `IEnumerable<T>` for seamless streaming telemetry.
+  - Automatically measures execution duration across the stream lifetime, counts yielded items into `scope.SetItems(count)` for throughput calculation, and catches/records exceptions via `scope.SetException(ex)` without requiring manual `try/catch` or `using` blocks in business logic.
+  - Supports custom operation names, `[CallerMemberName]` resolution, custom tags, and metadata dictionaries.
+  - Full cancellation token propagation via `[EnumeratorCancellation]` and `.WithCancellation(ct).ConfigureAwait(false)`.
 
 ### Fixed
 
