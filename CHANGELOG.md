@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.54] - 2026-10-09
 
+### Added
+
+- **Native Threshold Color Coding & Dynamic Color Selectors (`ConsoleMetricSinkOptions`)**:
+  - Declarative threshold rules via `opt.AddThreshold<DurationSnapshot>(warn, critical, ...)` to color-code snapshots based on latency thresholds (warning in DarkYellow/Orange, critical in Red, normal in Green).
+  - Generalized threshold overloads for `TimeSpan`, `double`, `long`, and custom predicate rules across snapshot types (`FailureSnapshot`, `ExceptionSnapshot`, `MemorySnapshot`, `ThroughputSnapshot`).
+  - Dynamic pattern-matching color selection via `opt.ColorSelector = snapshot => snapshot switch { ... }`.
+  - ANSI color mapping utility (`ConsoleMetricSink.ToAnsi(ConsoleColor)`) with full color formatting on target badges and primary metrics.
+
 ### Fixed
 
 - **XML Documentation Packaging**:

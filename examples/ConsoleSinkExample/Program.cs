@@ -1,5 +1,6 @@
 using DotnetKit.MetricFlow;
 using DotnetKit.MetricFlow.Abstractions;
+using DotnetKit.MetricFlow.Counters;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace ConsoleSinkExample;
@@ -93,9 +94,54 @@ internal class Program
             }
         }
 
-        Console.WriteLine("Notice no sink lines were emitted yet because no triggers were set.");
-        Console.WriteLine("Now manually flushing sinks at application shutdown via FlushSinks()...\n");
-        await warehouseTracker.FlushSinksAsync();
+        // ---------------------------------------------------------------------
+        // Scenario 3: Threshold-Based Color Coding & Custom Color Selectors
+        // ---------------------------------------------------------------------
+        Console.WriteLine("\n>>> [Scenario 3] Native Threshold Color Coding & Dynamic Color Selector <<<\n");
+
+        var paymentOptions = new MetricFlowOptions
+        {
+            Topic = "PaymentGateway"
+        };
+
+        // Configure console sink with native duration thresholds and custom color rules
+        paymentOptions.AddConsoleSink(opt =>
+        {
+            opt.Colorize = true;
+            opt.Prefix = "[Payment:Thresholds]";
+
+            // Native threshold rule:
+            // - Average duration < 50ms: Green
+            // - Average duration 50ms - 100ms: DarkYellow / Warning
+            // - Average duration >= 100ms: Red / Critical
+            opt.AddThreshold<DurationSnapshot>(
+                warn: TimeSpan.FromMilliseconds(50),
+                critical: TimeSpan.FromMilliseconds(100)
+            );
+        });
+
+        using var paymentTracker = new MetricTracker(paymentOptions);
+
+        Console.WriteLine("1. Fast payment operation (< 50ms -> Green)...");
+        using (paymentTracker.Track("AuthorizePayment_Normal"))
+        {
+            await Task.Delay(20);
+        }
+        await paymentTracker.FlushSinksAsync();
+
+        Console.WriteLine("\n2. Degraded payment operation (50ms - 100ms -> DarkYellow Warning)...");
+        using (paymentTracker.Track("AuthorizePayment_Degraded"))
+        {
+            await Task.Delay(65);
+        }
+        await paymentTracker.FlushSinksAsync();
+
+        Console.WriteLine("\n3. Critical latency payment operation (> 100ms -> Red Critical)...");
+        using (paymentTracker.Track("AuthorizePayment_Critical"))
+        {
+            await Task.Delay(125);
+        }
+        await paymentTracker.FlushSinksAsync();
 
         Console.WriteLine("\nStructured console log sink example completed successfully!");
     }

@@ -57,6 +57,32 @@ public class ConsoleMetricSink : IMetricSink
     }
 
     /// <summary>
+    /// Converts a <see cref="ConsoleColor"/> to its corresponding ANSI foreground escape sequence.
+    /// </summary>
+    /// <param name="color">The console color to convert.</param>
+    /// <returns>An ANSI escape sequence string.</returns>
+    public static string ToAnsi(ConsoleColor color) => color switch
+    {
+        ConsoleColor.Black => "\u001b[30m",
+        ConsoleColor.DarkBlue => "\u001b[34m",
+        ConsoleColor.DarkGreen => "\u001b[32m",
+        ConsoleColor.DarkCyan => "\u001b[36m",
+        ConsoleColor.DarkRed => "\u001b[31m",
+        ConsoleColor.DarkMagenta => "\u001b[35m",
+        ConsoleColor.DarkYellow => "\u001b[33m",
+        ConsoleColor.Gray => "\u001b[37m",
+        ConsoleColor.DarkGray => "\u001b[90m",
+        ConsoleColor.Blue => "\u001b[94m",
+        ConsoleColor.Green => "\u001b[32m",
+        ConsoleColor.Cyan => "\u001b[36m",
+        ConsoleColor.Red => "\u001b[31m",
+        ConsoleColor.Magenta => "\u001b[35m",
+        ConsoleColor.Yellow => "\u001b[33m",
+        ConsoleColor.White => "\u001b[97m",
+        _ => "\u001b[0m"
+    };
+
+    /// <summary>
     /// Formats a single metric snapshot into a log line according to configured options.
     /// </summary>
     /// <param name="snapshot">The snapshot to format.</param>
@@ -67,6 +93,7 @@ public class ConsoleMetricSink : IMetricSink
 
         var sb = new StringBuilder(128);
         bool color = _options.Colorize;
+        ConsoleColor? resolvedColor = color ? _options.ResolveColor(snapshot) : null;
 
         // Timestamp
         if (_options.IncludeTimestamp)
@@ -86,26 +113,52 @@ public class ConsoleMetricSink : IMetricSink
         }
 
         // Target: [CounterName:MetricName]
-        if (color) sb.Append(AnsiBold).Append(AnsiYellow);
+        if (color)
+        {
+            sb.Append(AnsiBold);
+            sb.Append(resolvedColor.HasValue ? ToAnsi(resolvedColor.Value) : AnsiYellow);
+        }
         sb.Append('[').Append(snapshot.CounterName).Append(':').Append(snapshot.MetricName).Append(']');
         if (color) sb.Append(AnsiReset);
 
         sb.Append(' ');
 
         // Details based on snapshot type
-        AppendSnapshotDetails(sb, snapshot, color);
+        AppendSnapshotDetails(sb, snapshot, color, resolvedColor);
 
         return sb.ToString();
     }
 
-    private static void AppendSnapshotDetails(StringBuilder sb, IMetricSnapshot snapshot, bool color)
+    private static void AppendSnapshotDetails(StringBuilder sb, IMetricSnapshot snapshot, bool color, ConsoleColor? resolvedColor)
     {
         switch (snapshot)
         {
+            case DurationSnapshot d:
+                sb.Append("Avg: ");
+                if (color && resolvedColor.HasValue) sb.Append(ToAnsi(resolvedColor.Value));
+                sb.Append(d.AverageDuration.TotalMilliseconds.ToString("F2", CultureInfo.InvariantCulture)).Append(" ms");
+                if (color && resolvedColor.HasValue) sb.Append(AnsiReset);
+
+                sb.Append(", Min: ").Append(d.MinDuration.TotalMilliseconds.ToString("F2", CultureInfo.InvariantCulture)).Append(" ms")
+                  .Append(", Max: ").Append(d.MaxDuration.TotalMilliseconds.ToString("F2", CultureInfo.InvariantCulture)).Append(" ms")
+                  .Append(", Total: ").Append(d.TotalDuration.TotalMilliseconds.ToString("F2", CultureInfo.InvariantCulture)).Append(" ms");
+
+                if (d.FailedCount > 0)
+                {
+                    sb.Append(", ");
+                    if (color) sb.Append(AnsiRed);
+                    sb.Append("Failed: ").Append(d.FailedCount);
+                    if (color) sb.Append(AnsiReset);
+                }
+                break;
+
             case ThroughputSnapshot tp:
                 sb.Append("TotalItems: ").Append(tp.TotalItems)
                   .Append(", Operations: ").Append(tp.TotalOperations)
-                  .Append(", Rate: ").Append(tp.ItemsPerSecond.ToString("F1", CultureInfo.InvariantCulture)).Append(" items/s");
+                  .Append(", Rate: ");
+                if (color && resolvedColor.HasValue) sb.Append(ToAnsi(resolvedColor.Value));
+                sb.Append(tp.ItemsPerSecond.ToString("F1", CultureInfo.InvariantCulture)).Append(" items/s");
+                if (color && resolvedColor.HasValue) sb.Append(AnsiReset);
 
                 if (tp.FailedOperations > 0)
                 {
@@ -122,18 +175,44 @@ public class ConsoleMetricSink : IMetricSink
 
                 if (f.TotalFailures > 0)
                 {
-                    if (color) sb.Append(AnsiRed);
+                    if (color) sb.Append(resolvedColor.HasValue ? ToAnsi(resolvedColor.Value) : AnsiRed);
                     sb.Append(f.TotalFailures).Append(" (").Append((f.FailureRate * 100).ToString("F1", CultureInfo.InvariantCulture)).Append("%)");
                     if (color) sb.Append(AnsiReset);
                 }
                 else
                 {
-                    if (color) sb.Append(AnsiGreen);
+                    if (color) sb.Append(resolvedColor.HasValue ? ToAnsi(resolvedColor.Value) : AnsiGreen);
                     sb.Append("0 (0.0%)");
                     if (color) sb.Append(AnsiReset);
                 }
                 break;
 
+            case ExceptionSnapshot ex:
+                sb.Append("Operations: ").Append(ex.TotalOperations)
+                  .Append(", Exceptions: ");
+
+                if (ex.TotalExceptions > 0)
+                {
+                    if (color) sb.Append(resolvedColor.HasValue ? ToAnsi(resolvedColor.Value) : AnsiRed);
+                    sb.Append(ex.TotalExceptions).Append(" (").Append((ex.ExceptionRate * 100).ToString("F1", CultureInfo.InvariantCulture)).Append("%)");
+                    if (color) sb.Append(AnsiReset);
+                }
+                else
+                {
+                    if (color) sb.Append(resolvedColor.HasValue ? ToAnsi(resolvedColor.Value) : AnsiGreen);
+                    sb.Append("0 (0.0%)");
+                    if (color) sb.Append(AnsiReset);
+                }
+                break;
+
+            case MemorySnapshot m:
+                sb.Append("Operations: ").Append(m.OperationCount)
+                  .Append(", Avg: ");
+                if (color && resolvedColor.HasValue) sb.Append(ToAnsi(resolvedColor.Value));
+                sb.Append(FormatBytes(m.AverageAllocatedBytes));
+                if (color && resolvedColor.HasValue) sb.Append(AnsiReset);
+                sb.Append(", Total: ").Append(FormatBytes(m.TotalAllocatedBytes));
+                break;
 
             default:
                 // Fallback to formatted string cleaned of excess newlines for single-line display
@@ -145,9 +224,18 @@ public class ConsoleMetricSink : IMetricSink
                 else
                 {
                     var lines = formatted.Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
+                    if (color && resolvedColor.HasValue) sb.Append(ToAnsi(resolvedColor.Value));
                     sb.Append(string.Join(" | ", lines));
+                    if (color && resolvedColor.HasValue) sb.Append(AnsiReset);
                 }
                 break;
         }
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{(bytes / 1024.0).ToString("F2", CultureInfo.InvariantCulture)} KB";
+        return $"{(bytes / (1024.0 * 1024.0)).ToString("F2", CultureInfo.InvariantCulture)} MB";
     }
 }

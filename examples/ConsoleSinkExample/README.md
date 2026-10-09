@@ -132,6 +132,32 @@ using (tracker.TrackItems("InventoryRestock", itemCount: 50))
 tracker.FlushSinks();
 ```
 
+### 4. Native Threshold Color Coding & Dynamic Color Selectors
+
+Configure threshold rules or custom lambda delegates to color-code snapshots dynamically:
+
+```csharp
+options.AddConsoleSink(opt =>
+{
+    opt.Colorize = true;
+
+    // Fluent threshold rules (e.g. latency alerts):
+    opt.AddThreshold<DurationSnapshot>(
+        warn: TimeSpan.FromMilliseconds(700),     // DarkYellow (Orange)
+        critical: TimeSpan.FromMilliseconds(2000) // Red
+    );
+
+    // Or via a custom pattern-matching selector delegate:
+    opt.ColorSelector = snapshot => snapshot switch
+    {
+        DurationSnapshot d when d.AverageDuration.TotalMilliseconds > 2000 => ConsoleColor.Red,
+        DurationSnapshot d when d.AverageDuration.TotalMilliseconds > 700 => ConsoleColor.DarkYellow,
+        ExceptionSnapshot { TotalExceptions: > 0 } => ConsoleColor.Red,
+        _ => ConsoleColor.Green
+    };
+});
+```
+
 ---
 
 ## Running the Example
