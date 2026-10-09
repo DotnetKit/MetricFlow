@@ -42,12 +42,32 @@ public class MetricFlowMeterRegistry(
     /// </summary>
     public void Dispose()
     {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// Releases the unmanaged resources used by the <see cref="MetricFlowMeterRegistry"/> and optionally releases the managed resources.
+    /// </summary>
+    /// <param name="disposing">true to release both managed and unmanaged resources; false to release only unmanaged resources.</param>
+    protected virtual void Dispose(bool disposing)
+    {
         if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
 
-        foreach (var bridge in _bridges.Values)
+        if (disposing)
         {
-            bridge.Dispose();
+            foreach (var bridge in _bridges.Values)
+            {
+                try
+                {
+                    bridge.Dispose();
+                }
+                catch
+                {
+                    // Bridges should not prevent other resources from disposing
+                }
+            }
+            _bridges.Clear();
         }
-        _bridges.Clear();
     }
 }

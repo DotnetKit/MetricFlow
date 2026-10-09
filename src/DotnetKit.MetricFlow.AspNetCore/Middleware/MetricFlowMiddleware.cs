@@ -7,29 +7,22 @@ namespace DotnetKit.MetricFlow.AspNetCore.Middleware;
 /// <summary>
 /// Middleware for tracking HTTP request rate, duration, errors, and status codes using MetricFlow.
 /// </summary>
-public class MetricFlowMiddleware
+public class MetricFlowMiddleware(
+    RequestDelegate next,
+    IMetricTracker tracker,
+    MetricFlowAspNetCoreOptions? options = null,
+    MetricFlowOptions? coreOptions = null)
 {
     private const string MetricNameItemKey = "__MetricFlow_MetricName";
 
-    private readonly RequestDelegate _next;
-    private readonly MetricFlowAspNetCoreOptions _options;
-    private readonly IMetricTracker _tracker;
-
-    public MetricFlowMiddleware(
-        RequestDelegate next,
-        IMetricTracker tracker,
-        MetricFlowAspNetCoreOptions? options = null,
-        MetricFlowOptions? coreOptions = null)
+    private readonly RequestDelegate _next = next ?? throw new ArgumentNullException(nameof(next));
+    private readonly MetricFlowAspNetCoreOptions _options = options ?? new MetricFlowAspNetCoreOptions
     {
-        _next = next ?? throw new ArgumentNullException(nameof(next));
-        _tracker = tracker ?? throw new ArgumentNullException(nameof(tracker));
-        _options = options ?? new MetricFlowAspNetCoreOptions
-        {
-            Topic = coreOptions?.Topic ?? tracker.Topic,
-            TopicTags = coreOptions?.TopicTags,
-            SamplingRate = coreOptions?.SamplingRate ?? 1.0
-        };
-    }
+        Topic = coreOptions?.Topic ?? tracker.Topic,
+        TopicTags = coreOptions?.TopicTags,
+        SamplingRate = coreOptions?.SamplingRate ?? 1.0
+    };
+    private readonly IMetricTracker _tracker = tracker ?? throw new ArgumentNullException(nameof(tracker));
 
     public MetricFlowMiddleware(
         RequestDelegate next,
@@ -38,7 +31,7 @@ public class MetricFlowMiddleware
         : this(next, tracker, options, options)
     {
     }
-
+   // ReSharper disable once UnusedMember.Global - Invoked implicitly by ASP.NET Core pipeline convention
     public async Task InvokeAsync(HttpContext context)
     {
         if (ShouldExclude(context))
@@ -47,13 +40,13 @@ public class MetricFlowMiddleware
             return;
         }
 
-        string metricName = ResolveMetricName(context);
+        var metricName = ResolveMetricName(context);
         context.Items[MetricNameItemKey] = metricName;
 
         var inTags = CreateTags(context);
         _tracker.In(metricName, inTags);
 
-        bool failed = false;
+        var failed = false;
         Exception? caughtException = null;
 
         try
@@ -105,7 +98,7 @@ public class MetricFlowMiddleware
             return true;
         }
 
-        for (int i = 0; i < _options.ExcludePathPrefixes.Count; i++)
+        for (var i = 0; i < _options.ExcludePathPrefixes.Count; i++)
         {
             if (path.StartsWithSegments(_options.ExcludePathPrefixes[i], StringComparison.OrdinalIgnoreCase))
             {
@@ -149,8 +142,6 @@ public class MetricFlowMiddleware
             case MetricRouteNamingStrategy.RawPath:
                 name = context.Request.Path.Value;
                 break;
-
-            case MetricRouteNamingStrategy.RoutePattern:
             default:
                 if (endpoint is RouteEndpoint routeEndpoint2)
                 {

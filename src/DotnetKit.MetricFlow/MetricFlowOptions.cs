@@ -2,6 +2,10 @@ using DotnetKit.MetricFlow.Abstractions;
 using DotnetKit.MetricFlow.Configuration;
 using DotnetKit.MetricFlow.Counters;
 using DotnetKit.MetricFlow.Meters;
+using DotnetKit.MetricFlow.Sinks;
+using DotnetKit.MetricFlow.Sinks.Console;
+using DotnetKit.MetricFlow.Sinks.Logger;
+using Microsoft.Extensions.Logging;
 
 namespace DotnetKit.MetricFlow;
 
@@ -73,6 +77,109 @@ public class MetricFlowOptions
     }
 
     /// <summary>
+    /// Registered metric sinks that receive snapshots when triggers fire or upon manual flush.
+    /// </summary>
+    public IList<IMetricSink> Sinks { get; } = new List<IMetricSink>();
+
+    /// <summary>
+    /// Configuration options for execution-lifecycle sampling triggers (e.g. stride, failures, latency thresholds).
+    /// </summary>
+    public MetricSinkTriggerOptions SinkTriggers { get; set; } = new();
+
+    /// <summary>
+    /// Registers a custom metric sink to receive snapshot emissions.
+    /// </summary>
+    /// <param name="sink">The metric sink instance.</param>
+    /// <returns>This options instance for fluent chaining.</returns>
+    public MetricFlowOptions AddSink(IMetricSink sink)
+    {
+        ArgumentNullException.ThrowIfNull(sink);
+        Sinks.Add(sink);
+        return this;
+    }
+
+    /// <summary>
+    /// Registers a <see cref="ConsoleMetricSink"/> for structured console logging of metric snapshots.
+    /// </summary>
+    /// <param name="configure">Optional configuration for console output formatting.</param>
+    /// <returns>This options instance for fluent chaining.</returns>
+    public MetricFlowOptions AddConsoleSink(Action<ConsoleMetricSinkOptions>? configure = null)
+    {
+        var options = new ConsoleMetricSinkOptions();
+        configure?.Invoke(options);
+        Sinks.Add(new ConsoleMetricSink(options));
+        return this;
+    }
+
+    /// <summary>
+    /// Registers a <see cref="LoggerMetricSink"/> for structured ILogger logging of metric snapshots.
+    /// </summary>
+    /// <param name="configure">Optional configuration for logger output formatting and log levels.</param>
+    /// <returns>This options instance for fluent chaining.</returns>
+    public MetricFlowOptions AddLoggerSink(Action<LoggerMetricSinkOptions>? configure = null)
+    {
+        var options = new LoggerMetricSinkOptions();
+        configure?.Invoke(options);
+        Sinks.Add(new LoggerMetricSink(options));
+        return this;
+    }
+
+    /// <summary>
+    /// Registers a <see cref="LoggerMetricSink"/> for structured ILogger logging of metric snapshots using a specific <see cref="ILogger"/>.
+    /// </summary>
+    /// <param name="logger">The logger instance.</param>
+    /// <param name="configure">Optional configuration for logger output formatting and log levels.</param>
+    /// <returns>This options instance for fluent chaining.</returns>
+    public MetricFlowOptions AddLoggerSink(ILogger logger, Action<LoggerMetricSinkOptions>? configure = null)
+    {
+        ArgumentNullException.ThrowIfNull(logger);
+        var options = new LoggerMetricSinkOptions();
+        configure?.Invoke(options);
+        Sinks.Add(new LoggerMetricSink(logger, options));
+        return this;
+    }
+
+    /// <summary>
+    /// Registers a <see cref="LoggerMetricSink"/> for structured ILogger logging of metric snapshots using an <see cref="ILoggerFactory"/>.
+    /// </summary>
+    /// <param name="loggerFactory">The logger factory.</param>
+    /// <param name="configure">Optional configuration for logger output formatting and log levels.</param>
+    /// <returns>This options instance for fluent chaining.</returns>
+    public MetricFlowOptions AddLoggerSink(ILoggerFactory loggerFactory, Action<LoggerMetricSinkOptions>? configure = null)
+    {
+        ArgumentNullException.ThrowIfNull(loggerFactory);
+        var options = new LoggerMetricSinkOptions();
+        configure?.Invoke(options);
+        Sinks.Add(new LoggerMetricSink(loggerFactory, options));
+        return this;
+    }
+
+    /// <summary>
+    /// Registers an <see cref="ObservableMetricSink"/> for reactive streaming of metric snapshots via <see cref="IObservable{T}"/>.
+    /// </summary>
+    /// <param name="observable">Outputs the created observable sink for subscribing.</param>
+    /// <param name="name">Optional sink name.</param>
+    /// <returns>This options instance for fluent chaining.</returns>
+    public MetricFlowOptions AddObservableSink(out ObservableMetricSink observable, string name = "Observable")
+    {
+        observable = new ObservableMetricSink(name);
+        Sinks.Add(observable);
+        return this;
+    }
+
+    /// <summary>
+    /// Configures execution-lifecycle sampling triggers for emitting snapshots to sinks without a timer.
+    /// </summary>
+    /// <param name="configure">The configuration action.</param>
+    /// <returns>This options instance for fluent chaining.</returns>
+    public MetricFlowOptions ConfigureSinkTriggers(Action<MetricSinkTriggerOptions> configure)
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+        configure(SinkTriggers);
+        return this;
+    }
+
+    /// <summary>
     /// Sampling rate between 0.0 and 1.0 (or null to track 100%). Defaults to 1.0.
     /// </summary>
     public double? SamplingRate { get; set; } = 1.0;
@@ -98,6 +205,7 @@ public class MetricFlowOptions
         AutoAddExceptionCounter = enabled;
         return this;
     }
+
 
     /// <summary>
     /// Additional counters to register with the tracker.

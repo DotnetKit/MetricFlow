@@ -5,6 +5,7 @@ using System.Text;
 using DotnetKit.MetricFlow.Configuration;
 using DotnetKit.MetricFlow.Extensions;
 using DotnetKit.MetricFlow.Meters;
+using DotnetKit.MetricFlow.Sinks;
 
 namespace DotnetKit.MetricFlow.Abstractions;
 
@@ -13,16 +14,20 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
     private readonly ConcurrentDictionary<string, ICounter> _counters = new(StringComparer.OrdinalIgnoreCase);
     private volatile ICounter[] _activeCounters = [];
 
+    private readonly ConcurrentDictionary<string, IMetricSink> _sinks = new(StringComparer.OrdinalIgnoreCase);
+    private readonly MetricSinkTriggerOptions _sinkTriggers;
+    private readonly ConcurrentDictionary<string, long> _metricExecutionCounts = new(StringComparer.OrdinalIgnoreCase);
+
     private readonly AsyncLocal<Dictionary<string, Stack<InOperationState>>?> _asyncOperations = new();
     private readonly AsyncLocal<Dictionary<string, int>?> _asyncDroppedCounts = new();
 
-    private readonly string _topic;
-    private readonly Dictionary<string, string>? _topicTags;
     private readonly double? _samplingRate;
     private readonly IMetricMeterBridge? _meterBridge;
 
-    public string Topic => _topic;
-    public Dictionary<string, string>? TopicTags => _topicTags;
+    public string Topic { get; }
+
+    public Dictionary<string, string>? TopicTags { get; }
+
     public IMetricMeterBridge? MeterBridge => _meterBridge;
 
     protected MetricTrackerBase(
@@ -30,7 +35,7 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
         Dictionary<string, string>? topicTags = null,
         double? samplingRate = 1.0,
         ICounterConfigObservable? configObservable = null)
-        : this(topic, topicTags, samplingRate, configObservable, meterBridge: null)
+        : this(topic, topicTags, samplingRate, configObservable, meterBridge: null, sinks: null, sinkTriggers: null)
     {
     }
 
@@ -40,14 +45,36 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
         double? samplingRate,
         ICounterConfigObservable? configObservable,
         IMetricMeterBridge? meterBridge)
+        : this(topic, topicTags, samplingRate, configObservable, meterBridge, sinks: null, sinkTriggers: null)
     {
-        _topic = topic;
-        _topicTags = topicTags;
+    }
+
+    protected MetricTrackerBase(
+        string topic,
+        Dictionary<string, string>? topicTags,
+        double? samplingRate,
+        ICounterConfigObservable? configObservable,
+        IMetricMeterBridge? meterBridge,
+        IEnumerable<IMetricSink>? sinks,
+        MetricSinkTriggerOptions? sinkTriggers)
+    {
+        Topic = topic;
+        TopicTags = topicTags;
         _samplingRate = samplingRate;
         _meterBridge = meterBridge ?? new MetricFlowMeterBridge(topic, topicTags, new MetricFlowMeterOptions());
+        _sinkTriggers = sinkTriggers ?? new MetricSinkTriggerOptions();
+
+        if (sinks != null)
+        {
+            foreach (var sink in sinks)
+            {
+                _sinks[sink.Name] = sink;
+            }
+        }
 
         configObservable?.Subscribe(OnCounterConfigChanged);
     }
+
 
     public IMetricTracker RegisterCounter(ICounter counter)
     {
@@ -92,12 +119,18 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
         }
 
         var active = _activeCounters;
-        if (active.Length == 0 && (_meterBridge == null || !_meterBridge.IsEnabled))
+        if (active.Length == 0 && (_meterBridge == null || !_meterBridge.IsEnabled) && _sinks.IsEmpty)
         {
             return NoOpDisposable.Instance;
         }
 
-        return new CodeTracker(active, metricName, tags, metadata, _meterBridge);
+        Action<string, TimeSpan, bool, Exception?>? onCompleted = null;
+        if (!_sinks.IsEmpty && _sinkTriggers.HasTriggers)
+        {
+            onCompleted = HandleOperationCompleted;
+        }
+
+        return new CodeTracker(active, metricName, tags, metadata, _meterBridge, onCompleted);
     }
 
     public IDisposable Track(Dictionary<string, string>? tags = null, Dictionary<string, long>? metadata = null, [CallerMemberName] string metricName = "")
@@ -115,13 +148,13 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
         var states = new object?[active.Length];
         var inContext = new InContext(metricName, tags, metadata);
 
-        for (int i = 0; i < active.Length; i++)
+        for (var i = 0; i < active.Length; i++)
         {
             states[i] = active[i].OnIn(in inContext);
         }
 
         TagList? inFlightTags = null;
-        if (_meterBridge != null && _meterBridge.IsEnabled)
+        if (_meterBridge is { IsEnabled: true })
         {
             inFlightTags = _meterBridge.RecordOperationIn(metricName, tags, metadata);
         }
@@ -131,6 +164,27 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
 
     public void In(Dictionary<string, string>? tags = null, Dictionary<string, long>? metadata = null, [CallerMemberName] string metricName = "")
         => In(metricName, tags, metadata);
+    internal void HandleOperationCompleted(string metricName, TimeSpan duration, bool failed, Exception? exception)
+    {
+        if (!_sinks.IsEmpty && _sinkTriggers.HasTriggers)
+        {
+            var executionCount = _metricExecutionCounts.AddOrUpdate(metricName, 1, static (_, count) => count + 1);
+            if (_sinkTriggers.ShouldTrigger(executionCount, failed, duration))
+            {
+                DispatchMetricSnapshotsToSinks(metricName);
+            }
+        }
+    }
+
+
+    public void Out(
+        Dictionary<string, string>? tags = null,
+        bool failed = false,
+        Exception? exception = null,
+        TimeSpan? duration = null,
+        Dictionary<string, long>? metadata = null,
+        [CallerMemberName] string metricName = "")
+        => Out(metricName, tags, failed, exception, duration, metadata);
 
     public void Out(
         string metricName,
@@ -145,7 +199,7 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
             return;
         }
 
-        InOperationState? opState = TryPopInOperation(metricName);
+        var opState = TryPopInOperation(metricName);
 
         if (!duration.HasValue && opState != null)
         {
@@ -161,7 +215,7 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
 
         if (opState != null)
         {
-            for (int i = 0; i < opState.Counters.Length; i++)
+            for (var i = 0; i < opState.Counters.Length; i++)
             {
                 if (opState.Counters[i].IsEnabled)
                 {
@@ -173,30 +227,23 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
         {
             // Fallback: If Out was called without a preceding In on this async context
             var active = _activeCounters;
-            for (int i = 0; i < active.Length; i++)
+            foreach (var t in active)
             {
-                if (active[i].IsEnabled)
+                if (t.IsEnabled)
                 {
-                    active[i].OnOut(null, in outContext);
+                    t.OnOut(null, in outContext);
                 }
             }
         }
 
-        if (_meterBridge != null && _meterBridge.IsEnabled)
+        if (_meterBridge is { IsEnabled: true })
         {
             var opDuration = duration ?? TimeSpan.Zero;
             _meterBridge.RecordOperationOut(metricName, opDuration, failed, exception, tags, metadata);
         }
-    }
 
-    public void Out(
-        Dictionary<string, string>? tags = null,
-        bool failed = false,
-        Exception? exception = null,
-        TimeSpan? duration = null,
-        Dictionary<string, long>? metadata = null,
-        [CallerMemberName] string metricName = "")
-        => Out(metricName, tags, failed, exception, duration, metadata);
+        HandleOperationCompleted(metricName, duration ?? TimeSpan.Zero, failed, exception);
+    }
 
     public IMetricSnapshot? GetSnapshot(string metricName, string counterName)
     {
@@ -226,12 +273,83 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
         }
     }
 
+    public IMetricTracker RegisterSink(IMetricSink sink)
+    {
+        ArgumentNullException.ThrowIfNull(sink);
+        _sinks[sink.Name] = sink;
+        return this;
+    }
+
+    public bool UnregisterSink(string sinkName)
+    {
+        return _sinks.TryRemove(sinkName, out _);
+    }
+
+    public IEnumerable<IMetricSink> GetSinks() => _sinks.Values;
+
+    public void FlushSinks()
+    {
+        if (_sinks.IsEmpty) return;
+        var allSnapshots = GetAllSnapshots().ToList();
+        if (allSnapshots.Count == 0) return;
+
+        foreach (var sink in _sinks.Values)
+        {
+            try
+            {
+                sink.Emit(allSnapshots);
+            }
+            catch
+            {
+                // Sinks must not crash the caller
+            }
+        }
+    }
+
+    public async ValueTask FlushSinksAsync(CancellationToken cancellationToken = default)
+    {
+        if (_sinks.IsEmpty) return;
+        var allSnapshots = GetAllSnapshots().ToList();
+        if (allSnapshots.Count == 0) return;
+
+        foreach (var sink in _sinks.Values)
+        {
+            try
+            {
+                await sink.EmitAsync(allSnapshots, cancellationToken).ConfigureAwait(false);
+            }
+            catch
+            {
+                // Sinks must not crash the caller
+            }
+        }
+    }
+
+    private void DispatchMetricSnapshotsToSinks(string metricName)
+    {
+        var snapshots = GetSnapshots(metricName).ToList();
+        if (snapshots.Count == 0) return;
+
+        foreach (var sink in _sinks.Values)
+        {
+            try
+            {
+                sink.Emit(snapshots);
+            }
+            catch
+            {
+                // Sinks must not crash the tracking operation
+            }
+        }
+    }
+
     public void Clear()
     {
         foreach (var counter in _counters.Values)
         {
             counter.Reset();
         }
+        _metricExecutionCounts.Clear();
         _meterBridge?.Reset();
     }
 
@@ -246,8 +364,24 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
         if (disposing)
         {
             _meterBridge?.Dispose();
+            foreach (var sink in _sinks.Values)
+            {
+                if (sink is IDisposable disposable)
+                {
+                    try
+                    {
+                        disposable.Dispose();
+                    }
+                    catch
+                    {
+                        // Sinks should not prevent other resources from disposing
+                    }
+                }
+            }
+
         }
     }
+
 
     public override string ToString()
     {
@@ -270,7 +404,7 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
 
     private void RebuildActiveCounters()
     {
-        _activeCounters = _counters.Values.Where(c => c.IsEnabled).ToArray();
+        _activeCounters = [.. _counters.Values.Where(c => c.IsEnabled)];
     }
 
     private static bool ShouldDrop(double? rate)

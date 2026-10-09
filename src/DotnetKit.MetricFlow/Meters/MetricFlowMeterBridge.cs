@@ -54,7 +54,7 @@ public class MetricFlowMeterBridge : IMetricMeterBridge
         instruments.Active.Add(1, in tagList);
         return tagList;
     }
-
+    #pragma warning disable RCS1242 // Retains zero-copy reference passing directly into BCL's UpDownCounter.Add(..., in ...)
     public void RecordOperationInFlightEnd(string metricName, in TagList inFlightTags)
     {
         if (!IsEnabled || !_options.RecordActiveOperations)
@@ -82,7 +82,7 @@ public class MetricFlowMeterBridge : IMetricMeterBridge
         var instruments = GetOrAddInstruments(metricName);
 
         // 1. Duration histogram: {metricName}.duration (ms)
-        string status = failed || exception != null ? "error" : "ok";
+        var status = failed || exception != null ? "error" : "ok";
         var durationTags = CreateMeasurementTagList(metricName, status: status, exceptionType: null, tags);
         instruments.Duration.Record(duration.TotalMilliseconds, in durationTags);
 
@@ -104,7 +104,7 @@ public class MetricFlowMeterBridge : IMetricMeterBridge
         // 4. ExceptionCounter: {metricName}.exceptions
         if (failed || exception != null)
         {
-            string exType = exception?.GetType().FullName ?? "OperationFailed";
+            var exType = exception?.GetType().FullName ?? "OperationFailed";
             var exTags = CreateMeasurementTagList(metricName, status: "error", exceptionType: exType, tags);
             instruments.Exceptions.Add(1, in exTags);
         }
@@ -112,8 +112,7 @@ public class MetricFlowMeterBridge : IMetricMeterBridge
 
     public TagList CreateActiveTagList(string metricName, IReadOnlyDictionary<string, string>? tags)
     {
-        var tagList = new TagList();
-        tagList.Add("operation", metricName);
+        var tagList = new TagList { { "operation", metricName } };
         AppendSanitizedTags(ref tagList, tags);
         return tagList;
     }
@@ -124,8 +123,7 @@ public class MetricFlowMeterBridge : IMetricMeterBridge
         string? exceptionType,
         IReadOnlyDictionary<string, string>? tags)
     {
-        var tagList = new TagList();
-        tagList.Add("operation", metricName);
+        var tagList = new TagList { { "operation", metricName } };
 
         if (status != null)
         {
@@ -172,13 +170,13 @@ public class MetricFlowMeterBridge : IMetricMeterBridge
 
     private OperationInstruments GetOrAddInstruments(string metricName)
     {
-        string lookupKey = _options.NamingConvention == MetricInstrumentNamingConvention.SharedOperation
+        var lookupKey = _options.NamingConvention == MetricInstrumentNamingConvention.SharedOperation
             ? "__shared__"
             : metricName;
 
         return _instruments.GetOrAdd(lookupKey, _ =>
         {
-            string prefix = _options.NamingConvention == MetricInstrumentNamingConvention.SharedOperation
+            var prefix = _options.NamingConvention == MetricInstrumentNamingConvention.SharedOperation
                 ? "operation"
                 : SanitizeInstrumentMetricName(metricName);
 
@@ -221,7 +219,7 @@ public class MetricFlowMeterBridge : IMetricMeterBridge
         if (string.IsNullOrWhiteSpace(metricName)) return "operation";
 
         var sb = new StringBuilder(metricName.Length);
-        foreach (char c in metricName)
+        foreach (var c in metricName)
         {
             if (char.IsLetterOrDigit(c) || c == '_' || c == '.' || c == '-')
             {
@@ -242,9 +240,19 @@ public class MetricFlowMeterBridge : IMetricMeterBridge
 
     public void Dispose()
     {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
         if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
-        _meter.Dispose();
-        _instruments.Clear();
+
+        if (disposing)
+        {
+            _meter.Dispose();
+            _instruments.Clear();
+        }
     }
 
     private sealed class OperationInstruments

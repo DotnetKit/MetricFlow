@@ -8,10 +8,13 @@ namespace DotnetKit.MetricFlow;
 /// </summary>
 public class MetricFlowRegistry : IMetricFlow, IDisposable
 {
-    private readonly ConcurrentDictionary<string, IMetricTracker> _trackers = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, IMetricTracker> _trackers = new(
+        StringComparer.OrdinalIgnoreCase
+    );
     private readonly Func<string, IMetricTracker>? _trackerFactory;
     private readonly string _defaultTopic;
     private volatile IMetricTracker? _defaultTracker;
+    private int _disposed;
 
     /// <summary>
     /// Initializes a new instance of <see cref="MetricFlowRegistry"/>.
@@ -22,7 +25,8 @@ public class MetricFlowRegistry : IMetricFlow, IDisposable
     public MetricFlowRegistry(
         string defaultTopic = "Application",
         IEnumerable<IMetricTracker>? initialTrackers = null,
-        Func<string, IMetricTracker>? trackerFactory = null)
+        Func<string, IMetricTracker>? trackerFactory = null
+    )
     {
         _defaultTopic = string.IsNullOrWhiteSpace(defaultTopic) ? "Application" : defaultTopic;
         _trackerFactory = trackerFactory;
@@ -65,25 +69,30 @@ public class MetricFlowRegistry : IMetricFlow, IDisposable
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(topic);
 
-        return _trackers.GetOrAdd(topic, key =>
-        {
-            if (_trackerFactory != null)
+        return _trackers.GetOrAdd(
+            topic,
+            key =>
             {
-                var factoryTracker = _trackerFactory(key);
+                if (_trackerFactory != null)
+                {
+                    var factoryTracker = _trackerFactory(key);
+                    // ReSharper disable once ConvertIfStatementToNullCoalescingAssignment
+                    if (_defaultTracker == null)
+                    {
+                        _defaultTracker = factoryTracker;
+                    }
+                    return factoryTracker;
+                }
+
+                var fallback = new MetricTracker(key);
+                // ReSharper disable once ConvertIfStatementToNullCoalescingAssignment
                 if (_defaultTracker == null)
                 {
-                    _defaultTracker = factoryTracker;
+                    _defaultTracker = fallback;
                 }
-                return factoryTracker;
+                return fallback;
             }
-
-            var fallback = new MetricTracker(key);
-            if (_defaultTracker == null)
-            {
-                _defaultTracker = fallback;
-            }
-            return fallback;
-        });
+        );
     }
 
     /// <inheritdoc />
@@ -114,13 +123,36 @@ public class MetricFlowRegistry : IMetricFlow, IDisposable
     /// </summary>
     public void Dispose()
     {
-        foreach (var tracker in _trackers.Values)
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// Releases the unmanaged resources used by the <see cref="MetricFlowRegistry"/> and optionally releases the managed resources.
+    /// </summary>
+    /// <param name="disposing">true to release both managed and unmanaged resources; false to release only unmanaged resources.</param>
+    protected virtual void Dispose(bool disposing)
+    {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+            return;
+
+        if (disposing)
         {
-            if (tracker is IDisposable disposable)
+            foreach (var tracker in _trackers.Values)
             {
-                disposable.Dispose();
+                if (tracker is IDisposable disposable)
+                {
+                    try
+                    {
+                        disposable.Dispose();
+                    }
+                    catch
+                    {
+                        // Trackers should not prevent other resources from disposing
+                    }
+                }
             }
+            _trackers.Clear();
         }
-        _trackers.Clear();
     }
 }

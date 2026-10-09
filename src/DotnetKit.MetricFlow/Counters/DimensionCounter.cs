@@ -11,11 +11,16 @@ namespace DotnetKit.MetricFlow.Counters;
 /// </summary>
 public class DimensionCounter : CounterBase<object?>
 {
-    private readonly ConcurrentDictionary<string, MetricDimensionState> _states = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Func<IReadOnlyDictionary<string, string>?, IReadOnlyDictionary<string, long>?, string?> _dimensionSelector;
+    private readonly ConcurrentDictionary<string, MetricDimensionState> _states = new(
+        StringComparer.OrdinalIgnoreCase
+    );
+    private readonly Func<
+        IReadOnlyDictionary<string, string>?,
+        IReadOnlyDictionary<string, long>?,
+        string?
+    > _dimensionSelector;
 
     public string DimensionName { get; }
-    public string TagKey => DimensionName;
     public int MaxUniqueValues { get; }
     public string OverflowBucket { get; }
 
@@ -30,13 +35,15 @@ public class DimensionCounter : CounterBase<object?>
         string dimensionKey,
         string? name = null,
         int maxUniqueValues = 250,
-        string overflowBucket = "[Other]")
+        string overflowBucket = "[Other]"
+    )
         : this(
             name: name ?? $"Dimension:{dimensionKey}",
             selector: (tags, meta) => ExtractSingleTag(tags, meta, dimensionKey),
             dimensionName: dimensionKey,
             maxUniqueValues: maxUniqueValues,
-            overflowBucket: overflowBucket)
+            overflowBucket: overflowBucket
+        )
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(dimensionKey);
     }
@@ -54,13 +61,15 @@ public class DimensionCounter : CounterBase<object?>
         IEnumerable<string> dimensionKeys,
         string delimiter = " / ",
         int maxUniqueValues = 250,
-        string overflowBucket = "[Other]")
+        string overflowBucket = "[Other]"
+    )
         : this(
             name: name,
-            selector: (tags, meta) => ExtractMultiTags(tags, meta, dimensionKeys.ToArray(), delimiter),
+            selector: (tags, meta) => ExtractMultiTags(tags, meta, [.. dimensionKeys], delimiter),
             dimensionName: string.Join(delimiter, dimensionKeys),
             maxUniqueValues: maxUniqueValues,
-            overflowBucket: overflowBucket)
+            overflowBucket: overflowBucket
+        )
     {
         ArgumentNullException.ThrowIfNull(dimensionKeys);
     }
@@ -76,17 +85,25 @@ public class DimensionCounter : CounterBase<object?>
     /// <param name="dimensionName">Optional descriptive dimension label. Defaults to <paramref name="name"/>.</param>
     public DimensionCounter(
         string name,
-        Func<IReadOnlyDictionary<string, string>?, IReadOnlyDictionary<string, long>?, string?> selector,
+        Func<
+            IReadOnlyDictionary<string, string>?,
+            IReadOnlyDictionary<string, long>?,
+            string?
+        > selector,
         int maxUniqueValues = 250,
         string overflowBucket = "[Other]",
-        string? dimensionName = null)
+        string? dimensionName = null
+    )
         : base(name)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         ArgumentNullException.ThrowIfNull(selector);
         if (maxUniqueValues <= 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(maxUniqueValues), "MaxUniqueValues must be greater than zero.");
+            throw new ArgumentOutOfRangeException(
+                nameof(maxUniqueValues),
+                "MaxUniqueValues must be greater than zero."
+            );
         }
         ArgumentException.ThrowIfNullOrWhiteSpace(overflowBucket);
 
@@ -100,12 +117,20 @@ public class DimensionCounter : CounterBase<object?>
 
     public override void OnOut(object? state, in OutContext context)
     {
-        if (!IsEnabled) return;
+        if (!IsEnabled)
+            return;
 
         var breakdownState = _states.GetOrAdd(
             context.MetricName,
-            static (name, arg) => new MetricDimensionState(name, arg.DimensionName, arg.MaxUniqueValues, arg.OverflowBucket),
-            (DimensionName, MaxUniqueValues, OverflowBucket));
+            static (name, arg) =>
+                new MetricDimensionState(
+                    name,
+                    arg.DimensionName,
+                    arg.MaxUniqueValues,
+                    arg.OverflowBucket
+                ),
+            (DimensionName, MaxUniqueValues, OverflowBucket)
+        );
 
         string? dimensionValue;
         try
@@ -145,7 +170,8 @@ public class DimensionCounter : CounterBase<object?>
     private static string? ExtractSingleTag(
         IReadOnlyDictionary<string, string>? tags,
         IReadOnlyDictionary<string, long>? metadata,
-        string key)
+        string key
+    )
     {
         if (tags != null)
         {
@@ -186,14 +212,16 @@ public class DimensionCounter : CounterBase<object?>
         IReadOnlyDictionary<string, string>? tags,
         IReadOnlyDictionary<string, long>? metadata,
         IReadOnlyList<string> keys,
-        string delimiter)
+        string delimiter
+    )
     {
-        if (keys.Count == 0) return null;
+        if (keys.Count == 0)
+            return null;
 
         var values = new string[keys.Count];
-        bool anyPresent = false;
+        var anyPresent = false;
 
-        for (int i = 0; i < keys.Count; i++)
+        for (var i = 0; i < keys.Count; i++)
         {
             var val = ExtractSingleTag(tags, metadata, keys[i]);
             if (!string.IsNullOrWhiteSpace(val))
@@ -210,28 +238,33 @@ public class DimensionCounter : CounterBase<object?>
         return anyPresent ? string.Join(delimiter, values) : null;
     }
 
-    public class MetricDimensionState(string metricName, string dimensionName, int maxUniqueValues, string overflowBucket)
+    public class MetricDimensionState(
+        string metricName,
+        string dimensionName,
+        int maxUniqueValues,
+        string overflowBucket
+    )
     {
         private long _totalOperations;
         private long _taggedOperations;
         private long _untaggedOperations;
         private long _failedOperations;
-        private readonly ConcurrentDictionary<string, long> _breakdown = new(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<string, long> _breakdown = new(
+            StringComparer.OrdinalIgnoreCase
+        );
 
         public string MetricName => metricName;
         public string DimensionName => dimensionName;
-        public string TagKey => dimensionName;
         public int MaxUniqueValues => maxUniqueValues;
         public string OverflowBucket => overflowBucket;
 
         public long TotalOperations => Interlocked.Read(ref _totalOperations);
         public long TaggedOperations => Interlocked.Read(ref _taggedOperations);
-        public long TrackedOperations => TaggedOperations;
         public long UntaggedOperations => Interlocked.Read(ref _untaggedOperations);
-        public long UntrackedOperations => UntaggedOperations;
         public long FailedOperations => Interlocked.Read(ref _failedOperations);
 
-        public IReadOnlyDictionary<string, long> Breakdown => new Dictionary<string, long>(_breakdown, StringComparer.OrdinalIgnoreCase);
+        public IReadOnlyDictionary<string, long> GetBreakdown() =>
+            new Dictionary<string, long>(_breakdown, StringComparer.OrdinalIgnoreCase);
 
         public void Record(string? tagValue, bool failed = false)
         {
@@ -277,7 +310,7 @@ public class DimensionCounter : CounterBase<object?>
                 TaggedOperations: TaggedOperations,
                 UntaggedOperations: UntaggedOperations,
                 FailedOperations: FailedOperations,
-                Breakdown: Breakdown,
+                Breakdown: GetBreakdown(),
                 Timestamp: DateTime.UtcNow
             );
         }
@@ -293,30 +326,31 @@ public class TagBreakdownCounter : DimensionCounter
         string tagKey,
         string? name = null,
         int maxUniqueValues = 250,
-        string overflowBucket = "[Other]")
-        : base(tagKey, name ?? $"TagBreakdown:{tagKey}", maxUniqueValues, overflowBucket)
-    {
-    }
+        string overflowBucket = "[Other]"
+    )
+        : base(tagKey, name ?? $"TagBreakdown:{tagKey}", maxUniqueValues, overflowBucket) { }
 
     public TagBreakdownCounter(
         string name,
         IEnumerable<string> tagKeys,
         string delimiter = " / ",
         int maxUniqueValues = 250,
-        string overflowBucket = "[Other]")
-        : base(name, tagKeys, delimiter, maxUniqueValues, overflowBucket)
-    {
-    }
+        string overflowBucket = "[Other]"
+    )
+        : base(name, tagKeys, delimiter, maxUniqueValues, overflowBucket) { }
 
     public TagBreakdownCounter(
         string name,
-        Func<IReadOnlyDictionary<string, string>?, IReadOnlyDictionary<string, long>?, string?> selector,
+        Func<
+            IReadOnlyDictionary<string, string>?,
+            IReadOnlyDictionary<string, long>?,
+            string?
+        > selector,
         int maxUniqueValues = 250,
         string overflowBucket = "[Other]",
-        string? dimensionName = null)
-        : base(name, selector, maxUniqueValues, overflowBucket, dimensionName)
-    {
-    }
+        string? dimensionName = null
+    )
+        : base(name, selector, maxUniqueValues, overflowBucket, dimensionName) { }
 }
 
 public record DimensionSnapshot(
@@ -328,7 +362,8 @@ public record DimensionSnapshot(
     long UntaggedOperations,
     long FailedOperations,
     IReadOnlyDictionary<string, long> Breakdown,
-    DateTime Timestamp) : IMetricSnapshot
+    DateTime Timestamp
+) : IMetricSnapshot
 {
     /// <summary>
     /// Alias for <see cref="DimensionName"/> for backward compatibility.
@@ -337,22 +372,35 @@ public record DimensionSnapshot(
 
     public long TrackedOperations => TaggedOperations;
     public long UntrackedOperations => UntaggedOperations;
-    public double TaggedPercentage => TotalOperations > 0 ? (double)TaggedOperations / TotalOperations : 0.0;
+    public double TaggedPercentage =>
+        TotalOperations > 0 ? (double)TaggedOperations / TotalOperations : 0.0;
     public double TrackedPercentage => TaggedPercentage;
 
     public string ToFormattedString()
     {
         var sb = new StringBuilder();
         sb.AppendLine($"[{CounterName}] Metric: {MetricName}");
-        sb.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"Total Operations       : {TotalOperations:N0}");
-        sb.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"Tagged Operations      : {TaggedOperations:N0} ({TaggedPercentage * 100:F1}%)");
+        sb.AppendLine(
+            System.Globalization.CultureInfo.InvariantCulture,
+            $"Total Operations       : {TotalOperations:N0}"
+        );
+        sb.AppendLine(
+            System.Globalization.CultureInfo.InvariantCulture,
+            $"Tagged Operations      : {TaggedOperations:N0} ({TaggedPercentage * 100:F1}%)"
+        );
         if (UntaggedOperations > 0)
         {
-            sb.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"Untagged Operations    : {UntaggedOperations:N0}");
+            sb.AppendLine(
+                System.Globalization.CultureInfo.InvariantCulture,
+                $"Untagged Operations    : {UntaggedOperations:N0}"
+            );
         }
         if (FailedOperations > 0)
         {
-            sb.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"Failed Operations      : {FailedOperations:N0}");
+            sb.AppendLine(
+                System.Globalization.CultureInfo.InvariantCulture,
+                $"Failed Operations      : {FailedOperations:N0}"
+            );
         }
 
         if (Breakdown.Count > 0)
@@ -360,8 +408,11 @@ public record DimensionSnapshot(
             sb.AppendLine($"Breakdown by '{DimensionName}':");
             foreach (var (key, count) in Breakdown.OrderByDescending(kv => kv.Value))
             {
-                double pct = TaggedOperations > 0 ? (double)count / TaggedOperations * 100.0 : 0.0;
-                sb.AppendLine(System.Globalization.CultureInfo.InvariantCulture, $"  - {key}: {count:N0} ({pct:F1}%)");
+                var pct = TaggedOperations > 0 ? (double)count / TaggedOperations * 100.0 : 0.0;
+                sb.AppendLine(
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    $"  - {key}: {count:N0} ({pct:F1}%)"
+                );
             }
         }
 
@@ -383,4 +434,16 @@ public record TagBreakdownSnapshot(
     long UntaggedOperations,
     long FailedOperations,
     IReadOnlyDictionary<string, long> Breakdown,
-    DateTime Timestamp) : DimensionSnapshot(MetricName, CounterName, DimensionName, TotalOperations, TaggedOperations, UntaggedOperations, FailedOperations, Breakdown, Timestamp);
+    DateTime Timestamp
+)
+    : DimensionSnapshot(
+        MetricName,
+        CounterName,
+        DimensionName,
+        TotalOperations,
+        TaggedOperations,
+        UntaggedOperations,
+        FailedOperations,
+        Breakdown,
+        Timestamp
+    );

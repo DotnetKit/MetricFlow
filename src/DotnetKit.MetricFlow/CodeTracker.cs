@@ -14,6 +14,7 @@ public class CodeTracker : IDisposable
     private readonly long _startTimestamp;
     private readonly IMetricMeterBridge? _meterBridge;
     private readonly TagList? _inFlightTagList;
+    private readonly Action<string, TimeSpan, bool, Exception?>? _onCompleted;
 
     private bool _failed;
     private Exception? _exception;
@@ -26,16 +27,27 @@ public class CodeTracker : IDisposable
         string metricName,
         Dictionary<string, string>? tags = null,
         Dictionary<string, long>? metadata = null)
-        : this(counters, metricName, tags, metadata, meterBridge: null)
+        : this(counters, metricName, tags, metadata, meterBridge: null, onCompleted: null)
     {
     }
 
     public CodeTracker(
         ICounter[] counters,
         string metricName,
-        Dictionary<string, string>? tags = null,
-        Dictionary<string, long>? metadata = null,
-        IMetricMeterBridge? meterBridge = null)
+        Dictionary<string, string>? tags,
+        Dictionary<string, long>? metadata,
+        IMetricMeterBridge? meterBridge)
+        : this(counters, metricName, tags, metadata, meterBridge, onCompleted: null)
+    {
+    }
+
+    public CodeTracker(
+        ICounter[] counters,
+        string metricName,
+        Dictionary<string, string>? tags,
+        Dictionary<string, long>? metadata,
+        IMetricMeterBridge? meterBridge,
+        Action<string, TimeSpan, bool, Exception?>? onCompleted)
     {
         _counters = counters;
         _metricName = metricName;
@@ -44,6 +56,8 @@ public class CodeTracker : IDisposable
         _startTimestamp = Stopwatch.GetTimestamp();
         _states = new object?[counters.Length];
         _meterBridge = meterBridge;
+        _onCompleted = onCompleted;
+
 
         var inContext = new InContext(metricName, _tags, _metadata);
         for (int i = 0; i < counters.Length; i++)
@@ -122,8 +136,10 @@ public class CodeTracker : IDisposable
             }
 
             _meterBridge?.RecordOperationOut(_metricName, duration, _failed, _exception, _tags, _metadata);
+            _onCompleted?.Invoke(_metricName, duration, _failed, _exception);
         }
     }
+
 
     public void Dispose()
     {
