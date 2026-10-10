@@ -84,6 +84,156 @@ public class MetricSinkTests
     }
 
     [Fact]
+    public void ConsoleMetricSink_WithDurationThresholds_AppliesExpectedAnsiColors()
+    {
+        // Arrange
+        using var stringWriter = new StringWriter();
+        var options = new ConsoleMetricSinkOptions
+        {
+            OutputWriter = stringWriter,
+            Colorize = true,
+            IncludeTimestamp = false,
+            Prefix = "[Test]"
+        };
+
+        options.AddThreshold<DurationSnapshot>(
+            warn: TimeSpan.FromMilliseconds(700),
+            critical: TimeSpan.FromMilliseconds(2000)
+        );
+
+        var sink = new ConsoleMetricSink(options);
+
+        var normalSnapshot = new DurationSnapshot("FastOp", "Duration", 1, 1, 0,
+            TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(200),
+            TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(200), DateTime.UtcNow);
+
+        var warnSnapshot = new DurationSnapshot("SlowOp", "Duration", 1, 1, 0,
+            TimeSpan.FromMilliseconds(1200), TimeSpan.FromMilliseconds(1200),
+            TimeSpan.FromMilliseconds(1200), TimeSpan.FromMilliseconds(1200), DateTime.UtcNow);
+
+        var critSnapshot = new DurationSnapshot("CriticalOp", "Duration", 1, 1, 0,
+            TimeSpan.FromMilliseconds(2500), TimeSpan.FromMilliseconds(2500),
+            TimeSpan.FromMilliseconds(2500), TimeSpan.FromMilliseconds(2500), DateTime.UtcNow);
+
+        // Act
+        var normalLine = sink.FormatSnapshot(normalSnapshot);
+        var warnLine = sink.FormatSnapshot(warnSnapshot);
+        var critLine = sink.FormatSnapshot(critSnapshot);
+
+        // Assert - Normal (< 700ms) uses Green (\u001b[32m)
+        normalLine.Should().Contain(ConsoleMetricSink.ToAnsi(ConsoleColor.Green));
+        normalLine.Should().Contain("200.00 ms");
+
+        // Assert - Warning (>= 700ms and < 2000ms) uses DarkYellow (\u001b[33m)
+        warnLine.Should().Contain(ConsoleMetricSink.ToAnsi(ConsoleColor.DarkYellow));
+        warnLine.Should().Contain("1200.00 ms");
+
+        // Assert - Critical (>= 2000ms) uses Red (\u001b[31m)
+        critLine.Should().Contain(ConsoleMetricSink.ToAnsi(ConsoleColor.Red));
+        critLine.Should().Contain("2500.00 ms");
+    }
+
+    [Fact]
+    public void ConsoleMetricSink_WithColorSelector_OverridesThresholdsAndAppliesColors()
+    {
+        // Arrange
+        var options = new ConsoleMetricSinkOptions
+        {
+            Colorize = true,
+            IncludeTimestamp = false
+        };
+
+        options.ColorSelector = snapshot => snapshot switch
+        {
+            DurationSnapshot d when d.AverageDuration.TotalMilliseconds > 2000 => ConsoleColor.Red,
+            DurationSnapshot d when d.AverageDuration.TotalMilliseconds > 700 => ConsoleColor.DarkYellow,
+            ExceptionSnapshot { TotalExceptions: > 0 } => ConsoleColor.Red,
+            _ => ConsoleColor.Green
+        };
+
+        var sink = new ConsoleMetricSink(options);
+
+        var durationCrit = new DurationSnapshot("Checkout", "Duration", 1, 1, 0,
+            TimeSpan.FromMilliseconds(3000), TimeSpan.FromMilliseconds(3000),
+            TimeSpan.FromMilliseconds(3000), TimeSpan.FromMilliseconds(3000), DateTime.UtcNow);
+
+        var exceptionSnap = new ExceptionSnapshot("Payment", "Exception", 10, 2,
+            new Dictionary<string, long> { ["InvalidOperationException"] = 2 }, DateTime.UtcNow);
+
+        var otherSnap = new ThroughputSnapshot("Search", "Throughput", 100, 10,
+            TimeSpan.FromSeconds(1), 100.0, 10.0, DateTime.UtcNow);
+
+        // Act
+        var critLine = sink.FormatSnapshot(durationCrit);
+        var exLine = sink.FormatSnapshot(exceptionSnap);
+        var otherLine = sink.FormatSnapshot(otherSnap);
+
+        // Assert
+        critLine.Should().Contain(ConsoleMetricSink.ToAnsi(ConsoleColor.Red));
+        exLine.Should().Contain(ConsoleMetricSink.ToAnsi(ConsoleColor.Red));
+        otherLine.Should().Contain(ConsoleMetricSink.ToAnsi(ConsoleColor.Green));
+    }
+
+    [Fact]
+    public void ConsoleMetricSink_WhenColorizeFalse_StripsAllAnsiCodesEvenWithThresholds()
+    {
+        // Arrange
+        var options = new ConsoleMetricSinkOptions
+        {
+            Colorize = false,
+            IncludeTimestamp = false
+        };
+
+        options.AddThreshold<DurationSnapshot>(
+            warn: TimeSpan.FromMilliseconds(500),
+            critical: TimeSpan.FromMilliseconds(1000)
+        );
+
+        var sink = new ConsoleMetricSink(options);
+
+        var snapshot = new DurationSnapshot("Job", "Duration", 1, 1, 0,
+            TimeSpan.FromMilliseconds(1500), TimeSpan.FromMilliseconds(1500),
+            TimeSpan.FromMilliseconds(1500), TimeSpan.FromMilliseconds(1500), DateTime.UtcNow);
+
+        // Act
+        var line = sink.FormatSnapshot(snapshot);
+
+        // Assert
+        line.Should().NotContain("\u001b");
+        line.Should().Contain("1500.00 ms");
+    }
+
+    [Fact]
+    public void ConsoleMetricSink_WithNumericAndInvertedThresholds_BehavesCorrectly()
+    {
+        // Arrange
+        var options = new ConsoleMetricSinkOptions();
+
+        // Inverted: lower throughput is critical
+        options.AddThreshold<ThroughputSnapshot>(
+            warn: 50.0,
+            critical: 10.0,
+            warnColor: ConsoleColor.Yellow,
+            criticalColor: ConsoleColor.DarkRed,
+            normalColor: ConsoleColor.Cyan
+        );
+
+        var highThroughput = new ThroughputSnapshot("Orders", "Throughput", 1000, 10, TimeSpan.FromSeconds(10), 100.0, 100.0, DateTime.UtcNow);
+        var lowThroughput = new ThroughputSnapshot("Orders", "Throughput", 300, 10, TimeSpan.FromSeconds(10), 30.0, 30.0, DateTime.UtcNow);
+        var critThroughput = new ThroughputSnapshot("Orders", "Throughput", 50, 10, TimeSpan.FromSeconds(10), 5.0, 5.0, DateTime.UtcNow);
+
+        // Act & Assert
+        options.ResolveColor(highThroughput).Should().Be(ConsoleColor.Cyan);
+        options.ResolveColor(lowThroughput).Should().Be(ConsoleColor.Yellow);
+        options.ResolveColor(critThroughput).Should().Be(ConsoleColor.DarkRed);
+
+        // Clear thresholds
+        options.ClearThresholds();
+        options.ThresholdRules.Should().BeEmpty();
+        options.ResolveColor(critThroughput).Should().BeNull();
+    }
+
+    [Fact]
     public void ObservableMetricSink_BroadcastsSnapshotsToSubscribers()
     {
         // Arrange
@@ -241,7 +391,7 @@ public class MetricSinkTests
         });
 
         options.AddObservableSink(out var observable);
-        options.ConfigureSinkTriggers(trig =>
+        options.ConfigureSinkSampling(trig =>
         {
             trig.EmitEveryNExecutions = 10;
             trig.EmitOnFailure = true;

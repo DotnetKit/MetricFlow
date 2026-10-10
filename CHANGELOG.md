@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.54] - 2026-10-09
+
+### Added
+
+- **Native Threshold Color Coding & Dynamic Color Selectors (`ConsoleMetricSinkOptions`)**:
+  - Declarative threshold rules via `opt.AddThreshold<DurationSnapshot>(warn, critical, ...)` to color-code snapshots based on latency thresholds (warning in DarkYellow/Orange, critical in Red, normal in Green).
+  - Generalized threshold overloads for `TimeSpan`, `double`, `long`, and custom predicate rules across snapshot types (`FailureSnapshot`, `ExceptionSnapshot`, `MemorySnapshot`, `ThroughputSnapshot`).
+  - Dynamic pattern-matching color selection via `opt.ColorSelector = snapshot => snapshot switch { ... }`.
+- **Native Asynchronous Stream Tracking (`TrackStream` for `IAsyncEnumerable<T>` and `IEnumerable<T>`)**:
+  - Added native extension methods `TrackStream<T>` on `IAsyncEnumerable<T>` and `IEnumerable<T>` for seamless streaming telemetry.
+  - Automatically measures execution duration across the stream lifetime, counts yielded items into `scope.SetItems(count)` for throughput calculation, and catches/records exceptions via `scope.SetException(ex)` without requiring manual `try/catch` or `using` blocks in business logic.
+  - Supports custom operation names, `[CallerMemberName]` resolution, custom tags, and metadata dictionaries.
+- **Hierarchical Metrics & Scope Correlation (`HierarchyCounter` & Execution Tree Rendering)**:
+  - Added native `HierarchyCounter` that correlates parent and child tracking scopes across asynchronous execution contexts (`AsyncLocal`) with zero manual token passing.
+  - Automatically calculates exclusive self-duration (`SelfDuration`) and self-allocated memory (`SelfAllocatedBytes`) by subtracting child metrics from total parent values.
+  - Generates strongly-typed `HierarchyTreeSnapshot` implementing `IMetricSnapshot` with tree formatting (`▼`, `├─`, `└─`, `│`).
+  - First-class tree rendering in `ConsoleMetricSink` with threshold color coding and dynamic color selectors per node.
+  - Automatic integration with OpenTelemetry `ActivitySource` (`"DotnetKit.MetricFlow"`), creating correlated parent-child distributed tracing spans with tags for duration, items, allocated bytes, and exception details.
+  - Fluent configuration via `options.AddHierarchyCounter()` and `tracker.GetHierarchySnapshot("MetricName")`.
+- **Configurable Counter Units & Custom Formatters (`ConsoleMetricSinkOptions`)**:
+  - Configurable unit representation and scaling for durations (`DurationUnit`: `Milliseconds`, `Seconds`, `Minutes`, `Hours`, `Auto`) and decimal precision (`DurationDecimals`).
+  - Configurable memory units (`MemoryUnit`: `Bytes`, `Kilobytes`, `Megabytes`, `Gigabytes`, `Auto`) and decimal precision (`MemoryDecimals`).
+  - Configurable throughput unit label (`ThroughputUnit`, e.g. `"req/s"` or `"items/s"`).
+  - Strongly-typed custom snapshot formatters via `opt.AddFormatter<TSnapshot>(Func<TSnapshot, string>)` and counter name formatters `opt.AddFormatter(string counterName, Func<IMetricSnapshot, string>)` for seamless custom counter support without overriding sinks.
+  - Automatic propagation of unit formatters to tree rendering in `HierarchyTreeSnapshot`.
+
+### Fixed
+
+- **XML Documentation Packaging**:
+  - Enabled `<GenerateDocumentationFile>true</GenerateDocumentationFile>` in exported project files (`DotnetKit.MetricFlow`, `DotnetKit.MetricFlow.AspNetCore`, and `DotnetKit.MetricFlow.OpenTelemetry`).
+  - Ensures compiler embeds triple-slash XML doc comments (`/// <summary>`) in the generated NuGet packages for developer IntelliSense and API documentation.
+
+---
+
 ## [1.0.53] - 2026-10-07
 
 ### Added
@@ -27,7 +61,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Configurable ANSI colorization (`Colorize`), timestamps, custom prefixes, and redirection to any `TextWriter` for testing.
   - Dedicated formatting for throughput rates, execution counts, and failure rates.
 - **Fluent Builder & DI Extensions**:
-  - Registered sinks on `MetricFlowOptions`: `options.AddSink(...)`, `options.AddConsoleSink(...)`, `options.AddObservableSink(...)`, and `options.ConfigureSinkTriggers(...)`.
+  - Registered sinks on `MetricFlowOptions`: `options.AddSink(...)`, `options.AddConsoleSink(...)`, `options.AddObservableSink(...)`, and `options.ConfigureSinkSampling(...)`.
   - Fluent builder chaining: `builder.AddConsoleSink(...)` and `builder.AddSink(...)`.
   - Automatic dependency injection discovery: automatically resolves any registered `IMetricSink` services from the DI container into metric trackers.
   - Manual and asynchronous flush support: `tracker.FlushSinks()` and `tracker.FlushSinksAsync()`.

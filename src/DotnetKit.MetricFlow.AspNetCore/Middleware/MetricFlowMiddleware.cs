@@ -24,6 +24,9 @@ public class MetricFlowMiddleware(
     };
     private readonly IMetricTracker _tracker = tracker ?? throw new ArgumentNullException(nameof(tracker));
 
+    /// <summary>
+    /// Initializes a new instance of <see cref="MetricFlowMiddleware"/>.
+    /// </summary>
     public MetricFlowMiddleware(
         RequestDelegate next,
         MetricFlowAspNetCoreOptions options,
@@ -31,7 +34,11 @@ public class MetricFlowMiddleware(
         : this(next, tracker, options, options)
     {
     }
-   // ReSharper disable once UnusedMember.Global - Invoked implicitly by ASP.NET Core pipeline convention
+
+    /// <summary>
+    /// Invokes the middleware to record HTTP request execution metrics.
+    /// </summary>
+    // ReSharper disable once UnusedMember.Global - Invoked implicitly by ASP.NET Core pipeline convention
     public async Task InvokeAsync(HttpContext context)
     {
         if (ShouldExclude(context))

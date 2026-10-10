@@ -4,6 +4,9 @@ using DotnetKit.MetricFlow.Meters;
 
 namespace DotnetKit.MetricFlow;
 
+/// <summary>
+/// Tracks the execution lifecycle of a code block or operation, notifying registered counters and meter bridges upon disposal.
+/// </summary>
 public class CodeTracker : IDisposable
 {
     private readonly ICounter[] _counters;
@@ -20,8 +23,18 @@ public class CodeTracker : IDisposable
     private Exception? _exception;
     private int _disposed;
 
+    /// <summary>
+    /// Gets the name of the metric or operation being tracked.
+    /// </summary>
     public string MetricName => _metricName;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CodeTracker"/> class.
+    /// </summary>
+    /// <param name="counters">The active counters to notify.</param>
+    /// <param name="metricName">The name of the metric.</param>
+    /// <param name="tags">Optional key-value tags.</param>
+    /// <param name="metadata">Optional numeric metadata.</param>
     public CodeTracker(
         ICounter[] counters,
         string metricName,
@@ -31,6 +44,14 @@ public class CodeTracker : IDisposable
     {
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CodeTracker"/> class with meter bridge support.
+    /// </summary>
+    /// <param name="counters">The active counters to notify.</param>
+    /// <param name="metricName">The name of the metric.</param>
+    /// <param name="tags">Optional key-value tags.</param>
+    /// <param name="metadata">Optional numeric metadata.</param>
+    /// <param name="meterBridge">Optional meter bridge connecting to System.Diagnostics.Metrics.</param>
     public CodeTracker(
         ICounter[] counters,
         string metricName,
@@ -41,6 +62,15 @@ public class CodeTracker : IDisposable
     {
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CodeTracker"/> class with meter bridge and completion callback support.
+    /// </summary>
+    /// <param name="counters">The active counters to notify.</param>
+    /// <param name="metricName">The name of the metric.</param>
+    /// <param name="tags">Optional key-value tags.</param>
+    /// <param name="metadata">Optional numeric metadata.</param>
+    /// <param name="meterBridge">Optional meter bridge connecting to System.Diagnostics.Metrics.</param>
+    /// <param name="onCompleted">Optional callback invoked upon operation completion.</param>
     public CodeTracker(
         ICounter[] counters,
         string metricName,
@@ -74,12 +104,22 @@ public class CodeTracker : IDisposable
         }
     }
 
+    /// <summary>
+    /// Marks the tracked operation as failed or successful.
+    /// </summary>
+    /// <param name="failed"><c>true</c> to mark as failed; <c>false</c> otherwise.</param>
+    /// <returns>This tracker instance for fluent chaining.</returns>
     public CodeTracker SetFailed(bool failed = true)
     {
         _failed = failed;
         return this;
     }
 
+    /// <summary>
+    /// Associates an exception with the tracked operation and marks it as failed.
+    /// </summary>
+    /// <param name="exception">The exception thrown during the operation.</param>
+    /// <returns>This tracker instance for fluent chaining.</returns>
     public CodeTracker SetException(Exception? exception)
     {
         _exception = exception;
@@ -90,6 +130,12 @@ public class CodeTracker : IDisposable
         return this;
     }
 
+    /// <summary>
+    /// Adds or updates a string tag for the tracked operation.
+    /// </summary>
+    /// <param name="key">The tag key.</param>
+    /// <param name="value">The tag value.</param>
+    /// <returns>This tracker instance for fluent chaining.</returns>
     public CodeTracker SetTag(string key, string value)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
@@ -98,6 +144,12 @@ public class CodeTracker : IDisposable
         return this;
     }
 
+    /// <summary>
+    /// Adds or updates a numeric metadata value for the tracked operation.
+    /// </summary>
+    /// <param name="key">The metadata key (e.g. "items", "bytes").</param>
+    /// <param name="value">The numeric value.</param>
+    /// <returns>This tracker instance for fluent chaining.</returns>
     public CodeTracker SetMetadata(string key, long value)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
@@ -106,10 +158,24 @@ public class CodeTracker : IDisposable
         return this;
     }
 
+    /// <summary>
+    /// Convenience helper to record the number of items processed by this operation.
+    /// </summary>
+    /// <param name="count">The item count.</param>
+    /// <returns>This tracker instance for fluent chaining.</returns>
     public CodeTracker SetItems(long count) => SetMetadata("items", count);
 
+    /// <summary>
+    /// Alias for <see cref="SetItems(long)"/>.
+    /// </summary>
+    /// <param name="count">The item count.</param>
+    /// <returns>This tracker instance for fluent chaining.</returns>
     public CodeTracker SetItemCount(long count) => SetItems(count);
 
+    /// <summary>
+    /// Disposes the tracking scope and records exit metrics across all counters and bridges.
+    /// </summary>
+    /// <param name="disposing"><c>true</c> if disposing managed resources; otherwise, <c>false</c>.</param>
     protected virtual void Dispose(bool disposing)
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0)
@@ -140,7 +206,9 @@ public class CodeTracker : IDisposable
         }
     }
 
-
+    /// <summary>
+    /// Completes and disposes the tracked operation scope, recording elapsed duration and outcome metrics.
+    /// </summary>
     public void Dispose()
     {
         Dispose(true);
