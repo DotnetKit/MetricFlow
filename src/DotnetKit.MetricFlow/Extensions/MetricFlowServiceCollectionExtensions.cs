@@ -130,6 +130,26 @@ public static class MetricFlowServiceCollectionExtensions
     }
 
     /// <summary>
+    /// Registers MetricFlow with a specific topic name and optional configuration.
+    /// Returns an <see cref="IMetricFlowBuilder"/> for fluent chaining.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="topic">The metric topic name.</param>
+    /// <param name="configure">Optional configuration action.</param>
+    /// <returns>The builder instance for fluent chaining.</returns>
+    public static IMetricFlowBuilder AddMetricFlow(
+        this IServiceCollection services,
+        string topic,
+        Action<MetricFlowOptions>? configure = null)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentException.ThrowIfNullOrWhiteSpace(topic);
+
+        services.AddMetricFlowTracker(topic, configure);
+        return new MetricFlowBuilder(services);
+    }
+
+    /// <summary>
     /// Registers a metric tracker for a specific topic, registering it as both a keyed service and in the <see cref="IMetricFlow"/> registry.
     /// </summary>
     /// <param name="services">The service collection.</param>
@@ -236,27 +256,7 @@ public static class MetricFlowServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Registers MetricFlow with a specific topic name and optional configuration.
-    /// Returns an <see cref="IMetricFlowBuilder"/> for fluent chaining.
-    /// </summary>
-    /// <param name="services">The service collection.</param>
-    /// <param name="topic">The metric topic name.</param>
-    /// <param name="configure">Optional configuration action.</param>
-    /// <returns>The builder instance for fluent chaining.</returns>
-    public static IMetricFlowBuilder AddMetricFlow(
-        this IServiceCollection services,
-        string topic,
-        Action<MetricFlowOptions>? configure = null)
-    {
-        ArgumentNullException.ThrowIfNull(services);
-        ArgumentException.ThrowIfNullOrWhiteSpace(topic);
-
-        services.AddMetricFlowTracker(topic, configure);
-        return new MetricFlowBuilder(services);
-    }
-
-    /// <summary>
-    /// Registers a metric tracker for a specific topic (alias for <see cref="AddMetricFlowTracker(IServiceCollection, string, Action{MetricFlowOptions}?)"/>).
+    /// Registers a metric tracker for a specific topic (alias for <see cref="AddMetricFlow(IServiceCollection, string, Action{MetricFlowOptions}?)"/>).
     /// Returns an <see cref="IMetricFlowBuilder"/> for fluent chaining.
     /// </summary>
     /// <param name="services">The service collection.</param>
@@ -267,16 +267,10 @@ public static class MetricFlowServiceCollectionExtensions
         this IServiceCollection services,
         string topic,
         Action<MetricFlowOptions>? configure = null)
-    {
-        ArgumentNullException.ThrowIfNull(services);
-        ArgumentException.ThrowIfNullOrWhiteSpace(topic);
-
-        services.AddMetricFlowTracker(topic, configure);
-        return new MetricFlowBuilder(services);
-    }
+        => services.AddMetricFlow(topic, configure);
 
     /// <summary>
-    /// Registers a default metric tracker with optional configuration.
+    /// Registers a default metric tracker with optional configuration (alias for <see cref="AddMetricFlow(IServiceCollection, Action{MetricFlowOptions}?)"/>).
     /// Returns an <see cref="IMetricFlowBuilder"/> for fluent chaining.
     /// </summary>
     /// <param name="services">The service collection.</param>
@@ -285,10 +279,5 @@ public static class MetricFlowServiceCollectionExtensions
     public static IMetricFlowBuilder AddMetricTracker(
         this IServiceCollection services,
         Action<MetricFlowOptions>? configure = null)
-    {
-        ArgumentNullException.ThrowIfNull(services);
-
-        services.AddMetricFlowTracker(configure);
-        return new MetricFlowBuilder(services);
-    }
+        => services.AddMetricFlow(configure);
 }

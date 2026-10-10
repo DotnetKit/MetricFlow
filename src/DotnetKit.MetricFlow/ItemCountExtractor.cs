@@ -53,11 +53,12 @@ internal static class ItemCountExtractor
 
         foreach (var (key, value) in tags)
         {
-            if (string.Equals(key, "items", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(key, "count", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(key, "batch_size", StringComparison.OrdinalIgnoreCase))
+            if ((string.Equals(key, "items", StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(key, "count", StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(key, "batch_size", StringComparison.OrdinalIgnoreCase)) &&
+                long.TryParse(value, out items))
             {
-                if (long.TryParse(value, out items)) return true;
+                return true;
             }
         }
 

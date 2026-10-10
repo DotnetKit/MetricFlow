@@ -76,26 +76,39 @@ public class ObservableMetricSink : IMetricSink, IObservable<IReadOnlyList<IMetr
     /// <inheritdoc />
     public void Dispose()
     {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// Releases the unmanaged resources used by the <see cref="ObservableMetricSink"/> and optionally releases the managed resources.
+    /// </summary>
+    /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
+    protected virtual void Dispose(bool disposing)
+    {
         if (_disposed)
         {
             return;
         }
 
         _disposed = true;
-        foreach (var observer in _observers.Values)
-        {
-            try
-            {
-                observer.OnCompleted();
-            }
-            catch
-            {
-                // Ignored during dispose
-            }
-        }
 
-        _observers.Clear();
-        GC.SuppressFinalize(this);
+        if (disposing)
+        {
+            foreach (var observer in _observers.Values)
+            {
+                try
+                {
+                    observer.OnCompleted();
+                }
+                catch
+                {
+                    // Ignored during dispose
+                }
+            }
+
+            _observers.Clear();
+        }
     }
 
     private void Unsubscribe(Guid id)
