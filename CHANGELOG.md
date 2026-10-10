@@ -61,7 +61,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Configurable ANSI colorization (`Colorize`), timestamps, custom prefixes, and redirection to any `TextWriter` for testing.
   - Dedicated formatting for throughput rates, execution counts, and failure rates.
 - **Fluent Builder & DI Extensions**:
-  - Registered sinks on `MetricFlowOptions`: `options.AddSink(...)`, `options.AddConsoleSink(...)`, `options.AddObservableSink(...)`, and `options.ConfigureSinkTriggers(...)`.
+  - Registered sinks on `MetricFlowOptions`: `options.AddSink(...)`, `options.AddConsoleSink(...)`, `options.AddObservableSink(...)`, and `options.ConfigureSinkSampling(...)`.
   - Fluent builder chaining: `builder.AddConsoleSink(...)` and `builder.AddSink(...)`.
   - Automatic dependency injection discovery: automatically resolves any registered `IMetricSink` services from the DI container into metric trackers.
   - Manual and asynchronous flush support: `tracker.FlushSinks()` and `tracker.FlushSinksAsync()`.

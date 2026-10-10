@@ -43,16 +43,16 @@ internal class Program
             });
 
             // 2. Configure execution-lifecycle sampling triggers (zero background timers!)
-            options.ConfigureSinkTriggers(trig =>
+            options.ConfigureSinkSampling(sampling =>
             {
                 // Stride trigger: Emit snapshots every 5 completed operations
-                trig.EmitEveryNExecutions = 5;
+                sampling.EmitEveryNExecutions = 5;
 
                 // Tail / Outlier trigger: Emit snapshots immediately when an operation fails
-                trig.EmitOnFailure = true;
+                sampling.EmitOnFailure = true;
 
                 // Latency trigger: Emit snapshots immediately if duration exceeds 100ms
-                trig.EmitOnSlowDurationThreshold = TimeSpan.FromMilliseconds(100);
+                sampling.EmitOnSlowDurationThreshold = TimeSpan.FromMilliseconds(100);
             });
         });
 

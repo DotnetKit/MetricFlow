@@ -59,7 +59,7 @@ services.AddMetricFlow("OrderService", options =>
     });
 
     // 2. Configure timer-free sampling triggers
-    options.ConfigureSinkTriggers(trig =>
+    options.ConfigureSinkSampling(trig =>
     {
         trig.EmitEveryNExecutions = 5;                              // Stride: every 5 executions
         trig.EmitOnSlowDurationThreshold = TimeSpan.FromMilliseconds(100); // Latency: > 100ms

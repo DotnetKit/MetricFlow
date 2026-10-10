@@ -391,7 +391,7 @@ public class MetricSinkTests
         });
 
         options.AddObservableSink(out var observable);
-        options.ConfigureSinkTriggers(trig =>
+        options.ConfigureSinkSampling(trig =>
         {
             trig.EmitEveryNExecutions = 10;
             trig.EmitOnFailure = true;

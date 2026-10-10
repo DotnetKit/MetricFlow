@@ -172,7 +172,7 @@ public class MetricFlowOptions
     /// </summary>
     /// <param name="configure">The configuration action.</param>
     /// <returns>This options instance for fluent chaining.</returns>
-    public MetricFlowOptions ConfigureSinkTriggers(Action<MetricSinkTriggerOptions> configure)
+    public MetricFlowOptions ConfigureSinkSampling(Action<MetricSinkTriggerOptions> configure)
     {
         ArgumentNullException.ThrowIfNull(configure);
         configure(SinkTriggers);
