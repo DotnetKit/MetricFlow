@@ -154,8 +154,38 @@ public class ConsoleMetricSink : IMetricSink
                 if (color && resolvedColor.HasValue) sb.Append(AnsiReset);
 
                 sb.Append(", Min: ").Append(options.FormatDuration(d.MinDuration))
-                  .Append(", Max: ").Append(options.FormatDuration(d.MaxDuration))
-                  .Append(", Total: ").Append(options.FormatDuration(d.TotalDuration));
+                  .Append(", Max: ").Append(options.FormatDuration(d.MaxDuration));
+
+                if (d.P50Duration.HasValue || d.P90Duration.HasValue || d.P95Duration.HasValue || d.P99Duration.HasValue)
+                {
+                    sb.Append(" (");
+                    var hasPrev = false;
+                    if (d.P50Duration.HasValue)
+                    {
+                        sb.Append("p50: ").Append(options.FormatDuration(d.P50Duration.Value));
+                        hasPrev = true;
+                    }
+                    if (d.P90Duration.HasValue)
+                    {
+                        if (hasPrev) sb.Append(", ");
+                        sb.Append("p90: ").Append(options.FormatDuration(d.P90Duration.Value));
+                        hasPrev = true;
+                    }
+                    if (d.P95Duration.HasValue)
+                    {
+                        if (hasPrev) sb.Append(", ");
+                        sb.Append("p95: ").Append(options.FormatDuration(d.P95Duration.Value));
+                        hasPrev = true;
+                    }
+                    if (d.P99Duration.HasValue)
+                    {
+                        if (hasPrev) sb.Append(", ");
+                        sb.Append("p99: ").Append(options.FormatDuration(d.P99Duration.Value));
+                    }
+                    sb.Append(')');
+                }
+
+                sb.Append(", Total: ").Append(options.FormatDuration(d.TotalDuration));
 
                 if (d.FailedCount > 0)
                 {

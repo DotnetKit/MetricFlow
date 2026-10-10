@@ -1,5 +1,6 @@
 using DotnetKit.MetricFlow;
 using DotnetKit.MetricFlow.Abstractions;
+using DotnetKit.MetricFlow.Counters;
 using DotnetKit.MetricFlow.Meters;
 using DotnetKit.MetricFlow.Sinks;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -80,7 +81,8 @@ public static class MetricFlowServiceCollectionExtensions
                         additionalCounters: defaultOptions.Counters,
                         meterBridge: meterBridge,
                         sinks: allSinks,
-                        sinkTriggers: defaultOptions.SinkTriggers);
+                        sinkTriggers: defaultOptions.SinkTriggers,
+                        durationCounter: new DurationCounter(DurationCounter.DefaultCounterName, defaultOptions.DurationOptions));
 
                     if (defaultOptions.AutoAddExceptionCounter)
                     {
@@ -155,6 +157,7 @@ public static class MetricFlowServiceCollectionExtensions
             opt.AutoAddExceptionCounter = trackerOptions.AutoAddExceptionCounter;
             opt.MeterOptions = trackerOptions.MeterOptions;
             opt.SinkTriggers = trackerOptions.SinkTriggers;
+            opt.DurationOptions = trackerOptions.DurationOptions;
             foreach (var sink in trackerOptions.Sinks)
             {
                 opt.Sinks.Add(sink);
@@ -196,7 +199,8 @@ public static class MetricFlowServiceCollectionExtensions
                 additionalCounters: trackerOptions.Counters,
                 meterBridge: meterBridge,
                 sinks: allSinks,
-                sinkTriggers: trackerOptions.SinkTriggers);
+                sinkTriggers: trackerOptions.SinkTriggers,
+                durationCounter: new DurationCounter(DurationCounter.DefaultCounterName, trackerOptions.DurationOptions));
 
             if (trackerOptions.AutoAddExceptionCounter)
             {

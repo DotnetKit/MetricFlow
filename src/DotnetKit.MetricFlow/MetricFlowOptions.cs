@@ -180,6 +180,31 @@ public class MetricFlowOptions
     }
 
     /// <summary>
+    /// Configures execution-lifecycle sampling triggers for emitting snapshots to sinks without a timer (alias for <see cref="ConfigureSinkSampling"/>).
+    /// </summary>
+    /// <param name="configure">The configuration action.</param>
+    /// <returns>This options instance for fluent chaining.</returns>
+    public MetricFlowOptions ConfigureSinkTriggers(Action<MetricSinkTriggerOptions> configure)
+        => ConfigureSinkSampling(configure);
+
+    /// <summary>
+    /// Configuration options for duration measurement and percentile calculation.
+    /// </summary>
+    public DurationCounterOptions DurationOptions { get; set; } = new();
+
+    /// <summary>
+    /// Configures the default duration counter options (e.g. enabling percentiles, reservoir size).
+    /// </summary>
+    /// <param name="configure">The configuration delegate.</param>
+    /// <returns>This options instance for fluent chaining.</returns>
+    public MetricFlowOptions ConfigureDuration(Action<DurationCounterOptions> configure)
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+        configure(DurationOptions);
+        return this;
+    }
+
+    /// <summary>
     /// Sampling rate between 0.0 and 1.0 (or null to track 100%). Defaults to 1.0.
     /// </summary>
     public double? SamplingRate { get; set; } = 1.0;
