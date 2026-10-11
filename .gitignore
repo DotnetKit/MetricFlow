@@ -396,3 +396,12 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+
+# DocFX documentation output and cache
+_site/
+api/
+.docfx/
+
+# Agent workspaces
+.agents/
+
