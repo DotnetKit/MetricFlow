@@ -58,7 +58,7 @@ internal class Program
                 });
 
                 // Configure timer-free lifecycle triggers (no background polling threads!)
-                options.ConfigureSinkTriggers(trig =>
+                options.ConfigureSinkSampling(trig =>
                 {
                     // Stride sampling: automatically log snapshots every 5 completed operations
                     trig.EmitEveryNExecutions = 5;

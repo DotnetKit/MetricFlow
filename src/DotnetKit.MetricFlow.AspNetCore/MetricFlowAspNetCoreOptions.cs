@@ -37,7 +37,7 @@ public class MetricFlowAspNetCoreOptions : MetricFlowOptions
     /// Whether to prefix the metric name with the HTTP method (e.g. "GET /weatherforecast").
     /// Defaults to false.
     /// </summary>
-    public bool IncludeHttpMethodInMetricName { get; set; } = false;
+    public bool IncludeHttpMethodInMetricName { get; set; }
 
     /// <summary>
     /// Exact request paths to exclude from metric tracking (case-insensitive).

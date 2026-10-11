@@ -51,7 +51,7 @@ public class MetricFlowMeterOptions
     /// If false, items measurements are only recorded when an item count is provided.
     /// Defaults to false.
     /// </summary>
-    public bool AlwaysRecordItems { get; set; } = false;
+    public bool AlwaysRecordItems { get; set; }
 
     /// <summary>
     /// Instrument naming convention. Defaults to <see cref="MetricInstrumentNamingConvention.PerMetricName"/>.

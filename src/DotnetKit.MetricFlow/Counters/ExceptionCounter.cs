@@ -59,7 +59,7 @@ public class ExceptionCounter : ICounter
         public long TotalOperations => Interlocked.Read(ref _totalOperations);
         public long TotalExceptions => Interlocked.Read(ref _totalExceptions);
         public long TotalFailures => TotalExceptions;
-        public IReadOnlyDictionary<string, long> ExceptionsByType => new Dictionary<string, long>(_exceptionsByType);
+        public IReadOnlyDictionary<string, long> ExceptionsByType => _exceptionsByType;
 
         public void Record(Exception? exception)
         {
@@ -81,7 +81,7 @@ public class ExceptionCounter : ICounter
                 CounterName: counterName,
                 TotalOperations: TotalOperations,
                 TotalExceptions: TotalExceptions,
-                ExceptionsByType: ExceptionsByType,
+                ExceptionsByType: new Dictionary<string, long>(_exceptionsByType),
                 Timestamp: DateTime.UtcNow
             );
         }

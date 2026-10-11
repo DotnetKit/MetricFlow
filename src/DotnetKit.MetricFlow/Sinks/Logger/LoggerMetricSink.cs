@@ -169,6 +169,49 @@ public class LoggerMetricSink : IMetricSink
                 }
                 break;
 
+            case DurationSnapshot d:
+                if (string.IsNullOrEmpty(prefixText))
+                {
+                    if (d.P50Duration.HasValue || d.P95Duration.HasValue)
+                    {
+                        logger.Log(level, _options.EventId,
+                            "[{CounterName}:{MetricName}] Avg: {AvgMs:F2}ms, Min: {MinMs:F2}ms, Max: {MaxMs:F2}ms, p50: {P50Ms:F2}ms, p95: {P95Ms:F2}ms, p99: {P99Ms:F2}ms, Total: {TotalMs:F2}ms",
+                            d.CounterName, d.MetricName,
+                            d.AverageDuration.TotalMilliseconds, d.MinDuration.TotalMilliseconds, d.MaxDuration.TotalMilliseconds,
+                            d.P50Duration?.TotalMilliseconds ?? 0, d.P95Duration?.TotalMilliseconds ?? 0, d.P99Duration?.TotalMilliseconds ?? 0,
+                            d.TotalDuration.TotalMilliseconds);
+                    }
+                    else
+                    {
+                        logger.Log(level, _options.EventId,
+                            "[{CounterName}:{MetricName}] Avg: {AvgMs:F2}ms, Min: {MinMs:F2}ms, Max: {MaxMs:F2}ms, Total: {TotalMs:F2}ms",
+                            d.CounterName, d.MetricName,
+                            d.AverageDuration.TotalMilliseconds, d.MinDuration.TotalMilliseconds, d.MaxDuration.TotalMilliseconds,
+                            d.TotalDuration.TotalMilliseconds);
+                    }
+                }
+                else
+                {
+                    if (d.P50Duration.HasValue || d.P95Duration.HasValue)
+                    {
+                        logger.Log(level, _options.EventId,
+                            "{Prefix}[{CounterName}:{MetricName}] Avg: {AvgMs:F2}ms, Min: {MinMs:F2}ms, Max: {MaxMs:F2}ms, p50: {P50Ms:F2}ms, p95: {P95Ms:F2}ms, p99: {P99Ms:F2}ms, Total: {TotalMs:F2}ms",
+                            prefixText, d.CounterName, d.MetricName,
+                            d.AverageDuration.TotalMilliseconds, d.MinDuration.TotalMilliseconds, d.MaxDuration.TotalMilliseconds,
+                            d.P50Duration?.TotalMilliseconds ?? 0, d.P95Duration?.TotalMilliseconds ?? 0, d.P99Duration?.TotalMilliseconds ?? 0,
+                            d.TotalDuration.TotalMilliseconds);
+                    }
+                    else
+                    {
+                        logger.Log(level, _options.EventId,
+                            "{Prefix}[{CounterName}:{MetricName}] Avg: {AvgMs:F2}ms, Min: {MinMs:F2}ms, Max: {MaxMs:F2}ms, Total: {TotalMs:F2}ms",
+                            prefixText, d.CounterName, d.MetricName,
+                            d.AverageDuration.TotalMilliseconds, d.MinDuration.TotalMilliseconds, d.MaxDuration.TotalMilliseconds,
+                            d.TotalDuration.TotalMilliseconds);
+                    }
+                }
+                break;
+
             default:
                 var details = CleanMultiline(snapshot.ToFormattedString());
                 if (string.IsNullOrEmpty(prefixText))
@@ -213,6 +256,19 @@ public class LoggerMetricSink : IMetricSink
 
         switch (snapshot)
         {
+            case DurationSnapshot d:
+                sb.Append("Avg: ").Append(d.AverageDuration.TotalMilliseconds.ToString("F2", CultureInfo.InvariantCulture)).Append("ms, ")
+                  .Append("Min: ").Append(d.MinDuration.TotalMilliseconds.ToString("F2", CultureInfo.InvariantCulture)).Append("ms, ")
+                  .Append("Max: ").Append(d.MaxDuration.TotalMilliseconds.ToString("F2", CultureInfo.InvariantCulture)).Append("ms");
+                if (d.P50Duration.HasValue || d.P95Duration.HasValue || d.P99Duration.HasValue)
+                {
+                    sb.Append(" (p50: ").Append((d.P50Duration?.TotalMilliseconds ?? 0).ToString("F2", CultureInfo.InvariantCulture)).Append("ms, ")
+                      .Append("p95: ").Append((d.P95Duration?.TotalMilliseconds ?? 0).ToString("F2", CultureInfo.InvariantCulture)).Append("ms, ")
+                      .Append("p99: ").Append((d.P99Duration?.TotalMilliseconds ?? 0).ToString("F2", CultureInfo.InvariantCulture)).Append("ms)");
+                }
+                sb.Append(", Total: ").Append(d.TotalDuration.TotalMilliseconds.ToString("F2", CultureInfo.InvariantCulture)).Append("ms");
+                break;
+
             case ThroughputSnapshot tp:
                 sb.Append("TotalItems: ").Append(tp.TotalItems)
                   .Append(", Operations: ").Append(tp.TotalOperations)

@@ -58,12 +58,10 @@ public class MetricSinkTriggerOptions
             return true;
         }
 
-        if (EmitSampleRate.HasValue && EmitSampleRate.Value > 0)
+        if (EmitSampleRate.HasValue && EmitSampleRate.Value > 0 &&
+            (EmitSampleRate.Value >= 1.0 || Random.Shared.NextDouble() < EmitSampleRate.Value))
         {
-            if (EmitSampleRate.Value >= 1.0 || Random.Shared.NextDouble() < EmitSampleRate.Value)
-            {
-                return true;
-            }
+            return true;
         }
 
         return false;

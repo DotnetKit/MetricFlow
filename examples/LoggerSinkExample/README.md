@@ -77,7 +77,7 @@ services.AddMetricFlow("PaymentService", options =>
     });
 
     // Configure lifecycle sampling triggers
-    options.ConfigureSinkTriggers(trig =>
+    options.ConfigureSinkSampling(trig =>
     {
         trig.EmitEveryNExecutions = 5;                              // Stride: every 5 executions
         trig.EmitOnSlowDurationThreshold = TimeSpan.FromMilliseconds(100); // Latency: > 100ms

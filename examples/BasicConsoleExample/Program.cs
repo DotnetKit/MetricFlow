@@ -4,7 +4,7 @@ namespace BasicConsoleExample;
 
 internal class Program
 {
-    private static async Task Main(string[] args)
+    private static async Task Main(string[] _)
     {
         // 1. Initialize tracker with topic name and optional topic tags
         // By default, MetricTracker registers DurationCounter with zero additional counters.
