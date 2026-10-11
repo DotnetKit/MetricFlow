@@ -42,18 +42,18 @@ flowchart TD
 
     subgraph Counters["Pluggable Counters (Pattern A)"]
         direction TB
-        C1["DurationCounter\n(Captures: Stopwatch ticks)"]
-        C2["ThroughputCounter\n(Captures: Stopwatch ticks & Items)"]
-        C3["MemoryCounter\n(Captures: Allocated bytes)"]
-        C4["ExceptionCounter\n(Captures: Exceptions)"]
-        C5["DimensionCounter\n(Captures: Dimensions & cardinality)"]
-        C6["CustomCounter\n(Captures: Arbitrary state)"]
+        C1["DurationCounter<br/>(Captures: Stopwatch ticks)"]
+        C2["ThroughputCounter<br/>(Captures: Stopwatch ticks & Items)"]
+        C3["MemoryCounter<br/>(Captures: Allocated bytes)"]
+        C4["ExceptionCounter<br/>(Captures: Exceptions)"]
+        C5["DimensionCounter<br/>(Captures: Dimensions & cardinality)"]
+        C6["CustomCounter<br/>(Captures: Arbitrary state)"]
     end
 
     Call --> Scope
     ActiveSnapshot -.->|Read by| Scope
-    Scope -->|OnIn(InContext) -> state| Counters
-    Scope -->|OnOut(state, OutContext)| Counters
+    Scope -->|"OnIn(InContext) -> state"| Counters
+    Scope -->|"OnOut(state, OutContext)"| Counters
 ```
 
 ---

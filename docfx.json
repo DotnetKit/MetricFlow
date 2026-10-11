@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json.schemastore.org/docfx",
+  "metadata": [
+    {
+      "src": [
+        {
+          "files": [
+            "src/DotnetKit.MetricFlow/DotnetKit.MetricFlow.csproj",
+            "src/DotnetKit.MetricFlow.AspNetCore/DotnetKit.MetricFlow.AspNetCore.csproj",
+            "src/DotnetKit.MetricFlow.OpenTelemetry/DotnetKit.MetricFlow.OpenTelemetry.csproj"
+          ]
+        }
+      ],
+      "dest": "api",
+      "includePrivateMembers": false
+    }
+  ],
+  "build": {
+    "content": [
+      {
+        "files": [
+          "api/**.yml"
+        ]
+      },
+      {
+        "files": [
+          "docs/**.md",
+          "docs/**/toc.yml",
+          "toc.yml",
+          "index.md",
+          "README.md",
+          "ARCHITECTURE.md",
+          "CHANGELOG.md",
+          "ROADMAP.md"
+        ]
+      }
+    ],
+    "resource": [
+      {
+        "files": [
+          "images/**"
+        ]
+      }
+    ],
+    "output": "_site",
+    "template": [
+      "default",
+      "modern",
+      "templates"
+    ],
+    "globalMetadata": {
+      "_appName": "MetricFlow",
+      "_appTitle": "MetricFlow Documentation",
+      "_appLogoPath": "images/dotnetkit.png",
+      "_appFaviconPath": "images/dotnetkit.png",
+      "_enableSearch": true,
+      "_gitContribute": {
+        "repo": "https://github.com/DotnetKit/MetricFlow",
+        "branch": "main"
+      }
+    }
+  }
+}
