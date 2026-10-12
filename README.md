@@ -8,6 +8,8 @@
 
 MetricFlow is a lightweight and standalone .NET library designed to simplify the way developers define and track technical and business related metrics (such as counters, timers, throughput and dimensional breakdowns).
 
+[Full documentation](https://dotnetkit.github.io/MetricFlow/)
+
 ## What Can We Do with MetricFlow?
 
 MetricFlow provides domain-oriented observability to **monitor an entire application** or surgically profile **specific portions of your code** (methods, background loops, external calls, batch jobs).
