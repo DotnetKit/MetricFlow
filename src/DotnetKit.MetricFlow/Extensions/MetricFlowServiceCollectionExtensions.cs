@@ -3,7 +3,9 @@ using DotnetKit.MetricFlow.Abstractions;
 using DotnetKit.MetricFlow.Counters;
 using DotnetKit.MetricFlow.Meters;
 using DotnetKit.MetricFlow.Sinks;
+using DotnetKit.MetricFlow.Sinks.Logger;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 
 // ReSharper disable once CheckNamespace
 namespace Microsoft.Extensions.DependencyInjection;
@@ -61,12 +63,12 @@ public static class MetricFlowServiceCollectionExtensions
                     var diSinks = sp.GetServices<IMetricSink>();
                     var allSinks = defaultOptions.Sinks.Concat(diSinks).Distinct().ToList();
 
-                    var loggerFactory = sp.GetService<Microsoft.Extensions.Logging.ILoggerFactory>();
+                    var loggerFactory = sp.GetService<ILoggerFactory>();
                     if (loggerFactory != null)
                     {
                         foreach (var sink in allSinks)
                         {
-                            if (sink is DotnetKit.MetricFlow.Sinks.Logger.LoggerMetricSink loggerSink && loggerSink.NeedsLogger)
+                            if (sink is LoggerMetricSink loggerSink && loggerSink.NeedsLogger)
                             {
                                 loggerSink.SetLogger(loggerFactory.CreateLogger(loggerSink.Options.CategoryName));
                             }
@@ -199,12 +201,12 @@ public static class MetricFlowServiceCollectionExtensions
             var diSinks = sp.GetServices<IMetricSink>();
             var allSinks = trackerOptions.Sinks.Concat(diSinks).Distinct().ToList();
 
-            var loggerFactory = sp.GetService<Microsoft.Extensions.Logging.ILoggerFactory>();
+            var loggerFactory = sp.GetService<ILoggerFactory>();
             if (loggerFactory != null)
             {
                 foreach (var sink in allSinks)
                 {
-                    if (sink is DotnetKit.MetricFlow.Sinks.Logger.LoggerMetricSink loggerSink && loggerSink.NeedsLogger)
+                    if (sink is LoggerMetricSink loggerSink && loggerSink.NeedsLogger)
                     {
                         loggerSink.SetLogger(loggerFactory.CreateLogger(loggerSink.Options.CategoryName));
                     }

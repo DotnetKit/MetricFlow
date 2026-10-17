@@ -1,4 +1,5 @@
 using DotnetKit.MetricFlow;
+using DotnetKit.MetricFlow.Abstractions;
 using DotnetKit.MetricFlow.Counters;
 using FluentAssertions;
 using Xunit;
@@ -489,11 +490,11 @@ public class DimensionCounterTests
         counter.GetState("NonExistent").Should().BeNull();
 
         // Record some operations directly via OnIn and OnOut
-        var inCtx = new DotnetKit.MetricFlow.Abstractions.InContext("ProcessPayment");
+        var inCtx = new InContext("ProcessPayment");
         var inState = counter.OnIn(in inCtx);
         inState.Should().BeNull();
 
-        var outCtx1 = new DotnetKit.MetricFlow.Abstractions.OutContext(
+        var outCtx1 = new OutContext(
             "ProcessPayment",
             failed: false,
             exception: null,
@@ -502,7 +503,7 @@ public class DimensionCounterTests
         );
         counter.OnOut(inState, in outCtx1);
 
-        var outCtx2 = new DotnetKit.MetricFlow.Abstractions.OutContext(
+        var outCtx2 = new OutContext(
             "ProcessPayment",
             failed: true,
             exception: null,
@@ -511,7 +512,7 @@ public class DimensionCounterTests
         );
         counter.OnOut(inState, in outCtx2);
 
-        var outCtxUntagged = new DotnetKit.MetricFlow.Abstractions.OutContext(
+        var outCtxUntagged = new OutContext(
             "ProcessPayment",
             failed: false,
             exception: null,

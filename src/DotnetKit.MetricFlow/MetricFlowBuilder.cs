@@ -1,6 +1,11 @@
 using System.Collections;
 using DotnetKit.MetricFlow.Abstractions;
+using DotnetKit.MetricFlow.Sinks;
+using DotnetKit.MetricFlow.Sinks.Console;
+using DotnetKit.MetricFlow.Sinks.Logger;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace DotnetKit.MetricFlow;
 
@@ -36,40 +41,40 @@ public class MetricFlowBuilder : IMetricFlowBuilder
     }
 
     /// <inheritdoc />
-    public IMetricFlowBuilder AddConsoleSink(Action<DotnetKit.MetricFlow.Sinks.Console.ConsoleMetricSinkOptions>? configure = null)
+    public IMetricFlowBuilder AddConsoleSink(Action<ConsoleMetricSinkOptions>? configure = null)
     {
-        var options = new DotnetKit.MetricFlow.Sinks.Console.ConsoleMetricSinkOptions();
+        var options = new ConsoleMetricSinkOptions();
         configure?.Invoke(options);
-        return AddSink(new DotnetKit.MetricFlow.Sinks.Console.ConsoleMetricSink(options));
+        return AddSink(new ConsoleMetricSink(options));
     }
 
     /// <inheritdoc />
-    public IMetricFlowBuilder AddLoggerSink(Action<DotnetKit.MetricFlow.Sinks.Logger.LoggerMetricSinkOptions>? configure = null)
+    public IMetricFlowBuilder AddLoggerSink(Action<LoggerMetricSinkOptions>? configure = null)
     {
-        Current.AddSingleton<DotnetKit.MetricFlow.Sinks.IMetricSink>(sp =>
+        Current.AddSingleton<IMetricSink>(sp =>
         {
-            var options = new DotnetKit.MetricFlow.Sinks.Logger.LoggerMetricSinkOptions();
+            var options = new LoggerMetricSinkOptions();
             configure?.Invoke(options);
             var logger = options.Logger
-                ?? sp.GetService<Microsoft.Extensions.Logging.ILoggerFactory>()?.CreateLogger(options.CategoryName)
-                ?? sp.GetService<Microsoft.Extensions.Logging.ILogger>()
-                ?? Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
-            return new DotnetKit.MetricFlow.Sinks.Logger.LoggerMetricSink(logger, options);
+                ?? sp.GetService<ILoggerFactory>()?.CreateLogger(options.CategoryName)
+                ?? sp.GetService<ILogger>()
+                ?? NullLogger.Instance;
+            return new LoggerMetricSink(logger, options);
         });
         return this;
     }
 
     /// <inheritdoc />
-    public IMetricFlowBuilder AddLoggerSink(Microsoft.Extensions.Logging.ILogger logger, Action<DotnetKit.MetricFlow.Sinks.Logger.LoggerMetricSinkOptions>? configure = null)
+    public IMetricFlowBuilder AddLoggerSink(ILogger logger, Action<LoggerMetricSinkOptions>? configure = null)
     {
         ArgumentNullException.ThrowIfNull(logger);
-        var options = new DotnetKit.MetricFlow.Sinks.Logger.LoggerMetricSinkOptions();
+        var options = new LoggerMetricSinkOptions();
         configure?.Invoke(options);
-        return AddSink(new DotnetKit.MetricFlow.Sinks.Logger.LoggerMetricSink(logger, options));
+        return AddSink(new LoggerMetricSink(logger, options));
     }
 
     /// <inheritdoc />
-    public IMetricFlowBuilder AddSink(DotnetKit.MetricFlow.Sinks.IMetricSink sink)
+    public IMetricFlowBuilder AddSink(IMetricSink sink)
     {
         ArgumentNullException.ThrowIfNull(sink);
         Current.AddSingleton(sink);

@@ -1,4 +1,5 @@
 using DotnetKit.MetricFlow;
+using DotnetKit.MetricFlow.Abstractions;
 using DotnetKit.MetricFlow.Counters;
 using DotnetKit.MetricFlow.Sinks.Console;
 using DotnetKit.MetricFlow.Sinks.Logger;
@@ -77,7 +78,7 @@ public class DurationPercentileTests
         var counter = new DurationCounter();
         for (int i = 1; i <= 100; i++)
         {
-            var ctx = new DotnetKit.MetricFlow.Abstractions.OutContext(
+            var ctx = new OutContext(
                 metricName: "SearchQuery",
                 failed: false,
                 exception: null,
@@ -110,7 +111,7 @@ public class DurationPercentileTests
     {
         // Arrange
         var counter = new DurationCounter(new DurationCounterOptions { EnablePercentiles = false });
-        var ctx = new DotnetKit.MetricFlow.Abstractions.OutContext(
+        var ctx = new OutContext(
             metricName: "QuickOp",
             failed: false,
             exception: null,
