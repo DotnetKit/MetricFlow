@@ -233,6 +233,19 @@ public static class TrackerCounterExtensions
     }
 
     /// <summary>
+    /// Retrieves the <see cref="FailureSnapshot"/> for a specific metric name, or <c>null</c> if not tracked.
+    /// </summary>
+    /// <param name="tracker">The tracker instance.</param>
+    /// <param name="metricName">The name of the metric.</param>
+    /// <param name="counterName">Optional counter name. Defaults to <see cref="FailureCounter.DefaultCounterName"/>.</param>
+    /// <returns>The failure snapshot or null.</returns>
+    public static FailureSnapshot? GetFailureSnapshot(
+        this IMetricTracker tracker,
+        string metricName,
+        string counterName = FailureCounter.DefaultCounterName)
+        => tracker.GetFailureShapshot(metricName, counterName);
+
+    /// <summary>
     /// Retrieves the <see cref="HierarchyTreeSnapshot"/> for a specific metric name, or <c>null</c> if not tracked.
     /// </summary>
     /// <param name="tracker">The tracker instance.</param>
@@ -340,4 +353,49 @@ public static class TrackerCounterExtensions
                tracker.GetSnapshot<DimensionSnapshot>(metricName, dimensionName) ??
                tracker.GetSnapshot<DimensionSnapshot>(metricName, $"TagBreakdown:{dimensionName}");
     }
+
+    /// <summary>
+    /// Calculates the total allocated memory in bytes across all operations tracked by this tracker or snapshot source.
+    /// </summary>
+    /// <param name="source">The metric tracker or snapshot source.</param>
+    /// <param name="counterName">Optional counter name filter. Defaults to <see cref="MemoryCounter.DefaultCounterName"/>.</param>
+    /// <returns>The total allocated bytes across all matching memory snapshots.</returns>
+    public static long GetTotalMemoryAllocated(
+        this IMetricSnapshotsSource source,
+        string counterName = MemoryCounter.DefaultCounterName)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        return source.GetAllSnapshots()
+            .OfType<MemorySnapshot>()
+            .Where(s => string.IsNullOrEmpty(counterName) || string.Equals(s.CounterName, counterName, StringComparison.OrdinalIgnoreCase))
+            .Sum(s => s.TotalAllocatedBytes);
+    }
+
+    /// <summary>
+    /// Calculates the total items processed across all operations tracked by this tracker or snapshot source.
+    /// </summary>
+    /// <param name="source">The metric tracker or snapshot source.</param>
+    /// <param name="counterName">Optional counter name filter. When null, matches any throughput/item counter.</param>
+    /// <returns>The total items processed across all matching throughput snapshots.</returns>
+    public static long GetTotalItemsProcessed(
+        this IMetricSnapshotsSource source,
+        string? counterName = null)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        return source.GetAllSnapshots()
+            .OfType<ThroughputSnapshot>()
+            .Where(s => string.IsNullOrEmpty(counterName) || string.Equals(s.CounterName, counterName, StringComparison.OrdinalIgnoreCase))
+            .Sum(s => s.TotalItems);
+    }
+
+    /// <summary>
+    /// Calculates the total items processed across all operations tracked by this tracker or snapshot source (alias for <see cref="GetTotalItemsProcessed"/>).
+    /// </summary>
+    /// <param name="source">The metric tracker or snapshot source.</param>
+    /// <param name="counterName">Optional counter name filter.</param>
+    /// <returns>The total items processed across all matching throughput snapshots.</returns>
+    public static long GetTotalItems(
+        this IMetricSnapshotsSource source,
+        string? counterName = null)
+        => source.GetTotalItemsProcessed(counterName);
 }

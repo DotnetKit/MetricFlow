@@ -423,6 +423,11 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
     public IEnumerable<IMetricSink> GetSinks() => _sinks.Values;
 
     /// <summary>
+    /// Gets the execution lifecycle triggers configured for this tracker's sinks.
+    /// </summary>
+    public MetricSinkTriggerOptions SinkTriggers => _sinkTriggers;
+
+    /// <summary>
     /// Synchronously flushes all active snapshots across all registered counters to all registered sinks.
     /// </summary>
     public void FlushSinks()

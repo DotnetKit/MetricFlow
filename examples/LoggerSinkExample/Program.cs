@@ -86,21 +86,14 @@ internal class Program
             var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
             var standaloneLogger = loggerFactory.CreateLogger("PayoutService.Telemetry");
 
-            var standaloneOptions = new MetricFlowOptions
-            {
-                Topic = "PayoutService"
-            }
-            .AddThroughputCounter()
-            .AddFailureCounter();
-
-            // Register logger sink passing the ILogger instance directly
-            standaloneOptions.AddLoggerSink(standaloneLogger, opt =>
-            {
-                opt.LogLevel = LogLevel.Information;
-                opt.Prefix = "[PayoutService]";
-            });
-
-            using var payoutTracker = new MetricTracker(standaloneOptions);
+            using var payoutTracker = new MetricTracker("PayoutService")
+                .AddThroughputCounter()
+                .AddFailureCounter()
+                .AddLoggerSink(standaloneLogger, opt =>
+                {
+                    opt.LogLevel = LogLevel.Information;
+                    opt.Prefix = "[PayoutService]";
+                });
 
             Console.WriteLine("Tracking payout operations in standalone tracker...");
             for (int i = 1; i <= 3; i++)
@@ -111,6 +104,7 @@ internal class Program
                 }
             }
 
+            Console.WriteLine($"Total payout items processed across operations: {payoutTracker.GetTotalItemsProcessed()}");
             Console.WriteLine("Manually flushing sinks at shutdown via FlushSinks()...\n");
             payoutTracker.FlushSinks();
 

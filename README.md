@@ -323,6 +323,43 @@ ExceptionSnapshot? errors2   = tracker.GetExceptionSnapshot("ProcessOrder");
 FailureSnapshot? failures2   = tracker.GetFailureSnapshot("ProcessOrder");
 MemorySnapshot? memory2      = tracker.GetMemorySnapshot("ProcessOrder");
 DimensionSnapshot? dimension = tracker.GetDimensionSnapshot("ProcessOrder", "region");
+
+// 5. Topic-level cumulative aggregate queries across all monitored operations
+long totalAllocatedBytes     = tracker.GetTotalMemoryAllocated();
+long totalItemsProcessed    = tracker.GetTotalItemsProcessed(); // or tracker.GetTotalItems()
+```
+
+##### Structured Sinks, Standalone Triggers & Periodic Flush
+
+MetricFlow sinks can be attached directly to standalone `MetricTracker` instances or configured via Dependency Injection. Sinks emit snapshots either on execution-lifecycle triggers (zero background timer overhead) or on a periodic interval:
+
+```csharp
+// Fluent standalone tracker with console sink, triggers, and periodic flush
+using var tracker = new MetricTracker("OrderProcessing")
+    .AddThroughputCounter()
+    .AddMemoryCounter()
+    .AddFailureCounter()
+    .AddConsoleSink(opt =>
+    {
+        opt.Colorize = true;
+        opt.Prefix = "[OrderProcessing]";
+    })
+    .AddLoggerSink(logger, opt =>
+    {
+        opt.LogLevel = LogLevel.Information;
+    })
+    .ConfigureSinkTriggers(trig =>
+    {
+        trig.EmitEveryNExecutions = 25;                     // Emit snapshot every 25 operations
+        trig.EmitOnFailure = true;                          // Emit immediately on error/exception
+        trig.EmitOnSlowDurationThreshold = TimeSpan.FromMilliseconds(250); // Emit on slow operations
+    });
+
+// Optional: Enable periodic background sink flushes every 5 seconds (flushes final metrics on dispose)
+using var flushToken = tracker.EnablePeriodicFlush(TimeSpan.FromSeconds(5));
+
+// Manual flush is always available
+tracker.FlushSinks();
 ```
 
 #### 4. Dependency Injection (Console Apps, Workers & Daemons)
