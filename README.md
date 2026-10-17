@@ -7,8 +7,8 @@
 [![DotnetKit.MetricFlow.OpenTelemetry](https://img.shields.io/nuget/v/DotnetKit.MetricFlow.OpenTelemetry)](https://www.nuget.org/packages/DotnetKit.MetricFlow.OpenTelemetry)
 
 MetricFlow is a lightweight and standalone .NET library designed to simplify the way developers define and track technical and business related metrics (such as counters, timers, throughput and dimensional breakdowns).
-
-[Full documentation](https://dotnetkit.github.io/MetricFlow/)
+Full documentation, architecture guides, and API references are available on our [GitHub Pages Documentation Portal](https://dotnetkit.github.io/MetricFlow/)
+ 
 
 ## What Can We Do with MetricFlow?
 
