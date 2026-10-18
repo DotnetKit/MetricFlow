@@ -2,7 +2,6 @@ using DotnetKit.MetricFlow;
 using DotnetKit.MetricFlow.Abstractions;
 using DotnetKit.MetricFlow.Counters;
 using DotnetKit.MetricFlow.Sinks.Console;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace ConsoleSinkExample;
 
@@ -15,52 +14,41 @@ internal class Program
         Console.WriteLine("================================================================\n");
 
         // ---------------------------------------------------------------------
-        // Scenario 1: Dependency Injection & Timer-Free Lifecycle Triggers
+        // Scenario 1: Standalone MetricTracker & Timer-Free Lifecycle Triggers
         // ---------------------------------------------------------------------
-        Console.WriteLine(">>> [Scenario 1] Dependency Injection & Timer-Free Lifecycle Triggers <<<\n");
+        Console.WriteLine(">>> [Scenario 1] Standalone MetricTracker & Timer-Free Lifecycle Triggers <<<\n");
 
-        var services = new ServiceCollection();
-
-        // Register MetricFlow with the structured console sink and execution triggers
-        services.AddMetricFlow("OrderService", options =>
+        // 1. Initialize tracker with topic name and topic tags
+        using var orderTracker = new MetricTracker("OrderService", new()
         {
-            // Configure topic tags and counters
-            options.AddTagsEnricher(tags =>
-            {
-                tags["environment"] = "Production";
-                tags["region"] = "us-east-1";
-            })
-            .AddThroughputCounter()
-            .AddFailureCounter();
+            ["environment"] = "Production",
+            ["region"] = "us-east-1"
+        })
+        .AddThroughputCounter()
+        .AddFailureCounter()
+        // 2. Register ConsoleMetricSink with custom formatting options directly on tracker
+        .AddConsoleSink(opt =>
+        {
+            opt.Colorize = true;                 // Enable ANSI color coding
+            opt.IncludeTimestamp = true;         // Include timestamp prefix
+            opt.TimestampFormat = "HH:mm:ss.fff";// Millisecond precision
+            opt.Prefix = "[OrderService:Sink]";  // Log prefix tag
+        })
+        // 3. Configure execution-lifecycle sampling triggers (zero background timers!)
+        .ConfigureSinkSampling(sampling =>
+        {
+            // Stride trigger: Emit snapshots every 5 completed operations
+            sampling.EmitEveryNExecutions = 5;
 
-            // 1. Register ConsoleMetricSink with custom formatting options
-            options.AddConsoleSink(opt =>
-            {
-                opt.Colorize = true;                 // Enable ANSI color coding
-                opt.IncludeTimestamp = true;         // Include timestamp prefix
-                opt.TimestampFormat = "HH:mm:ss.fff";// Millisecond precision
-                opt.Prefix = "[OrderService:Sink]";  // Log prefix tag
-            });
+            // Tail / Outlier trigger: Emit snapshots immediately when an operation fails
+            sampling.EmitOnFailure = true;
 
-            // 2. Configure execution-lifecycle sampling triggers (zero background timers!)
-            options.ConfigureSinkSampling(sampling =>
-            {
-                // Stride trigger: Emit snapshots every 5 completed operations
-                sampling.EmitEveryNExecutions = 5;
-
-                // Tail / Outlier trigger: Emit snapshots immediately when an operation fails
-                sampling.EmitOnFailure = true;
-
-                // Latency trigger: Emit snapshots immediately if duration exceeds 100ms
-                sampling.EmitOnSlowDurationThreshold = TimeSpan.FromMilliseconds(100);
-            });
+            // Latency trigger: Emit snapshots immediately if duration exceeds 100ms
+            sampling.EmitOnSlowDurationThreshold = TimeSpan.FromMilliseconds(100);
         });
 
-        // Register application worker service
-        services.AddTransient<OrderFulfillmentService>();
-
-        await using var provider = services.BuildServiceProvider();
-        var orderService = provider.GetRequiredService<OrderFulfillmentService>();
+        // Pass the standalone tracker directly to the service (zero DI container needed)
+        var orderService = new OrderFulfillmentService(orderTracker);
 
         // Execute orders to demonstrate triggers firing in real-time
         await orderService.ProcessOrdersAsync();

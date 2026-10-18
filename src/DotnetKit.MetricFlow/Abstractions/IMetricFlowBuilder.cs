@@ -1,4 +1,8 @@
+using DotnetKit.MetricFlow.Sinks;
+using DotnetKit.MetricFlow.Sinks.Console;
+using DotnetKit.MetricFlow.Sinks.Logger;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace DotnetKit.MetricFlow.Abstractions;
 
@@ -28,33 +32,41 @@ public interface IMetricFlowBuilder : IFluentBuilder<IServiceCollection>, IServi
     IMetricFlowBuilder AddMetricTracker(Action<MetricFlowOptions>? configure = null);
 
     /// <summary>
-    /// Adds a <see cref="DotnetKit.MetricFlow.Sinks.Console.ConsoleMetricSink"/> for structured console logging.
+    /// Adds a <see cref="ConsoleMetricSink"/> for structured console logging.
     /// </summary>
     /// <param name="configure">Optional configuration for console output formatting.</param>
     /// <returns>The builder instance for fluent chaining.</returns>
-    IMetricFlowBuilder AddConsoleSink(Action<DotnetKit.MetricFlow.Sinks.Console.ConsoleMetricSinkOptions>? configure = null);
+    IMetricFlowBuilder AddConsoleSink(Action<ConsoleMetricSinkOptions>? configure = null);
 
     /// <summary>
-    /// Adds a <see cref="DotnetKit.MetricFlow.Sinks.Logger.LoggerMetricSink"/> for structured logging via <see cref="Microsoft.Extensions.Logging.ILogger"/>.
-    /// The logger is automatically resolved from the dependency injection container (<see cref="Microsoft.Extensions.Logging.ILoggerFactory"/> or <see cref="Microsoft.Extensions.Logging.ILogger"/>).
+    /// Adds a <see cref="ConsoleMetricSink"/> for structured console logging to a specified <see cref="TextWriter"/>.
+    /// </summary>
+    /// <param name="outputWriter">The target writer for log output.</param>
+    /// <param name="configure">Optional configuration for console output formatting.</param>
+    /// <returns>The builder instance for fluent chaining.</returns>
+    IMetricFlowBuilder AddConsoleSink(TextWriter outputWriter, Action<ConsoleMetricSinkOptions>? configure = null);
+
+    /// <summary>
+    /// Adds a <see cref="LoggerMetricSink"/> for structured logging via <see cref="ILogger"/>.
+    /// The logger is automatically resolved from the dependency injection container (<see cref="ILoggerFactory"/> or <see cref="ILogger"/>).
     /// </summary>
     /// <param name="configure">Optional configuration for logger output formatting and log levels.</param>
     /// <returns>The builder instance for fluent chaining.</returns>
-    IMetricFlowBuilder AddLoggerSink(Action<DotnetKit.MetricFlow.Sinks.Logger.LoggerMetricSinkOptions>? configure = null);
+    IMetricFlowBuilder AddLoggerSink(Action<LoggerMetricSinkOptions>? configure = null);
 
     /// <summary>
-    /// Adds a <see cref="DotnetKit.MetricFlow.Sinks.Logger.LoggerMetricSink"/> for structured logging via a specific <see cref="Microsoft.Extensions.Logging.ILogger"/>.
+    /// Adds a <see cref="LoggerMetricSink"/> for structured logging via a specific <see cref="ILogger"/>.
     /// </summary>
     /// <param name="logger">The logger instance.</param>
     /// <param name="configure">Optional configuration for logger output formatting and log levels.</param>
     /// <returns>The builder instance for fluent chaining.</returns>
-    IMetricFlowBuilder AddLoggerSink(Microsoft.Extensions.Logging.ILogger logger, Action<DotnetKit.MetricFlow.Sinks.Logger.LoggerMetricSinkOptions>? configure = null);
+    IMetricFlowBuilder AddLoggerSink(ILogger logger, Action<LoggerMetricSinkOptions>? configure = null);
 
     /// <summary>
     /// Adds a custom metric sink to receive snapshot emissions.
     /// </summary>
     /// <param name="sink">The metric sink instance.</param>
     /// <returns>The builder instance for fluent chaining.</returns>
-    IMetricFlowBuilder AddSink(DotnetKit.MetricFlow.Sinks.IMetricSink sink);
+    IMetricFlowBuilder AddSink(IMetricSink sink);
 }
 

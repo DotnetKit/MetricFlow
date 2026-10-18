@@ -1,5 +1,3 @@
-using System.Text;
-
 namespace DotnetKit.MetricFlow.Hierarchy;
 
 /// <summary>

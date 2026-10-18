@@ -1,7 +1,5 @@
 using System.Diagnostics;
 using DotnetKit.MetricFlow;
-using DotnetKit.MetricFlow.Abstractions;
-using DotnetKit.MetricFlow.Counters;
 using DotnetKit.MetricFlow.Hierarchy;
 using DotnetKit.MetricFlow.Sinks.Console;
 using FluentAssertions;

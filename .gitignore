@@ -402,6 +402,9 @@ _site/
 api/
 .docfx/
 
-# Agent workspaces
-.agents/
+# Agent transient session files, handoffs, and temporary workspaces
+.agents/teamwork/
+.agents/**/scratch/
+.agents/**/logs/
+.agents/**/*.tmp
 

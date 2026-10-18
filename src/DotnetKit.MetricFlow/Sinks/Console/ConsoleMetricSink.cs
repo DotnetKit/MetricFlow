@@ -40,6 +40,20 @@ public class ConsoleMetricSink : IMetricSink
         Name = string.IsNullOrWhiteSpace(name) ? "Console" : name;
     }
 
+    /// <summary>
+    /// Initializes a new instance of <see cref="ConsoleMetricSink"/> with a specified <see cref="TextWriter"/> and optional configuration.
+    /// </summary>
+    /// <param name="outputWriter">The target writer for log output.</param>
+    /// <param name="options">Configuration options, or null for defaults.</param>
+    /// <param name="name">Optional friendly name for this sink.</param>
+    public ConsoleMetricSink(TextWriter outputWriter, ConsoleMetricSinkOptions? options = null, string name = "Console")
+    {
+        ArgumentNullException.ThrowIfNull(outputWriter);
+        _options = options ?? new ConsoleMetricSinkOptions();
+        _options.OutputWriter = outputWriter;
+        Name = string.IsNullOrWhiteSpace(name) ? "Console" : name;
+    }
+
     /// <inheritdoc />
     public void Emit(IReadOnlyList<IMetricSnapshot> snapshots)
     {

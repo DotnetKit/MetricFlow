@@ -1,60 +1,60 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <NoWarn>$(NoWarn);1591</NoWarn>
-  </PropertyGroup>
+    <PropertyGroup>
+        <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <NoWarn>$(NoWarn);1591</NoWarn>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <FrameworkReference Include="Microsoft.AspNetCore.App" />
-  </ItemGroup>
+    <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    </ItemGroup>
 
-  <PropertyGroup>
-    <PackageIcon>dotnetkit.png</PackageIcon>
-    <PackageIconUrl>https://evocdn.azureedge.net/images/128/dotnetkit.png</PackageIconUrl>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageId>DotnetKit.MetricFlow.AspNetCore</PackageId>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <PackageProjectUrl>https://github.com/DotnetKit/MetricFlow</PackageProjectUrl>
-    <PackageTags>Metric, Monitoring, ASPNETCore, WebApi, Diagnostics, Performance</PackageTags>
-    <isPackable>true</isPackable>
-    <Company>Evodim</Company>
-    <Product>DotnetKit</Product>
-    <Authors>Evodim</Authors>
-    <Copyright>Evodim Solutions - 2026</Copyright>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <RepositoryUrl>https://github.com/DotnetKit/MetricFlow</RepositoryUrl>
-    <Description>ASP.NET Core extensions and middleware for MetricFlow, providing automated HTTP request tracking, endpoint routing resolution, and metric exposition.</Description>
-    <Title>DotnetKit.MetricFlow.AspNetCore</Title>
-    <IncludeSymbols>true</IncludeSymbols>
-    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-  </PropertyGroup>
+    <PropertyGroup>
+        <PackageIcon>dotnetkit.png</PackageIcon>
+        <PackageIconUrl>https://evocdn.azureedge.net/images/128/dotnetkit.png</PackageIconUrl>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <PackageId>DotnetKit.MetricFlow.AspNetCore</PackageId>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+        <PackageProjectUrl>https://github.com/DotnetKit/MetricFlow</PackageProjectUrl>
+        <PackageTags>Metric, Monitoring, ASPNETCore, WebApi, Diagnostics, Performance</PackageTags>
+        <isPackable>true</isPackable>
+        <Company>Evodim</Company>
+        <Product>DotnetKit</Product>
+        <Authors>Evodim</Authors>
+        <Copyright>Evodim Solutions - 2026</Copyright>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <RepositoryUrl>https://github.com/DotnetKit/MetricFlow</RepositoryUrl>
+        <Description>ASP.NET Core extensions and middleware for MetricFlow, providing automated HTTP request tracking, endpoint routing resolution, and metric exposition.</Description>
+        <Title>DotnetKit.MetricFlow.AspNetCore</Title>
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    </PropertyGroup>
 
-  <PropertyGroup>
-    <MinVerTagPrefix>v</MinVerTagPrefix>
-    <Version />
-  </PropertyGroup>
+    <PropertyGroup>
+        <MinVerTagPrefix>v</MinVerTagPrefix>
+        <Version />
+    </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="MinVer" Version="5.0.0">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="MinVer" Version="5.0.0">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+    </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\DotnetKit.MetricFlow\DotnetKit.MetricFlow.csproj" />
-  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\DotnetKit.MetricFlow\DotnetKit.MetricFlow.csproj" />
+    </ItemGroup>
 
-  <ItemGroup>
-    <None Include="..\DotnetKit.MetricFlow\dotnetkit.png" Pack="true" PackagePath="" />
-    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
-  </ItemGroup>
+    <ItemGroup>
+        <None Include="..\DotnetKit.MetricFlow\dotnetkit.png" Pack="true" PackagePath="" />
+        <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+    </ItemGroup>
 
-  <PropertyGroup>
-    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
-  </PropertyGroup>
+    <PropertyGroup>
+        <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+    </PropertyGroup>
 </Project>

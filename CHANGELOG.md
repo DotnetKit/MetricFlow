@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.55] - 2026-10-17
+
+### Added
+
+- **Fluent Sink Extensions for Standalone Trackers (`TrackerSinkExtensions`)**:
+  - Parity between DI-based setup and standalone `new MetricTracker(...)` usage.
+  - Fluent extension methods on `IMetricTracker` / `MetricTracker`:
+    - `tracker.AddConsoleSink(opt => ...)`: Configures and registers `ConsoleMetricSink` directly on tracker instances.
+    - `tracker.AddLoggerSink(logger, opt => ...)`: Registers `LoggerMetricSink` with a direct `ILogger` instance.
+    - `tracker.AddLoggerSink(loggerFactory, opt => ...)`: Registers `LoggerMetricSink` with an `ILoggerFactory`.
+    - `tracker.AddLoggerSink(opt => ...)`: Registers `LoggerMetricSink` configured via options or delegate.
+    - `tracker.AddObservableSink(out var observable)`: Registers `ObservableMetricSink` and outputs the observable for reactive stream subscriptions.
+- **Standalone Sink Trigger Configuration (`ConfigureSinkTriggers` & `ConfigureSinkSampling`)**:
+  - Exposed `SinkTriggers` property on `IMetricTracker` and `MetricTrackerBase`.
+  - Added fluent extensions `tracker.ConfigureSinkTriggers(trig => ...)` and `tracker.ConfigureSinkSampling(...)` to configure timer-free execution triggers (`EmitEveryNExecutions`, `EmitOnFailure`, `EmitOnSlowDurationThreshold`, `EmitSampleRate`) on standalone trackers without requiring full constructor parameterization.
+- **Automatic Periodic Flush Helper (`EnablePeriodicFlush`)**:
+  - Added `tracker.EnablePeriodicFlush(interval, dueTime = null)` returning an `IDisposable` token for long-running services, background benchmarks, and CLI apps.
+  - Safely schedules background sink flushes with re-entrancy protection, and triggers a final synchronous flush upon token disposal to prevent metric loss during application shutdown.
+- **Topic-Level Cumulative Queries (`TrackerCounterExtensions`)**:
+  - Added `source.GetTotalMemoryAllocated(counterName = "Memory")` on `IMetricSnapshotsSource` / `IMetricTracker` to compute cumulative memory bytes across all operations tracked by the source.
+  - Added `source.GetTotalItemsProcessed(counterName = null)` and `source.GetTotalItems(...)` to compute total items across all throughput/item operations.
+- **Typo Correction & API Compatibility**:
+  - Added `tracker.GetFailureSnapshot(...)` as a properly-spelled alias for `tracker.GetFailureShapshot(...)` while maintaining 100% backwards compatibility.
+
+---
+
 ## [1.0.54] - 2026-10-09
 
 ### Added

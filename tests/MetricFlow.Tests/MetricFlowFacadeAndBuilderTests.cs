@@ -1,4 +1,3 @@
-using DotnetKit.MetricFlow;
 using DotnetKit.MetricFlow.Abstractions;
 using DotnetKit.MetricFlow.Counters;
 using FluentAssertions;

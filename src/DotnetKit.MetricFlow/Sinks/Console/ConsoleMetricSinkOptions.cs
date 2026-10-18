@@ -13,6 +13,22 @@ public class ConsoleMetricSinkOptions
     /// The <see cref="TextWriter"/> to write log output to. If null, defaults to <see cref="System.Console.Out"/>.
     /// Setting this to a custom writer is useful for unit tests or redirecting console streams.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Warning on Lifetime:</b> MetricFlow does <em>not</em> dispose this writer. The caller is responsible 
+    /// for managing its lifecycle and must ensure the writer outlives any <see cref="IMetricTracker"/> using this sink. 
+    /// Do not assign a writer scoped to a short-lived <c>using</c> block if the tracker is long-lived or registered as a singleton.
+    /// </para>
+    /// <para>
+    /// <b>Warning on Thread Safety:</b> Unlike <see cref="System.Console.Out"/>, arbitrary <see cref="TextWriter"/> 
+    /// instances (such as <see cref="System.IO.StreamWriter"/> or <see cref="System.IO.StringWriter"/>) are not thread-safe. 
+    /// If metrics are reported from multiple concurrent threads, consider wrapping your writer in <see cref="TextWriter.Synchronized(TextWriter)"/>.
+    /// </para>
+    /// <para>
+    /// <b>Buffering:</b> If using a <see cref="System.IO.StreamWriter"/>, ensure <see cref="System.IO.StreamWriter.AutoFlush"/> 
+    /// is set to <c>true</c> so metrics appear without delay.
+    /// </para>
+    /// </remarks>
     public TextWriter? OutputWriter { get; set; }
 
     /// <summary>

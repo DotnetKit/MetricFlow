@@ -35,7 +35,8 @@ dotnet_separate_import_directive_groups = false
 dotnet_diagnostic.CA1305.severity = suggestion
 dotnet_diagnostic.CA1310.severity = suggestion
 dotnet_diagnostic.CA1848.severity = suggestion
-
+# Warn on unnecessary using directives
+dotnet_diagnostic.IDE0005.severity = warning
 # ------------------------------------------------------------------------------
 # Test Projects Configuration (naming conventions & pragmatic test patterns)
 # ------------------------------------------------------------------------------

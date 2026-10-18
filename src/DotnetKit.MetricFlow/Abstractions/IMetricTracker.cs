@@ -159,6 +159,11 @@ public interface IMetricTracker : IMetricSnapshotsSource
     IEnumerable<Sinks.IMetricSink> GetSinks() => [];
 
     /// <summary>
+    /// Gets the execution lifecycle triggers configured for this tracker's sinks, if supported.
+    /// </summary>
+    Sinks.MetricSinkTriggerOptions? SinkTriggers => null;
+
+    /// <summary>
     /// Synchronously flushes all current snapshots to registered sinks.
     /// </summary>
     void FlushSinks() { }

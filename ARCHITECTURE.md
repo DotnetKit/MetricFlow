@@ -354,3 +354,42 @@ MetricFlow connects domain tracking with the .NET runtime using a lightweight, b
   - **Streaming BCL Metrics**: Emitted immediately to any registered `MeterListener`, `dotnet-counters`, or OpenTelemetry `MeterProvider`.
   - **Aggregated Local Snapshots**: Maintained concurrently in memory for local logging, diagnostics, health checks, or the `/metrics` endpoint (`tracker.ToString()`).
 
+---
+
+## 12. Pluggable Sinks & Lifecycle Trigger Pipeline
+
+MetricFlow features an extensible sink pipeline (`IMetricSink`) for delivering formatted snapshots directly to console streams, structured loggers, and reactive event listeners:
+
+```mermaid
+flowchart TD
+    Operation["Tracked Operation (Out / Dispose)"] --> Evaluator{"MetricSinkTriggerOptions\n(Stride / Latency / Failure)"}
+    Evaluator -- "Trigger Condition Met" --> Dispatcher["DispatchMetricSnapshotsToSinks()"]
+    Evaluator -- "Condition Not Met" --> Skip["Continue (No Overhead)"]
+    
+    PeriodicTimer["Periodic Timer\n(EnablePeriodicFlush)"] --> ManualFlush["FlushSinks()"]
+    ManualFlush --> Dispatcher
+    
+    Dispatcher --> ConsoleSink["ConsoleMetricSink\n(ANSI, Thresholds, Trees)"]
+    Dispatcher --> LoggerSink["LoggerMetricSink\n(Serilog / Microsoft.Extensions.Logging)"]
+    Dispatcher --> ObservableSink["ObservableMetricSink\n(IObservable<IReadOnlyList<IMetricSnapshot>>)"]
+```
+
+### Key Components
+
+- **`IMetricSink`**: Unified sink abstraction supporting synchronous `Emit(IReadOnlyList<IMetricSnapshot>)` and asynchronous `EmitAsync(...)` with bidirectional default interface implementations.
+- **Built-in Sinks**:
+  - **`ConsoleMetricSink`**: Formats snapshots into structured single-line console output with ANSI colorization, configurable units (`DurationUnit`, `MemoryUnit`, `ThroughputUnit`), dynamic color selectors, and formatted execution trees (`HierarchyTreeSnapshot`).
+  - **`LoggerMetricSink`**: Emits structured log entries via `Microsoft.Extensions.Logging.ILogger` or `ILoggerFactory`, extracting metric properties into structured parameters for Serilog, OpenTelemetry, and Seq.
+  - **`ObservableMetricSink`**: Implements `IObservable<IReadOnlyList<IMetricSnapshot>>` for reactive event streaming without timers.
+- **Timer-Free Execution Triggers (`MetricSinkTriggerOptions`)**:
+  - Evaluated on hot paths during operation exit (`Out` / scope `Dispose`):
+    - **Stride Sampling (`EmitEveryNExecutions`)**: Emits snapshots periodically every $N$ executions per metric without background timers.
+    - **Failure / Outlier Trigger (`EmitOnFailure`)**: Immediately dispatches snapshots when an operation reports logical or exception failure.
+    - **Latency Threshold Trigger (`EmitOnSlowDurationThreshold`)**: Immediately emits snapshots when an operation exceeds a duration threshold.
+    - **Probabilistic Sampling (`EmitSampleRate`)**: Samples a percentage of operations.
+- **Background Periodic Flush (`EnablePeriodicFlush`)**:
+  - Provides an `IDisposable` token running a thread-safe periodic timer for long-running services and benchmarks.
+  - Employs atomic re-entrancy protection so slow sinks never cause overlapping concurrent flush runs.
+  - Triggers a final synchronous flush upon token disposal, ensuring buffered telemetry is not lost during process shutdown.
+
+

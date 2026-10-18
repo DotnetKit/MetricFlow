@@ -24,51 +24,42 @@ Rather than relying on polling background timers or dedicated background threads
   - **Latency / Slow-Operation Sampling (`EmitOnSlowDurationThreshold`)**: Immediately emits snapshots when an operation exceeds a duration threshold (e.g., > 100ms).
   - **Tail / Outlier Sampling (`EmitOnFailure`)**: Immediately emits snapshots when an operation fails logically (`SetFailed(true)`) or throws an unhandled exception.
   - **Probabilistic Sampling (`EmitSampleRate`)**: Emits snapshots based on a random percentage.
-- **Dependency Injection & Fluent Builder**: Seamless configuration via `services.AddMetricFlow(...).AddConsoleSink(...)` or `builder.AddConsoleSink(...)`.
+- **Standalone & Fluent Chaining**: Seamless configuration directly on standalone `MetricTracker` via `.AddConsoleSink(...)` and `.ConfigureSinkSampling(...)`, or via DI options.
 - **Manual / Graceful Shutdown Flush**: Explicitly flush all pending snapshots via `tracker.FlushSinks()` or `await tracker.FlushSinksAsync()`.
 
 ---
 
 ## Code Walkthrough
 
-### 1. Dependency Injection Configuration
+### 1. Standalone Tracker & Trigger Configuration
 
-Register `ConsoleMetricSink` and configure lifecycle triggers within `AddMetricFlow`:
+Register `ConsoleMetricSink` and configure lifecycle triggers directly on `MetricTracker`:
 
 ```csharp
-var services = new ServiceCollection();
-
-services.AddMetricFlow("OrderService", options =>
+using var orderTracker = new MetricTracker("OrderService", new()
 {
-    // Configure business tags and telemetry counters
-    options.AddTagsEnricher(tags =>
-    {
-        tags["environment"] = "Production";
-        tags["region"] = "us-east-1";
-    })
-    .AddThroughputCounter()
-    .AddFailureCounter();
-
-    // 1. Configure the ConsoleMetricSink
-    options.AddConsoleSink(opt =>
-    {
-        opt.Colorize = true;                 // ANSI color formatting
-        opt.IncludeTimestamp = true;         // [HH:mm:ss.fff] timestamp prefix
-        opt.TimestampFormat = "HH:mm:ss.fff";
-        opt.Prefix = "[OrderService:Sink]";  // Custom log line prefix
-    });
-
-    // 2. Configure timer-free sampling triggers
-    options.ConfigureSinkSampling(trig =>
-    {
-        trig.EmitEveryNExecutions = 5;                              // Stride: every 5 executions
-        trig.EmitOnSlowDurationThreshold = TimeSpan.FromMilliseconds(100); // Latency: > 100ms
-        trig.EmitOnFailure = true;                                  // Tail: on errors / exceptions
-    });
+    ["environment"] = "Production",
+    ["region"] = "us-east-1"
+})
+.AddThroughputCounter()
+.AddFailureCounter()
+// 1. Configure the ConsoleMetricSink directly on the tracker
+.AddConsoleSink(opt =>
+{
+    opt.Colorize = true;                 // ANSI color formatting
+    opt.IncludeTimestamp = true;         // [HH:mm:ss.fff] timestamp prefix
+    opt.TimestampFormat = "HH:mm:ss.fff";
+    opt.Prefix = "[OrderService:Sink]";  // Custom log line prefix
+})
+// 2. Configure timer-free sampling triggers
+.ConfigureSinkSampling(trig =>
+{
+    trig.EmitEveryNExecutions = 5;                              // Stride: every 5 executions
+    trig.EmitOnSlowDurationThreshold = TimeSpan.FromMilliseconds(100); // Latency: > 100ms
+    trig.EmitOnFailure = true;                                  // Tail: on errors / exceptions
 });
 
-services.AddTransient<OrderFulfillmentService>();
-await using var provider = services.BuildServiceProvider();
+var orderService = new OrderFulfillmentService(orderTracker);
 ```
 
 ### 2. Operational Workflows & Triggers
@@ -234,7 +225,7 @@ dotnet run --project examples/ConsoleSinkExample/ConsoleSinkExample.csproj
         MetricFlow - Structured Console Log Sink Example        
 ================================================================
 
->>> [Scenario 1] Dependency Injection & Timer-Free Lifecycle Triggers <<<
+>>> [Scenario 1] Standalone MetricTracker & Timer-Free Lifecycle Triggers <<<
 
 Step 1: Processing 10 regular orders (triggers every 5 executions via EmitEveryNExecutions)...
 [23:06:59.346] [OrderService:Sink] [Exception:ProcessOrder] Operations: 5, Exceptions: 0 (0.0%)

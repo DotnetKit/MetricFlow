@@ -230,7 +230,7 @@ public class MetricTrackerTests
 
         act.Should().NotThrow();
     }
- 
+
     [Fact]
     public void Tracker_ShouldImplementIMetricSnapshotsSource()
     {
