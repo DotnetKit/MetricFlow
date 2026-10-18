@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using DotnetKit.MetricFlow.Abstractions;
 using DotnetKit.MetricFlow.Counters;
+using DotnetKit.MetricFlow.Exporters;
 using DotnetKit.MetricFlow.Hierarchy;
 
 namespace DotnetKit.MetricFlow.Sinks.Console;
@@ -64,10 +65,32 @@ public class ConsoleMetricSink : IMetricSink
 
         var writer = _options.OutputWriter ?? System.Console.Out;
 
-        for (int i = 0; i < snapshots.Count; i++)
+        switch (_options.DisplayMode)
         {
-            var line = FormatSnapshot(snapshots[i]);
-            writer.WriteLine(line);
+            case ConsoleDisplayMode.Table:
+                var operations = snapshots.GetOperationSummaries();
+                var table = TableMetricFormatter.RenderTable(operations, _options);
+                if (!string.IsNullOrEmpty(table))
+                {
+                    writer.WriteLine(table);
+                }
+                break;
+
+            case ConsoleDisplayMode.Markdown:
+                var md = snapshots.ToMarkdownTable();
+                if (!string.IsNullOrEmpty(md))
+                {
+                    writer.WriteLine(md);
+                }
+                break;
+
+            default:
+                for (int i = 0; i < snapshots.Count; i++)
+                {
+                    var line = FormatSnapshot(snapshots[i]);
+                    writer.WriteLine(line);
+                }
+                break;
         }
     }
 
