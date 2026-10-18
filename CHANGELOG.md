@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.56] - 2026-10-18
+
+### Added
+
+- **Correlated Operation Summaries (`OperationSummary` & `OperationSummaryExtensions`)**:
+  - Unified multi-metric correlation record `OperationSummary` aggregating `ThroughputSnapshot`, `DurationSnapshot`, `MemorySnapshot`, `FailureSnapshot`, `ExceptionSnapshot`, `DimensionSnapshot`s, and `HierarchyTreeSnapshot` by operation name.
+  - Fluent projection extensions `source.GetOperationSummaries()`, `snapshots.GetOperationSummaries()`, and `tracker.GetOperationSummary("OperationName")`.
+  - Computed helper properties: `TotalOperations`, `TotalFailures`, `FailureRate`, `AverageDuration`, `ItemsPerSecond`, and `AverageAllocatedBytes`.
+- **Native Display Modes in Console Sink (`ConsoleDisplayMode.Table` & `Markdown`)**:
+  - Added `ConsoleDisplayMode` (`FlatLog`, `Table`, `Markdown`) to `ConsoleMetricSinkOptions` (defaults to `FlatLog` for 100% backward compatibility).
+  - High-performance `TableMetricFormatter` rendering auto-padded, multi-column tables with dynamically sized columns (`Operation`, `Operations`, `Duration (Avg / p99)`, `Throughput Rate`, `Memory (Avg / Total)`, `Failures`).
+  - GitHub-flavored Markdown table emission in `ConsoleMetricSink` via `ConsoleDisplayMode.Markdown`.
+- **Cell-Level ANSI Threshold Colorization**:
+  - Fine-grained cell-level styling in table mode: evaluates threshold rules per column, highlighting offending latency (`Yellow`/`Red`), throughput, or failure values while preserving neutral styling for table borders, headers, operation names, and healthy cells.
+  - ANSI striping in column width calculations ensuring exact character alignment in terminal displays.
+- **Categorical Dimension Breakdown Sub-Rows**:
+  - Sub-row tree rendering in console tables (`ShowDimensionBreakdown`, `MaxDimensionValuesToRender`):
+    Renders dimension keys, top values, and percentages beneath parent operation rows using tree branch glyphs (`├─ `, `└─ `).
+- **Multi-Format Exporters (`ToMarkdownTable`, `ToCsv`, `ToJson`)**:
+  - Native extensions on `IMetricSnapshotsSource`, `IMetricTracker`, `IEnumerable<IMetricSnapshot>`, and `IEnumerable<OperationSummary>`:
+    - `ToMarkdownTable(...)`: Formatted GitHub-flavored Markdown tables for PR summaries and CI artifacts.
+    - `ToCsv(...)`: RFC 4180 compliant CSV text with metrics, durations, and rates for Excel, Pandas, or pipeline artifact storage.
+    - `ToJson(...)`: High-performance JSON serialization using cached `JsonSerializerOptions` with camelCase naming policy for log aggregators (Datadog, Elasticsearch).
+- **Live In-Place Console Dashboard Sink (`LiveConsoleMetricSink` & `AddLiveConsoleDashboard`)**:
+  - Interactive live dashboard sink updating multi-operation tables in-place using ANSI cursor repositioning (`\u001b[{N}A\u001b[0J`) and configurable background refresh intervals (`RefreshInterval`).
+  - Fluent registration extensions `options.AddLiveConsoleDashboard(...)` on `MetricFlowOptions` and `tracker.AddLiveConsoleDashboard(...)` on `IMetricTracker`.
+  - Graceful fallback for redirected output environments (CI runners, file redirections) and clean terminal state restoration on disposal.
+
+---
+
 ## [1.0.55] - 2026-10-17
 
 ### Added

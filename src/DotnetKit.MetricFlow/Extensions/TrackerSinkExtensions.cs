@@ -57,6 +57,25 @@ public static class TrackerSinkExtensions
     }
 
     /// <summary>
+    /// Registers a <see cref="LiveConsoleMetricSink"/> on the metric tracker for real-time cursor-managed multi-stage table updates.
+    /// </summary>
+    /// <typeparam name="T">The metric tracker type.</typeparam>
+    /// <param name="tracker">The tracker instance.</param>
+    /// <param name="configure">Optional configuration for dashboard refresh interval, title, and formatting.</param>
+    /// <returns>The same tracker instance for method chaining.</returns>
+    public static T AddLiveConsoleDashboard<T>(
+        this T tracker,
+        Action<LiveConsoleMetricSinkOptions>? configure = null)
+        where T : IMetricTracker
+    {
+        ArgumentNullException.ThrowIfNull(tracker);
+        var options = new LiveConsoleMetricSinkOptions();
+        configure?.Invoke(options);
+        tracker.RegisterSink(new LiveConsoleMetricSink(options));
+        return tracker;
+    }
+
+    /// <summary>
     /// Registers a <see cref="LoggerMetricSink"/> on the metric tracker for structured logging via <see cref="ILogger"/>.
     /// </summary>
     /// <typeparam name="T">The metric tracker type.</typeparam>

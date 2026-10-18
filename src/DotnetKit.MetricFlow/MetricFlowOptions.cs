@@ -130,6 +130,19 @@ public class MetricFlowOptions
     }
 
     /// <summary>
+    /// Registers a <see cref="LiveConsoleMetricSink"/> for real-time cursor-managed multi-stage table dashboard updates.
+    /// </summary>
+    /// <param name="configure">Optional configuration for dashboard refresh interval, title, and formatting.</param>
+    /// <returns>This options instance for fluent chaining.</returns>
+    public MetricFlowOptions AddLiveConsoleDashboard(Action<LiveConsoleMetricSinkOptions>? configure = null)
+    {
+        var options = new LiveConsoleMetricSinkOptions();
+        configure?.Invoke(options);
+        Sinks.Add(new LiveConsoleMetricSink(options));
+        return this;
+    }
+
+    /// <summary>
     /// Registers a <see cref="LoggerMetricSink"/> for structured ILogger logging of metric snapshots.
     /// </summary>
     /// <param name="configure">Optional configuration for logger output formatting and log levels.</param>

@@ -57,9 +57,29 @@ public class ConsoleMetricSinkOptions
     public string Prefix { get; set; } = "[MetricFlow]";
 
     /// <summary>
+    /// Gets or sets the display formatting mode (FlatLog, Table, or Markdown). Defaults to <see cref="ConsoleDisplayMode.FlatLog"/>.
+    /// </summary>
+    public ConsoleDisplayMode DisplayMode { get; set; } = ConsoleDisplayMode.FlatLog;
+
+    /// <summary>
     /// Whether to render hierarchical parent-child execution trees when a hierarchy snapshot is emitted. Defaults to true.
     /// </summary>
     public bool ShowHierarchicalTree { get; set; } = true;
+
+    /// <summary>
+    /// Whether to render categorical dimension breakdowns as sub-rows beneath the stage row in Table mode. Defaults to true.
+    /// </summary>
+    public bool ShowDimensionBreakdown { get; set; } = true;
+
+    /// <summary>
+    /// Maximum number of breakdown values to display per dimension tag before truncating with an overflow indicator. Defaults to 4.
+    /// </summary>
+    public int MaxDimensionValuesToRender { get; set; } = 4;
+
+    /// <summary>
+    /// Whether to render the header row and separator line in Table mode. Defaults to true.
+    /// </summary>
+    public bool ShowTableHeaders { get; set; } = true;
 
     /// <summary>
     /// The unit used to format durations. Defaults to <see cref="DurationUnit.Milliseconds"/>.

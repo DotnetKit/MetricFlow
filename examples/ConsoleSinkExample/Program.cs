@@ -1,6 +1,7 @@
 using DotnetKit.MetricFlow;
 using DotnetKit.MetricFlow.Abstractions;
 using DotnetKit.MetricFlow.Counters;
+using DotnetKit.MetricFlow.Exporters;
 using DotnetKit.MetricFlow.Sinks.Console;
 
 namespace ConsoleSinkExample;
@@ -219,6 +220,55 @@ internal class Program
 
         // Flush and display the execution tree
         await catalogTracker.FlushSinksAsync();
+
+        // ---------------------------------------------------------------------
+        // Scenario 5: Multi-Stage Table Display, Cell-Level Thresholds & Exporters
+        // ---------------------------------------------------------------------
+        Console.WriteLine("\n>>> [Scenario 5] Multi-Stage Table, Cell Thresholds & Multi-Format Exporters <<<\n");
+
+        using var pipelineTracker = new MetricTracker("DataPipeline")
+            .AddThroughputCounter()
+            .AddMemoryCounter()
+            .AddFailureCounter()
+            .AddDimensionCounter("sensor_id", maxUniqueValues: 10)
+            .AddConsoleSink(opt =>
+            {
+                opt.DisplayMode = ConsoleDisplayMode.Table;
+                opt.Colorize = true;
+                opt.ShowDimensionBreakdown = true;
+                opt.Prefix = "[Pipeline]";
+
+                // Cell-level threshold: highlight only duration cell in Yellow/Red
+                opt.AddThreshold<DurationSnapshot>(
+                    warn: TimeSpan.FromMilliseconds(20),
+                    critical: TimeSpan.FromMilliseconds(50),
+                    warnColor: ConsoleColor.DarkYellow,
+                    criticalColor: ConsoleColor.Red);
+            });
+
+        // Track Stage 1: Ingestion
+        using (var scope = pipelineTracker.TrackItems("Stage1_Ingest", 500, new() { ["sensor_id"] = "sensor-us-west-01" }))
+        {
+            await Task.Delay(10);
+            scope.SetMetadata("payload_bytes", 1024);
+        }
+
+        // Track Stage 2: Transform (Degraded duration > 20ms)
+        using (var scope = pipelineTracker.TrackItems("Stage2_Transform", 500, new() { ["sensor_id"] = "sensor-eu-central" }))
+        {
+            await Task.Delay(30); // Triggers cell-level warning (Yellow)
+            scope.SetMetadata("payload_bytes", 2048);
+        }
+
+        // Flush Table view
+        pipelineTracker.FlushSinks();
+
+        // Multi-Format Exporters Demo
+        Console.WriteLine("\n--- GitHub-Flavored Markdown Table Export ---");
+        Console.WriteLine(pipelineTracker.ToMarkdownTable());
+
+        Console.WriteLine("\n--- RFC 4180 CSV Export ---");
+        Console.WriteLine(pipelineTracker.ToCsv());
 
         Console.WriteLine("\nStructured console log sink example completed successfully!");
     }
