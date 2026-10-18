@@ -1,58 +1,65 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <NoWarn>$(NoWarn);1591</NoWarn>
-  </PropertyGroup>
-  <PropertyGroup>
-    <PackageIcon>dotnetkit.png</PackageIcon>
-    <PackageIconUrl>https://evocdn.azureedge.net/images/128/dotnetkit.png</PackageIconUrl>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageId>DotnetKit.MetricFlow</PackageId>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <PackageProjectUrl>https://github.com/DotnetKit/MetricFlow</PackageProjectUrl>
-    <PackageTags>Metric, Monitoring, Counter, Performance counters, Diagnostics</PackageTags>
-    <isPackable>true</isPackable>
-    <Company>Evodim</Company>
-    <Product>DotnetKit</Product>
-    <Authors>Evodim</Authors>
-    <Copyright>Evodim Solutions - 2026</Copyright>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <RepositoryUrl>https://github.com/DotnetKit/MetricFlow</RepositoryUrl>
-    <Description>MetricFlow is a lightweight .NET library designed to help developers define and track functional and domain-oriented metrics (such as counters, timers, and event-based measurements).</Description>
-    <Title>MetricFlow</Title>
-    <IncludeSymbols>true</IncludeSymbols>
-    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-  </PropertyGroup>
-  <PropertyGroup>
-    <MinVerTagPrefix>v</MinVerTagPrefix>
-    <Version />
-  </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include="MinVer" Version="5.0.0">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-  </ItemGroup>
-  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
-  </ItemGroup>
-  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="dotnetkit.png" Pack="true" PackagePath="" />
-    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
-  </ItemGroup>
-  <ItemGroup>
-    <InternalsVisibleTo Include="MetricFlow.Tests" />
-  </ItemGroup>
-  <PropertyGroup>
-    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
-  </PropertyGroup>
+    <PropertyGroup>
+        <TreatWarningsAsErrors Condition="'$(CI)' == 'true'">true</TreatWarningsAsErrors>
+        <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <NoWarn>$(NoWarn);1591</NoWarn>
+    </PropertyGroup>
+    <PropertyGroup>
+        <PackageIcon>dotnetkit.png</PackageIcon>
+        <PackageIconUrl>https://evocdn.azureedge.net/images/128/dotnetkit.png</PackageIconUrl>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <PackageId>DotnetKit.MetricFlow</PackageId>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+        <PackageProjectUrl>https://github.com/DotnetKit/MetricFlow</PackageProjectUrl>
+        <PackageTags>Metric, Monitoring, Counter, Performance counters, Diagnostics</PackageTags>
+        <isPackable>true</isPackable>
+        <Company>Evodim</Company>
+        <Product>DotnetKit</Product>
+        <Authors>Evodim</Authors>
+        <Copyright>Evodim Solutions - 2026</Copyright>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <RepositoryUrl>https://github.com/DotnetKit/MetricFlow</RepositoryUrl>
+        <Description>MetricFlow is a lightweight .NET library designed to help developers define and track functional and domain-oriented metrics (such as counters, timers, and event-based measurements).</Description>
+        <Title>MetricFlow</Title>
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    </PropertyGroup>
+    <PropertyGroup>
+        <MinVerTagPrefix>v</MinVerTagPrefix>
+        <Version />
+    </PropertyGroup>
+    <ItemGroup>
+        <PackageReference Include="MinVer" Version="5.0.0">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+    </ItemGroup>
+    <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
+        <PackageReference
+            Include="Microsoft.Extensions.DependencyInjection.Abstractions"
+            Version="8.0.0"
+        />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
+    </ItemGroup>
+    <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
+        <PackageReference
+            Include="Microsoft.Extensions.DependencyInjection.Abstractions"
+            Version="10.0.0"
+        />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />
+    </ItemGroup>
+    <ItemGroup>
+        <None Include="dotnetkit.png" Pack="true" PackagePath="" />
+        <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+    </ItemGroup>
+    <ItemGroup>
+        <InternalsVisibleTo Include="MetricFlow.Tests" />
+    </ItemGroup>
+    <PropertyGroup>
+        <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+    </PropertyGroup>
 </Project>
