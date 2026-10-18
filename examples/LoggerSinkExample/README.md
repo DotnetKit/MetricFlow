@@ -26,18 +26,18 @@ This example demonstrates the structured **Logger Sink** (`LoggerMetricSink`) us
   - **Stride Sampling (`EmitEveryNExecutions`)**: Dispatches snapshots every $N$ executions.
   - **Tail / Outlier Sampling (`EmitOnFailure`)**: Immediately dispatches snapshots when an operation fails.
   - **Latency Sampling (`EmitOnSlowDurationThreshold`)**: Immediately dispatches snapshots when operation latency exceeds a threshold.
-- **Flexible DI & Standalone Integration**:
-  - Automatically resolves `ILoggerFactory` / `ILogger` from the DI container.
-  - Can also be directly instantiated with any `ILogger` or `ILoggerFactory`.
+- **Flexible Standalone & DI Support**:
+  - Direct integration on standalone `MetricTracker` via `.AddLoggerSink(loggerFactory, ...)` or `.AddLoggerSink(logger, ...)`.
+  - Also integrates with dependency injection via `services.AddMetricFlow(...).AddLoggerSink(...)`.
 - **Clean Formatting**: Single-line log output with optional prefix and customizable timestamp formatting.
 
 ---
 
 ## Code Walkthrough
 
-### 1. Serilog & Dependency Injection Configuration
+### 1. Standalone Logger & MetricTracker Configuration
 
-Configure Serilog and register `LoggerMetricSink` with `AddMetricFlow`:
+Configure Serilog, build a standalone `ILoggerFactory`, and register `LoggerMetricSink` directly on `MetricTracker`:
 
 ```csharp
 // 1. Configure Serilog
@@ -47,46 +47,36 @@ Log.Logger = new LoggerConfiguration()
     .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss.fff} {Level:u3}] {Message:lj}{NewLine}{Exception}")
     .CreateLogger();
 
-var services = new ServiceCollection();
-
-// 2. Register Serilog as the ILogger provider
-services.AddLogging(builder =>
+// 2. Create standalone ILoggerFactory backed by Serilog
+using var loggerFactory = LoggerFactory.Create(builder =>
 {
     builder.ClearProviders();
     builder.AddSerilog(dispose: true);
 });
 
-// 3. Register MetricFlow with LoggerMetricSink
-services.AddMetricFlow("PaymentService", options =>
+// 3. Register MetricFlow with LoggerMetricSink directly on tracker
+using var paymentTracker = new MetricTracker("PaymentService", new()
 {
-    options.AddTagsEnricher(tags =>
-    {
-        tags["environment"] = "Production";
-        tags["gateway"] = "Stripe";
-    })
-    .AddThroughputCounter()
-    .AddFailureCounter();
-
-    // Configure LoggerMetricSink
-    options.AddLoggerSink(opt =>
-    {
-        opt.CategoryName = "PaymentService.Telemetry";
-        opt.LogLevel = LogLevel.Information;       // Normal metrics -> Information
-        opt.FailureLogLevel = LogLevel.Warning;    // Failures -> Warning
-        opt.Prefix = "[PaymentService]";
-    });
-
-    // Configure lifecycle sampling triggers
-    options.ConfigureSinkSampling(trig =>
-    {
-        trig.EmitEveryNExecutions = 5;                              // Stride: every 5 executions
-        trig.EmitOnSlowDurationThreshold = TimeSpan.FromMilliseconds(100); // Latency: > 100ms
-        trig.EmitOnFailure = true;                                  // Tail: on errors / exceptions
-    });
+    ["environment"] = "Production",
+    ["gateway"] = "Stripe"
+})
+.AddThroughputCounter()
+.AddFailureCounter()
+.AddLoggerSink(loggerFactory, opt =>
+{
+    opt.CategoryName = "PaymentService.Telemetry";
+    opt.LogLevel = LogLevel.Information;       // Normal metrics -> Information
+    opt.FailureLogLevel = LogLevel.Warning;    // Failures -> Warning
+    opt.Prefix = "[PaymentService]";
+})
+.ConfigureSinkSampling(trig =>
+{
+    trig.EmitEveryNExecutions = 5;                              // Stride: every 5 executions
+    trig.EmitOnSlowDurationThreshold = TimeSpan.FromMilliseconds(100); // Latency: > 100ms
+    trig.EmitOnFailure = true;                                  // Tail: on errors / exceptions
 });
 
-services.AddTransient<PaymentProcessingService>();
-await using var provider = services.BuildServiceProvider();
+var paymentService = new PaymentProcessingService(paymentTracker);
 ```
 
 ### 2. Operational Workflows & Automatic Triggers

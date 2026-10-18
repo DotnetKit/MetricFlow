@@ -1,7 +1,6 @@
 using DotnetKit.MetricFlow;
 using DotnetKit.MetricFlow.Abstractions;
 using DotnetKit.MetricFlow.Sinks.Logger;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Events;
@@ -27,63 +26,50 @@ internal class Program
 
         try
         {
-            // 2. Build Dependency Injection container with Serilog and MetricFlow
-            var services = new ServiceCollection();
-
-            // Register Serilog as the Microsoft.Extensions.Logging provider
-            services.AddLogging(builder =>
+            // 2. Create standalone ILoggerFactory backed by Serilog
+            using var loggerFactory = LoggerFactory.Create(builder =>
             {
                 builder.ClearProviders();
                 builder.AddSerilog(dispose: true);
             });
 
-            // 3. Register MetricFlow with LoggerMetricSink and lifecycle sampling triggers
-            services.AddMetricFlow("PaymentService", options =>
+            // 3. Standalone MetricTracker with LoggerMetricSink and lifecycle sampling triggers
+            Console.WriteLine(">>> [Scenario 1] Standalone MetricTracker with Serilog ILogger & Lifecycle Triggers <<<\n");
+
+            using var paymentTracker = new MetricTracker("PaymentService", new()
             {
-                options.AddTagsEnricher(tags =>
-                {
-                    tags["environment"] = "Production";
-                    tags["gateway"] = "Stripe";
-                })
-                .AddThroughputCounter()
-                .AddFailureCounter();
+                ["environment"] = "Production",
+                ["gateway"] = "Stripe"
+            })
+            .AddThroughputCounter()
+            .AddFailureCounter()
+            .AddLoggerSink(loggerFactory, opt =>
+            {
+                opt.CategoryName = "PaymentService.Telemetry";
+                opt.LogLevel = LogLevel.Information;       // Normal metrics logged as Info
+                opt.FailureLogLevel = LogLevel.Warning;    // Failures logged as Warning
+                opt.Prefix = "[PaymentService]";
+            })
+            .ConfigureSinkSampling(trig =>
+            {
+                // Stride sampling: automatically log snapshots every 5 completed operations
+                trig.EmitEveryNExecutions = 5;
 
-                // Configure the ILogger Metric Sink
-                options.AddLoggerSink(opt =>
-                {
-                    opt.CategoryName = "PaymentService.Telemetry";
-                    opt.LogLevel = LogLevel.Information;       // Normal metrics logged as Info
-                    opt.FailureLogLevel = LogLevel.Warning;    // Failures logged as Warning
-                    opt.Prefix = "[PaymentService]";
-                });
+                // Latency sampling: immediately log snapshots when an operation exceeds 100ms
+                trig.EmitOnSlowDurationThreshold = TimeSpan.FromMilliseconds(100);
 
-                // Configure timer-free lifecycle triggers (no background polling threads!)
-                options.ConfigureSinkSampling(trig =>
-                {
-                    // Stride sampling: automatically log snapshots every 5 completed operations
-                    trig.EmitEveryNExecutions = 5;
-
-                    // Latency sampling: immediately log snapshots when an operation exceeds 100ms
-                    trig.EmitOnSlowDurationThreshold = TimeSpan.FromMilliseconds(100);
-
-                    // Outlier / tail sampling: immediately log snapshots on operation failure
-                    trig.EmitOnFailure = true;
-                });
+                // Outlier / tail sampling: immediately log snapshots on operation failure
+                trig.EmitOnFailure = true;
             });
 
-            // Register application worker service
-            services.AddTransient<PaymentProcessingService>();
-
-            await using var provider = services.BuildServiceProvider();
-            var paymentService = provider.GetRequiredService<PaymentProcessingService>();
+            var paymentService = new PaymentProcessingService(paymentTracker);
 
             // Run simulated operational workflows
             await paymentService.ProcessPaymentsAsync();
 
-            // 4. Standalone MetricTracker with LoggerMetricSink
+            // 4. Standalone MetricTracker with Direct ILogger instance & Manual Flush
             Console.WriteLine("\n>>> [Scenario 2] Standalone MetricTracker with Direct ILogger & Manual Flush <<<\n");
 
-            var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
             var standaloneLogger = loggerFactory.CreateLogger("PayoutService.Telemetry");
 
             using var payoutTracker = new MetricTracker("PayoutService")
