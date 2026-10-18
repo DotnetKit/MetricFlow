@@ -36,7 +36,7 @@ public static class TableMetricFormatter
         }
 
         var sb = new StringBuilder();
-        bool color = options.Colorize;
+        var color = options.Colorize;
 
         // Render optional title banner if prefix or timestamp is configured
         if (!string.IsNullOrEmpty(options.Prefix) || options.IncludeTimestamp)
@@ -67,23 +67,23 @@ public static class TableMetricFormatter
         }
 
         // Determine which columns are active across all operations
-        bool hasDuration = operations.Any(s => s.Duration != null);
-        bool hasThroughput = operations.Any(s => s.Throughput != null);
-        bool hasMemory = operations.Any(s => s.Memory != null);
-        bool hasFailures = operations.Any(s =>
+        var hasDuration = operations.Any(s => s.Duration != null);
+        var hasThroughput = operations.Any(s => s.Throughput != null);
+        var hasMemory = operations.Any(s => s.Memory != null);
+        var hasFailures = operations.Any(s =>
             s.Failure != null || s.Exception != null || s.TotalFailures > 0
         );
 
         // Precompute raw strings and colors per cell
         var rows = new List<TableRowData>(operations.Count);
-        int maxOpLen = "Operation".Length;
-        int maxOpsLen = "Operations".Length;
-        int maxDurLen = hasDuration ? "Duration (Avg / p99)".Length : 0;
-        int maxTpLen = hasThroughput ? "Throughput Rate".Length : 0;
-        int maxMemLen = hasMemory ? "Memory (Avg / Total)".Length : 0;
-        int maxFailLen = hasFailures ? "Failures".Length : 0;
+        var maxOpLen = "Operation".Length;
+        var maxOpsLen = "Operations".Length;
+        var maxDurLen = hasDuration ? "Duration (Avg / p99)".Length : 0;
+        var maxTpLen = hasThroughput ? "Throughput Rate".Length : 0;
+        var maxMemLen = hasMemory ? "Memory (Avg / Total)".Length : 0;
+        var maxFailLen = hasFailures ? "Failures".Length : 0;
 
-        for (int i = 0; i < operations.Count; i++)
+        for (var i = 0; i < operations.Count; i++)
         {
             var op = operations[i];
 
@@ -98,7 +98,7 @@ public static class TableMetricFormatter
                 maxOpsLen = opsCountText.Length;
 
             // 3. Duration column
-            string durText = "-";
+            var durText = "-";
             ConsoleColor? durColor = null;
             if (op.Duration != null)
             {
@@ -109,7 +109,7 @@ public static class TableMetricFormatter
                 maxDurLen = durText.Length;
 
             // 4. Throughput column
-            string tpText = "-";
+            var tpText = "-";
             ConsoleColor? tpColor = null;
             if (op.Throughput != null)
             {
@@ -121,7 +121,7 @@ public static class TableMetricFormatter
                 maxTpLen = tpText.Length;
 
             // 5. Memory column
-            string memText = "-";
+            var memText = "-";
             ConsoleColor? memColor = null;
             if (op.Memory != null)
             {
@@ -134,7 +134,7 @@ public static class TableMetricFormatter
                 maxMemLen = memText.Length;
 
             // 6. Failures column
-            string failText = "-";
+            var failText = "-";
             ConsoleColor? failColor = null;
             if (hasFailures)
             {
@@ -209,7 +209,7 @@ public static class TableMetricFormatter
         }
 
         // Render Rows
-        for (int i = 0; i < rows.Count; i++)
+        for (var i = 0; i < rows.Count; i++)
         {
             var row = rows[i];
 
@@ -294,10 +294,10 @@ public static class TableMetricFormatter
         bool color
     )
     {
-        for (int d = 0; d < dimensions.Count; d++)
+        for (var d = 0; d < dimensions.Count; d++)
         {
             var dim = dimensions[d];
-            bool isLast = d == dimensions.Count - 1;
+            var isLast = d == dimensions.Count - 1;
             var branch = isLast ? "  └─ " : "  ├─ ";
 
             if (color)
@@ -318,9 +318,9 @@ public static class TableMetricFormatter
                 .Take(options.MaxDimensionValuesToRender)
                 .ToList();
 
-            var total = dim.TotalOperations > 0 ? (double)dim.TotalOperations : 1.0;
+            var total = dim.TotalOperations > 0 ? dim.TotalOperations : 1.0;
 
-            for (int k = 0; k < ordered.Count; k++)
+            for (var k = 0; k < ordered.Count; k++)
             {
                 if (k > 0)
                     sb.Append(", ");

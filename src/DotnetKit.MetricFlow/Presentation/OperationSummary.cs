@@ -22,14 +22,13 @@ public record OperationSummary(
     /// <summary>
     /// Gets all categorical dimension snapshots tracked under this operation.
     /// </summary>
-    public IReadOnlyList<DimensionSnapshot> Dimensions { get; init; } =
-        Dimensions ?? Array.Empty<DimensionSnapshot>();
+    public IReadOnlyList<DimensionSnapshot> Dimensions { get; init; } = Dimensions ?? [];
 
     /// <summary>
     /// Gets any additional or custom metric snapshots associated with this operation.
     /// </summary>
     public IReadOnlyList<IMetricSnapshot> AdditionalSnapshots { get; init; } =
-        AdditionalSnapshots ?? Array.Empty<IMetricSnapshot>();
+        AdditionalSnapshots ?? [];
 
     /// <summary>
     /// Gets the total operation count recorded across the primary counters.

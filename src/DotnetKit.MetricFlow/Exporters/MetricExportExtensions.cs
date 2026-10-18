@@ -57,7 +57,7 @@ public static class MetricExportExtensions
     )
     {
         ArgumentNullException.ThrowIfNull(operations);
-        var opList = operations as IReadOnlyList<OperationSummary> ?? operations.ToList();
+        var opList = operations as IReadOnlyList<OperationSummary> ?? [.. operations];
         var opt = options ?? new MarkdownTableOptions();
 
         if (opList.Count == 0)
@@ -88,8 +88,8 @@ public static class MetricExportExtensions
             var ops = op.TotalOperations.ToString("N0", culture);
             var durAvg =
                 op.Duration != null ? FormatDuration(op.Duration.AverageDuration, opt) : "-";
-            string minMax = "-";
-            string p95p99 = "-";
+            var minMax = "-";
+            var p95p99 = "-";
             if (op.Duration != null)
             {
                 var minStr = FormatDuration(op.Duration.MinDuration, opt);

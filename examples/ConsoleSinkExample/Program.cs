@@ -17,36 +17,37 @@ internal class Program
         // ---------------------------------------------------------------------
         // Scenario 1: Standalone MetricTracker & Timer-Free Lifecycle Triggers
         // ---------------------------------------------------------------------
-        Console.WriteLine(">>> [Scenario 1] Standalone MetricTracker & Timer-Free Lifecycle Triggers <<<\n");
+        Console.WriteLine(
+            ">>> [Scenario 1] Standalone MetricTracker & Timer-Free Lifecycle Triggers <<<\n"
+        );
 
         // 1. Initialize tracker with topic name and topic tags
-        using var orderTracker = new MetricTracker("OrderService", new()
-        {
-            ["environment"] = "Production",
-            ["region"] = "us-east-1"
-        })
-        .AddThroughputCounter()
-        .AddFailureCounter()
-        // 2. Register ConsoleMetricSink with custom formatting options directly on tracker
-        .AddConsoleSink(opt =>
-        {
-            opt.Colorize = true;                 // Enable ANSI color coding
-            opt.IncludeTimestamp = true;         // Include timestamp prefix
-            opt.TimestampFormat = "HH:mm:ss.fff";// Millisecond precision
-            opt.Prefix = "[OrderService:Sink]";  // Log prefix tag
-        })
-        // 3. Configure execution-lifecycle sampling triggers (zero background timers!)
-        .ConfigureSinkSampling(sampling =>
-        {
-            // Stride trigger: Emit snapshots every 5 completed operations
-            sampling.EmitEveryNExecutions = 5;
+        using var orderTracker = new MetricTracker(
+            "OrderService",
+            new() { ["environment"] = "Production", ["region"] = "us-east-1" }
+        )
+            .AddThroughputCounter()
+            .AddFailureCounter()
+            // 2. Register ConsoleMetricSink with custom formatting options directly on tracker
+            .AddConsoleSink(opt =>
+            {
+                opt.Colorize = true; // Enable ANSI color coding
+                opt.IncludeTimestamp = true; // Include timestamp prefix
+                opt.TimestampFormat = "HH:mm:ss.fff"; // Millisecond precision
+                opt.Prefix = "[OrderService:Sink]"; // Log prefix tag
+            })
+            // 3. Configure execution-lifecycle sampling triggers (zero background timers!)
+            .ConfigureSinkSampling(sampling =>
+            {
+                // Stride trigger: Emit snapshots every 5 completed operations
+                sampling.EmitEveryNExecutions = 5;
 
-            // Tail / Outlier trigger: Emit snapshots immediately when an operation fails
-            sampling.EmitOnFailure = true;
+                // Tail / Outlier trigger: Emit snapshots immediately when an operation fails
+                sampling.EmitOnFailure = true;
 
-            // Latency trigger: Emit snapshots immediately if duration exceeds 100ms
-            sampling.EmitOnSlowDurationThreshold = TimeSpan.FromMilliseconds(100);
-        });
+                // Latency trigger: Emit snapshots immediately if duration exceeds 100ms
+                sampling.EmitOnSlowDurationThreshold = TimeSpan.FromMilliseconds(100);
+            });
 
         // Pass the standalone tracker directly to the service (zero DI container needed)
         var orderService = new OrderFulfillmentService(orderTracker);
@@ -59,12 +60,9 @@ internal class Program
         // ---------------------------------------------------------------------
         Console.WriteLine("\n>>> [Scenario 2] Standalone MetricTracker & Manual Sink Flush <<<\n");
 
-        var standaloneOptions = new MetricFlowOptions
-        {
-            Topic = "WarehouseService"
-        }
-        .AddThroughputCounter()
-        .AddFailureCounter();
+        var standaloneOptions = new MetricFlowOptions { Topic = "WarehouseService" }
+            .AddThroughputCounter()
+            .AddFailureCounter();
 
         // Configure console sink with custom options
         standaloneOptions.AddConsoleSink(opt =>
@@ -75,7 +73,9 @@ internal class Program
 
         using var warehouseTracker = new MetricTracker(standaloneOptions);
 
-        Console.WriteLine("Tracking operations in standalone tracker (no automatic triggers configured)...");
+        Console.WriteLine(
+            "Tracking operations in standalone tracker (no automatic triggers configured)..."
+        );
         for (var i = 1; i <= 3; i++)
         {
             using (warehouseTracker.TrackItems("InventoryRestock", itemCount: i * 25))
@@ -87,12 +87,11 @@ internal class Program
         // ---------------------------------------------------------------------
         // Scenario 3: Threshold-Based Color Coding & Custom Color Selectors
         // ---------------------------------------------------------------------
-        Console.WriteLine("\n>>> [Scenario 3] Native Threshold Color Coding & Dynamic Color Selector <<<\n");
+        Console.WriteLine(
+            "\n>>> [Scenario 3] Native Threshold Color Coding & Dynamic Color Selector <<<\n"
+        );
 
-        var paymentOptions = new MetricFlowOptions
-        {
-            Topic = "PaymentGateway"
-        };
+        var paymentOptions = new MetricFlowOptions { Topic = "PaymentGateway" };
 
         // Configure console sink with native duration thresholds and custom color rules
         paymentOptions.AddConsoleSink(opt =>
@@ -119,7 +118,9 @@ internal class Program
         }
         await paymentTracker.FlushSinksAsync();
 
-        Console.WriteLine("\n2. Degraded payment operation (50ms - 100ms -> DarkYellow Warning)...");
+        Console.WriteLine(
+            "\n2. Degraded payment operation (50ms - 100ms -> DarkYellow Warning)..."
+        );
         using (paymentTracker.Track("AuthorizePayment_Degraded"))
         {
             await Task.Delay(65);
@@ -136,15 +137,14 @@ internal class Program
         // ---------------------------------------------------------------------
         // Scenario 4: Hierarchical Execution Trees & Multi-Counter Custom Colors
         // ---------------------------------------------------------------------
-        Console.WriteLine("\n>>> [Scenario 4] Hierarchical Parent-Child Scopes & Custom Colors <<<\n");
+        Console.WriteLine(
+            "\n>>> [Scenario 4] Hierarchical Parent-Child Scopes & Custom Colors <<<\n"
+        );
 
-        var hierarchyOptions = new MetricFlowOptions
-        {
-            Topic = "MediaCatalog"
-        }
-        .AddHierarchyCounter()
-        .AddMemoryCounter()
-        .AddThroughputCounter();
+        var hierarchyOptions = new MetricFlowOptions { Topic = "MediaCatalog" }
+            .AddHierarchyCounter()
+            .AddMemoryCounter()
+            .AddThroughputCounter();
 
         hierarchyOptions.AddConsoleSink(opt =>
         {
@@ -158,30 +158,37 @@ internal class Program
                 critical: TimeSpan.FromMilliseconds(100),
                 warnColor: ConsoleColor.DarkYellow,
                 criticalColor: ConsoleColor.Red,
-                normalColor: ConsoleColor.Green);
+                normalColor: ConsoleColor.Green
+            );
 
             // 2. Memory allocation thresholds
             opt.AddThreshold<MemorySnapshot>(
-                warn: 10 * 1024 * 1024,      // 10 MB
-                critical: 50 * 1024 * 1024,  // 50 MB
+                warn: 10 * 1024 * 1024, // 10 MB
+                critical: 50 * 1024 * 1024, // 50 MB
                 warnColor: ConsoleColor.DarkYellow,
-                criticalColor: ConsoleColor.Red);
+                criticalColor: ConsoleColor.Red
+            );
 
             // 3. Or use a dynamic pattern-matching selector for total control
-            opt.ColorSelector = snapshot => snapshot switch
-            {
-                ExceptionSnapshot { TotalExceptions: > 0 } => ConsoleColor.Red,
-                FailureSnapshot { TotalFailures: > 0 } => ConsoleColor.Red,
-                DurationSnapshot d when d.AverageDuration.TotalMilliseconds > 100 => ConsoleColor.Red,
-                DurationSnapshot d when d.AverageDuration.TotalMilliseconds > 50 => ConsoleColor.DarkYellow,
-                MemorySnapshot m when m.AverageAllocatedBytes > 50 * 1024 * 1024 => ConsoleColor.Red,
-                MemorySnapshot m when m.AverageAllocatedBytes > 10 * 1024 * 1024 => ConsoleColor.DarkYellow,
-                _ => ConsoleColor.Green
-            };
+            opt.ColorSelector = snapshot =>
+                snapshot switch
+                {
+                    ExceptionSnapshot { TotalExceptions: > 0 } => ConsoleColor.Red,
+                    FailureSnapshot { TotalFailures: > 0 } => ConsoleColor.Red,
+                    DurationSnapshot d when d.AverageDuration.TotalMilliseconds > 100 =>
+                        ConsoleColor.Red,
+                    DurationSnapshot d when d.AverageDuration.TotalMilliseconds > 50 =>
+                        ConsoleColor.DarkYellow,
+                    MemorySnapshot m when m.AverageAllocatedBytes > 50 * 1024 * 1024 =>
+                        ConsoleColor.Red,
+                    MemorySnapshot m when m.AverageAllocatedBytes > 10 * 1024 * 1024 =>
+                        ConsoleColor.DarkYellow,
+                    _ => ConsoleColor.Green,
+                };
 
             // 4. Unit customization (Duration, Memory, Throughput)
             opt.DurationUnit = DurationUnit.Auto; // Automatically scales between ms, s, m, h
-            opt.MemoryUnit = MemoryUnit.Auto;     // Automatically scales between B, KB, MB, GB
+            opt.MemoryUnit = MemoryUnit.Auto; // Automatically scales between B, KB, MB, GB
             opt.ThroughputUnit = "epg_items/s";
         });
 
@@ -224,7 +231,9 @@ internal class Program
         // ---------------------------------------------------------------------
         // Scenario 5: Multi-Stage Table Display, Cell-Level Thresholds & Exporters
         // ---------------------------------------------------------------------
-        Console.WriteLine("\n>>> [Scenario 5] Multi-Stage Table, Cell Thresholds & Multi-Format Exporters <<<\n");
+        Console.WriteLine(
+            "\n>>> [Scenario 5] Multi-Stage Table, Cell Thresholds & Multi-Format Exporters <<<\n"
+        );
 
         using var pipelineTracker = new MetricTracker("DataPipeline")
             .AddThroughputCounter()
@@ -243,18 +252,31 @@ internal class Program
                     warn: TimeSpan.FromMilliseconds(20),
                     critical: TimeSpan.FromMilliseconds(50),
                     warnColor: ConsoleColor.DarkYellow,
-                    criticalColor: ConsoleColor.Red);
+                    criticalColor: ConsoleColor.Red
+                );
             });
 
         // Track Stage 1: Ingestion
-        using (var scope = pipelineTracker.TrackItems("Stage1_Ingest", 500, new() { ["sensor_id"] = "sensor-us-west-01" }))
+        using (
+            var scope = pipelineTracker.TrackItems(
+                "Stage1_Ingest",
+                500,
+                new() { ["sensor_id"] = "sensor-us-west-01" }
+            )
+        )
         {
             await Task.Delay(10);
             scope.SetMetadata("payload_bytes", 1024);
         }
 
         // Track Stage 2: Transform (Degraded duration > 20ms)
-        using (var scope = pipelineTracker.TrackItems("Stage2_Transform", 500, new() { ["sensor_id"] = "sensor-eu-central" }))
+        using (
+            var scope = pipelineTracker.TrackItems(
+                "Stage2_Transform",
+                500,
+                new() { ["sensor_id"] = "sensor-eu-central" }
+            )
+        )
         {
             await Task.Delay(30); // Triggers cell-level warning (Yellow)
             scope.SetMetadata("payload_bytes", 2048);
@@ -278,36 +300,58 @@ internal class OrderFulfillmentService(IMetricTracker tracker)
 {
     public async Task ProcessOrdersAsync()
     {
-        Console.WriteLine("Step 1: Processing 10 regular orders (triggers every 5 executions via EmitEveryNExecutions)...");
+        Console.WriteLine(
+            "Step 1: Processing 10 regular orders (triggers every 5 executions via EmitEveryNExecutions)..."
+        );
         for (var i = 1; i <= 10; i++)
         {
-            using (tracker.TrackItems("ProcessOrder", itemCount: i * 10, additionalTags: new() { ["tier"] = "standard" }))
+            using (
+                tracker.TrackItems(
+                    "ProcessOrder",
+                    itemCount: i * 10,
+                    additionalTags: new() { ["tier"] = "standard" }
+                )
+            )
             {
                 await Task.Delay(10);
             }
         }
 
-        Console.WriteLine("\nStep 2: Processing slow order (triggers immediately via EmitOnSlowDurationThreshold > 100ms)...");
+        Console.WriteLine(
+            "\nStep 2: Processing slow order (triggers immediately via EmitOnSlowDurationThreshold > 100ms)..."
+        );
         using (tracker.Track("ProcessOrder", tags: new() { ["tier"] = "slow_backend" }))
         {
             await Task.Delay(125); // Exceeds the 100ms threshold
         }
 
-        Console.WriteLine("\nStep 3: Processing order with logical failure (triggers immediately via EmitOnFailure)...");
-        using (var scope = tracker.Track("ProcessOrder", tags: new() { ["tier"] = "payment_declined" }))
+        Console.WriteLine(
+            "\nStep 3: Processing order with logical failure (triggers immediately via EmitOnFailure)..."
+        );
+        using (
+            var scope = tracker.Track("ProcessOrder", tags: new() { ["tier"] = "payment_declined" })
+        )
         {
             await Task.Delay(10);
             scope.SetFailed(); // Flag logical failure without exception
         }
 
-        Console.WriteLine("\nStep 4: Processing order that throws an exception (triggers immediately via EmitOnFailure)...");
+        Console.WriteLine(
+            "\nStep 4: Processing order that throws an exception (triggers immediately via EmitOnFailure)..."
+        );
         try
         {
-            await tracker.TrackActionAsync("ProcessOrder", async () =>
-            {
-                await Task.Delay(10);
-                throw new InvalidOperationException("External payment gateway connection timeout");
-            }, tags: new() { ["tier"] = "gateway_down" });
+            await tracker.TrackActionAsync(
+                "ProcessOrder",
+                async () =>
+                {
+                    await Task.Delay(10);
+                    throw new InvalidOperationException(
+                        "External payment gateway connection timeout"
+                    );
+                },
+                tags: new() { ["tier"] = "gateway_down" }
+            );
         }
         catch (InvalidOperationException)
         {
