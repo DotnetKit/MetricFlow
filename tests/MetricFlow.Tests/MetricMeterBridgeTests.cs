@@ -1,9 +1,7 @@
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using DotnetKit.MetricFlow;
 using DotnetKit.MetricFlow.Abstractions;
-using DotnetKit.MetricFlow.Extensions;
 using DotnetKit.MetricFlow.Meters;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;

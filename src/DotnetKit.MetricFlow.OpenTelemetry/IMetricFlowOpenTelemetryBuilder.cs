@@ -32,7 +32,7 @@ public interface IMetricFlowOpenTelemetryBuilder : IFluentBuilder<IServiceCollec
     /// <returns>The builder instance for fluent chaining.</returns>
     IMetricFlowOpenTelemetryBuilder WithTracing(
         Action<TracerProviderBuilder>? configure = null);
-    
+
     /// <summary>
     /// Configures MetricFlow OpenTelemetry instrumentation options.
     /// </summary>

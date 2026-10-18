@@ -2,7 +2,6 @@ using DotnetKit.MetricFlow;
 using DotnetKit.MetricFlow.Abstractions;
 using DotnetKit.MetricFlow.Configuration;
 using DotnetKit.MetricFlow.Counters;
-using DotnetKit.MetricFlow.Extensions;
 using FluentAssertions;
 using Xunit;
 

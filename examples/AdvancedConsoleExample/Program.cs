@@ -11,10 +11,10 @@ internal class Program
         // Initialize tracker with full multi-counter telemetry pipeline:
         // DurationCounter (default) + ThroughputCounter + ExceptionCounter + MemoryCounter + TagBreakdownCounter
         var tracker = new MetricTracker("AdvancedConsoleTopic", new()
-            {
-                ["tenant_id"] = "TenantId1",
-                ["session_id"] = Guid.NewGuid().ToString()
-            })
+        {
+            ["tenant_id"] = "TenantId1",
+            ["session_id"] = Guid.NewGuid().ToString()
+        })
             .AddThroughputCounter()
             .AddExceptionCounter()
             .AddMemoryCounter()

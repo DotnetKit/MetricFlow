@@ -54,7 +54,7 @@ public class MetricFlowMeterBridge : IMetricMeterBridge
         instruments.Active.Add(1, in tagList);
         return tagList;
     }
-    #pragma warning disable RCS1242 // Retains zero-copy reference passing directly into BCL's UpDownCounter.Add(..., in ...)
+#pragma warning disable RCS1242 // Retains zero-copy reference passing directly into BCL's UpDownCounter.Add(..., in ...)
     public void RecordOperationInFlightEnd(string metricName, in TagList inFlightTags)
     {
         if (!IsEnabled || !_options.RecordActiveOperations)

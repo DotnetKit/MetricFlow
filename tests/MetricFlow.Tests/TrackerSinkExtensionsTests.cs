@@ -232,7 +232,8 @@ public class TrackerSinkExtensionsTests
             EventId EventId,
             string Message,
             Exception? Exception
-        )> Logs { get; } = [];
+        )> Logs
+        { get; } = [];
 
         public IDisposable? BeginScope<TState>(TState state)
             where TState : notnull => null;

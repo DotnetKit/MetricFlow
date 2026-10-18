@@ -1,6 +1,5 @@
 using DotnetKit.MetricFlow;
 using DotnetKit.MetricFlow.Abstractions;
-using DotnetKit.MetricFlow.Sinks.Logger;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Events;
