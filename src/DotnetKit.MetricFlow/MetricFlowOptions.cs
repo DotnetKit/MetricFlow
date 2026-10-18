@@ -112,6 +112,24 @@ public class MetricFlowOptions
     }
 
     /// <summary>
+    /// Registers a <see cref="ConsoleMetricSink"/> for structured console logging of metric snapshots to a specified <see cref="TextWriter"/>.
+    /// </summary>
+    /// <param name="outputWriter">The target writer for log output.</param>
+    /// <param name="configure">Optional configuration for console output formatting.</param>
+    /// <returns>This options instance for fluent chaining.</returns>
+    public MetricFlowOptions AddConsoleSink(TextWriter outputWriter, Action<ConsoleMetricSinkOptions>? configure = null)
+    {
+        ArgumentNullException.ThrowIfNull(outputWriter);
+        var options = new ConsoleMetricSinkOptions
+        {
+            OutputWriter = outputWriter
+        };
+        configure?.Invoke(options);
+        Sinks.Add(new ConsoleMetricSink(options));
+        return this;
+    }
+
+    /// <summary>
     /// Registers a <see cref="LoggerMetricSink"/> for structured ILogger logging of metric snapshots.
     /// </summary>
     /// <param name="configure">Optional configuration for logger output formatting and log levels.</param>

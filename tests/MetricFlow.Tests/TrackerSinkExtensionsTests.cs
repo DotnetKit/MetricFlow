@@ -17,12 +17,14 @@ public class TrackerSinkExtensionsTests
         using var stringWriter = new StringWriter();
         var tracker = new MetricTracker("OrderProcessing")
             .AddThroughputCounter()
-            .AddConsoleSink(opt =>
-            {
-                opt.OutputWriter = stringWriter;
-                opt.Prefix = "[StandaloneOrder]";
-                opt.Colorize = false;
-            });
+            .AddConsoleSink(
+                stringWriter,
+                opt =>
+                {
+                    opt.Prefix = "[StandaloneOrder]";
+                    opt.Colorize = false;
+                }
+            );
 
         // Act
         tracker.TrackItems("Checkout", 10).Dispose();
@@ -33,6 +35,17 @@ public class TrackerSinkExtensionsTests
         var output = stringWriter.ToString();
         output.Should().Contain("[StandaloneOrder]");
         output.Should().Contain("Checkout");
+    }
+
+    [Fact]
+    public void AddConsoleSink_WithNullOutputWriter_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var tracker = new MetricTracker("OrderProcessing");
+
+        // Act & Assert
+        var act = () => tracker.AddConsoleSink((TextWriter)null!);
+        act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
@@ -114,11 +127,13 @@ public class TrackerSinkExtensionsTests
         using var stringWriter = new StringWriter();
         var tracker = new MetricTracker("BatchService")
             .AddThroughputCounter()
-            .AddConsoleSink(opt =>
-            {
-                opt.OutputWriter = stringWriter;
-                opt.Colorize = false;
-            })
+            .AddConsoleSink(
+                stringWriter,
+                opt =>
+                {
+                    opt.Colorize = false;
+                }
+            )
             .ConfigureSinkTriggers(trig =>
             {
                 trig.EmitEveryNExecutions = 3;
@@ -147,7 +162,7 @@ public class TrackerSinkExtensionsTests
             .AddLoggerSink(testLogger);
 
         // Act - enable periodic flush every 30ms
-        using (var flushToken = tracker.EnablePeriodicFlush(TimeSpan.FromMilliseconds(30)))
+        using (tracker.EnablePeriodicFlush(TimeSpan.FromMilliseconds(30)))
         {
             tracker.TrackItems("JobA", 100).Dispose();
 
@@ -169,7 +184,7 @@ public class TrackerSinkExtensionsTests
             .AddLoggerSink(testLogger);
 
         // Act - configure 1 hour interval so timer won't fire during test
-        using (var flushToken = tracker.EnablePeriodicFlush(TimeSpan.FromHours(1)))
+        using (tracker.EnablePeriodicFlush(TimeSpan.FromHours(1)))
         {
             tracker.TrackItems("ShutdownJob", 42).Dispose();
             testLogger.Logs.Should().BeEmpty(); // Has not flushed yet
@@ -207,7 +222,7 @@ public class TrackerSinkExtensionsTests
         totalItemsAlias.Should().Be(500);
         totalMemory.Should().BeGreaterThanOrEqualTo(0);
         failureSnapshot.Should().NotBeNull();
-        failureSnapshot!.TotalOperations.Should().Be(1);
+        failureSnapshot.TotalOperations.Should().Be(1);
     }
 
     private sealed class TestLogger : ILogger
@@ -217,7 +232,7 @@ public class TrackerSinkExtensionsTests
             EventId EventId,
             string Message,
             Exception? Exception
-        )> Logs { get; } = new();
+        )> Logs { get; } = [];
 
         public IDisposable? BeginScope<TState>(TState state)
             where TState : notnull => null;

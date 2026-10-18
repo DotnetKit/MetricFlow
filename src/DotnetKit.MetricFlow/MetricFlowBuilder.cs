@@ -49,6 +49,18 @@ public class MetricFlowBuilder : IMetricFlowBuilder
     }
 
     /// <inheritdoc />
+    public IMetricFlowBuilder AddConsoleSink(TextWriter outputWriter, Action<ConsoleMetricSinkOptions>? configure = null)
+    {
+        ArgumentNullException.ThrowIfNull(outputWriter);
+        var options = new ConsoleMetricSinkOptions
+        {
+            OutputWriter = outputWriter
+        };
+        configure?.Invoke(options);
+        return AddSink(new ConsoleMetricSink(options));
+    }
+
+    /// <inheritdoc />
     public IMetricFlowBuilder AddLoggerSink(Action<LoggerMetricSinkOptions>? configure = null)
     {
         Current.AddSingleton<IMetricSink>(sp =>

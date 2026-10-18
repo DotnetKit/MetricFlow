@@ -39,6 +39,14 @@ public interface IMetricFlowBuilder : IFluentBuilder<IServiceCollection>, IServi
     IMetricFlowBuilder AddConsoleSink(Action<ConsoleMetricSinkOptions>? configure = null);
 
     /// <summary>
+    /// Adds a <see cref="ConsoleMetricSink"/> for structured console logging to a specified <see cref="TextWriter"/>.
+    /// </summary>
+    /// <param name="outputWriter">The target writer for log output.</param>
+    /// <param name="configure">Optional configuration for console output formatting.</param>
+    /// <returns>The builder instance for fluent chaining.</returns>
+    IMetricFlowBuilder AddConsoleSink(TextWriter outputWriter, Action<ConsoleMetricSinkOptions>? configure = null);
+
+    /// <summary>
     /// Adds a <see cref="LoggerMetricSink"/> for structured logging via <see cref="ILogger"/>.
     /// The logger is automatically resolved from the dependency injection container (<see cref="ILoggerFactory"/> or <see cref="ILogger"/>).
     /// </summary>

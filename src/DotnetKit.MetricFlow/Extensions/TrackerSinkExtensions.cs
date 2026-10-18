@@ -32,6 +32,31 @@ public static class TrackerSinkExtensions
     }
 
     /// <summary>
+    /// Registers a <see cref="ConsoleMetricSink"/> on the metric tracker for structured console logging of metric snapshots to a specified <see cref="TextWriter"/>.
+    /// </summary>
+    /// <typeparam name="T">The metric tracker type.</typeparam>
+    /// <param name="tracker">The tracker instance.</param>
+    /// <param name="outputWriter">The target writer for log output.</param>
+    /// <param name="configure">Optional configuration for console output formatting.</param>
+    /// <returns>The same tracker instance for method chaining.</returns>
+    public static T AddConsoleSink<T>(
+        this T tracker,
+        TextWriter outputWriter,
+        Action<ConsoleMetricSinkOptions>? configure = null)
+        where T : IMetricTracker
+    {
+        ArgumentNullException.ThrowIfNull(tracker);
+        ArgumentNullException.ThrowIfNull(outputWriter);
+        var options = new ConsoleMetricSinkOptions
+        {
+            OutputWriter = outputWriter
+        };
+        configure?.Invoke(options);
+        tracker.RegisterSink(new ConsoleMetricSink(options));
+        return tracker;
+    }
+
+    /// <summary>
     /// Registers a <see cref="LoggerMetricSink"/> on the metric tracker for structured logging via <see cref="ILogger"/>.
     /// </summary>
     /// <typeparam name="T">The metric tracker type.</typeparam>
