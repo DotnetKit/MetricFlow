@@ -218,7 +218,7 @@ Run the project directly from the repository root:
 dotnet run --project examples/ConsoleSinkExample/ConsoleSinkExample.csproj
 ```
 
-### Sample Output
+### Sample Output (flat)
 
 ```text
 ================================================================
