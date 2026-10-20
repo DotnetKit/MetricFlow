@@ -51,6 +51,9 @@ It can be used in both ASP.NET Core and non-ASP.NET Core applications.
 - **Pluggable & Extensible**: Fully customizable counter lifecycle (`CounterBase<TState>`) and trackers (`MetricTrackerBase`).
 - **Multi-Targeting**: Native support for `.NET 8.0` and `.NET 10.0`.
 
+<img width="1057" height="319" alt="image" src="https://github.com/user-attachments/assets/fe5c1bbd-6c23-4093-b9b2-52cd5ecd3bc7" />
+
+
 ## Getting Started
 
 ### Prerequisites
