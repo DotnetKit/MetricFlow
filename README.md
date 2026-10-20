@@ -86,6 +86,8 @@ dotnet build
 
 ### Usage
 
+(Official SKILL)[https://github.com/DotnetKit/MetricFlow/blob/main/.agents/skills/metricflow/SKILL.md]
+
 #### 1. Initialize Tracker
 
 Initialize a tracker and optionally chain throughput, memory, exception, and dimension counters:
