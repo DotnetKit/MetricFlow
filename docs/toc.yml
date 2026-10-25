@@ -2,6 +2,22 @@
   href: index.md
 - name: Getting Started
   href: ../README.md
+- name: Use Cases
+  items:
+    - name: Simple Implementation
+      href: use-cases/simple-implementation.md
+    - name: DI-Based Implementation
+      href: use-cases/di-based-implementation.md
+    - name: Console Log Sink & Triggers
+      href: use-cases/console-log-sink.md
+    - name: Hierarchical Scope Trees
+      href: use-cases/hierarchical-scope-trees.md
+    - name: Logger Sink (Serilog / ILogger)
+      href: use-cases/logger-sink.md
+    - name: Web Implementation
+      href: use-cases/web-implementation.md
+    - name: OpenTelemetry & Observability
+      href: use-cases/opentelemetry-observability.md
 - name: Architecture
   href: ../ARCHITECTURE.md
 - name: Roadmap

@@ -21,34 +21,49 @@ It can be used in both ASP.NET Core and non-ASP.NET Core applications.
 
 | Use Case                          | Best For                                                    | Registration Style                 | Primary Injections / APIs                              | Example Project                                                                                                 |
 | :-------------------------------- | :---------------------------------------------------------- | :--------------------------------- | :----------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------- |
-| **Simple Implementation**         | Targeted method/loop profiling, CLI jobs, algorithms        | Standalone instantiation           | `new MetricTracker(...)`                               | [BasicConsoleExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/BasicConsoleExample) & [AdvancedConsoleExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/AdvancedConsoleExample) |
-| **DI-Based Implementation**       | Background workers, daemons, multi-tenant                   | Standard DI (`IServiceCollection`) | `IMetricTracker`, `[FromKeyedServices]`, `IMetricFlow` | [AdvancedConsoleWithDIExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/AdvancedConsoleWithDIExample)                                           |
-| **Console Log Sink & Triggers**   | Real-time formatted console logging, timer-free sampling    | Standalone or DI                   | `AddConsoleSink(...)`, `ConfigureSinkSampling(...)`    | [ConsoleSinkExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/ConsoleSinkExample)                                                               |
-| **Hierarchical Scope Trees**      | Parent-child execution flows, self-time / self-memory       | Standalone or DI                   | `AddHierarchyCounter()`, `GetHierarchySnapshot(...)`   | [ConsoleSinkExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/ConsoleSinkExample)                                                               |
-| **Logger Sink (Serilog / ILogger)** | Centralized structured logging, APM forwarders, log files   | Standalone or DI                   | `AddLoggerSink(...)`, `ConfigureSinkSampling(...)`     | [LoggerSinkExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/LoggerSinkExample)                                                                 |
-| **Web Implementation**            | Web APIs, microservices, HTTP routing                       | ASP.NET Core pipeline              | `app.UseMetricFlow()`, `app.MapMetricFlow("/metrics")` | [WebApiExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/WebApiExample)                                                                         |
-| **OpenTelemetry & Observability** | Prometheus, Grafana, Datadog, OTLP collectors, CLI counters | OpenTelemetry SDK / BCL            | `.AddMetricFlowInstrumentation()`, `dotnet-counters`   | [OpenTelemetryConsoleExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/OpenTelemetryConsoleExample)                                             |
+| [**Simple Implementation**](docs/use-cases/simple-implementation.md)         | Targeted method/loop profiling, CLI jobs, algorithms        | Standalone instantiation           | `new MetricTracker(...)`                               | [BasicConsoleExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/BasicConsoleExample) & [AdvancedConsoleExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/AdvancedConsoleExample) |
+| [**DI-Based Implementation**](docs/use-cases/di-based-implementation.md)       | Background workers, daemons, multi-tenant                   | Standard DI (`IServiceCollection`) | `IMetricTracker`, `[FromKeyedServices]`, `IMetricFlow` | [AdvancedConsoleWithDIExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/AdvancedConsoleWithDIExample)                                           |
+| [**Console Log Sink & Triggers**](docs/use-cases/console-log-sink.md)   | Real-time formatted console logging, timer-free sampling    | Standalone or DI                   | `AddConsoleSink(...)`, `ConfigureSinkSampling(...)`    | [ConsoleSinkExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/ConsoleSinkExample)                                                               |
+| [**Hierarchical Scope Trees**](docs/use-cases/hierarchical-scope-trees.md)      | Parent-child execution flows, self-time / self-memory       | Standalone or DI                   | `AddHierarchyCounter()`, `GetHierarchySnapshot(...)`   | [ConsoleSinkExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/ConsoleSinkExample)                                                               |
+| [**Logger Sink (Serilog / ILogger)**](docs/use-cases/logger-sink.md) | Centralized structured logging, APM forwarders, log files   | Standalone or DI                   | `AddLoggerSink(...)`, `ConfigureSinkSampling(...)`     | [LoggerSinkExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/LoggerSinkExample)                                                                 |
+| [**Web Implementation**](docs/use-cases/web-implementation.md)            | Web APIs, microservices, HTTP routing                       | ASP.NET Core pipeline              | `app.UseMetricFlow()`, `app.MapMetricFlow("/metrics")` | [WebApiExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/WebApiExample)                                                                         |
+| [**OpenTelemetry & Observability**](docs/use-cases/opentelemetry-observability.md) | Prometheus, Grafana, Datadog, OTLP collectors, CLI counters | OpenTelemetry SDK / BCL            | `.AddMetricFlowInstrumentation()`, `dotnet-counters`   | [OpenTelemetryConsoleExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/OpenTelemetryConsoleExample)                                             |
 
 ---
 
 ## Features
 
-- **Counters**: Track execution counts and occurrences of events.
+### Core Metrics & Measurement
+
 - **Timers & Duration**: High-precision operation timing via lock-free stopwatch ticks.
+- **Counters**: Track execution counts and occurrences of events.
 - **Throughput & Item Tracking**: Measure batch sizes, entity counts, and processing rates (items/sec) with `ThroughputCounter`.
-- **Asynchronous Stream Tracking**: Native `TrackStream` for `IAsyncEnumerable<T>` and `IEnumerable<T>` with automatic item counting and duration tracking.
-- **Hierarchical Metrics & Correlation**: Automatically correlate parent and nested child tracking scopes across asynchronous execution contexts (`AsyncLocal`) with `HierarchyCounter`. Computes exclusive self-duration and self-allocated memory, renders formatted tree snapshots (`▼`, `├─`, `└─`), and bridges to ambient OpenTelemetry Activity spans.
-- **Dimensional Breakdown & Slicing**: Slice and compute operation distributions by business dimensions, tags, or computed rules with `DimensionCounter` and built-in cardinality safeguards.
 - **Memory Tracking**: Measure per-operation heap allocations with `MemoryCounter`.
 - **Exception & Failure Tracking**: Capture runtime exceptions with `ExceptionCounter` and track logical versus exception failure distributions with `FailureCounter`.
-- **Structured Sinks & Dynamic Color Coding**: Real-time console and logger sinks with threshold color rules (`AddThreshold`), dynamic pattern selectors (`ColorSelector`), customizable units (`DurationUnit`, `MemoryUnit`, `ThroughputUnit`), and extensible snapshot formatters (`AddFormatter`).
-- **OpenTelemetry Integration**: Turnkey integration via [`DotnetKit.MetricFlow.OpenTelemetry`](https://github.com/DotnetKit/MetricFlow/blob/main/src/DotnetKit.MetricFlow.OpenTelemetry/README.md) for exporting metrics to Prometheus, Grafana, Datadog, and OTLP collectors with ambient distributed trace correlation. See the [OpenTelemetry README](https://github.com/DotnetKit/MetricFlow/blob/main/src/DotnetKit.MetricFlow.OpenTelemetry/README.md).
-- **Built on .NET Diagnostics**: Built directly on native .NET BCL `System.Diagnostics.Metrics` (`Meter`, `Histogram`, `Counter`, `UpDownCounter`) with lock-free hot paths and cardinality protection. See the [Architecture Documentation](ARCHITECTURE.md#11-under-the-hood-systemdiagnostics-bridge).
-- **CLI Diagnostics**: Live real-time inspection in terminal via standard `dotnet-counters monitor`.
+- **Dimensional Breakdown & Slicing**: Slice and compute operation distributions by business dimensions, tags, or computed rules with `DimensionCounter` and built-in cardinality safeguards.
+
+### Flow & Execution Context
+
+- **Hierarchical Metrics & Correlation**: Automatically correlate parent and nested child tracking scopes across asynchronous execution contexts (`AsyncLocal`) with `HierarchyCounter`. Computes exclusive self-duration and self-allocated memory, renders formatted tree snapshots (`▼`, `├─`, `└─`), and bridges to ambient OpenTelemetry Activity spans.
+- **Asynchronous Stream Tracking**: Native `TrackStream` for `IAsyncEnumerable<T>` and `IEnumerable<T>` with automatic item counting and duration tracking.
 - **Metadata and Tags**: Add contextual information to metrics for rich analysis and filtering.
 - **Sampling**: Thread-safe sampling control to balance performance and data volume.
+
+### Sinks, Formatting & Diagnostics
+
+- **Structured Sinks & Dynamic Color Coding**: Real-time console and logger sinks with threshold color rules (`AddThreshold`), dynamic pattern selectors (`ColorSelector`), customizable units (`DurationUnit`, `MemoryUnit`, `ThroughputUnit`), and extensible snapshot formatters (`AddFormatter`).
+- **CLI Diagnostics**: Live real-time inspection in terminal via standard `dotnet-counters monitor`.
+
+### Ecosystem & Observability Integrations
+
+- **OpenTelemetry Integration**: Turnkey integration via [`DotnetKit.MetricFlow.OpenTelemetry`](https://github.com/DotnetKit/MetricFlow/blob/main/src/DotnetKit.MetricFlow.OpenTelemetry/README.md) for exporting metrics to Prometheus, Grafana, Datadog, and OTLP collectors with ambient distributed trace correlation. See the [OpenTelemetry README](https://github.com/DotnetKit/MetricFlow/blob/main/src/DotnetKit.MetricFlow.OpenTelemetry/README.md).
+- **Built on .NET Diagnostics**: Built directly on native .NET BCL `System.Diagnostics.Metrics` (`Meter`, `Histogram`, `Counter`, `UpDownCounter`) with lock-free hot paths and cardinality protection. See the [Architecture Documentation](ARCHITECTURE.md#11-under-the-hood-systemdiagnostics-bridge).
 - **ASP.NET Core Integration**: Turnkey middleware, endpoint routing resolution, and metric exposition endpoints.
+
+### Performance & Extensibility
+
 - **Pluggable & Extensible**: Fully customizable counter lifecycle (`CounterBase<TState>`) and trackers (`MetricTrackerBase`).
+- **Lock-Free Hot Paths**: Low-overhead execution with lock-free primitives and immutable configuration snapshots.
 - **Multi-Targeting**: Native support for `.NET 8.0` and `.NET 10.0`.
 
 <img width="1057" height="319" alt="image" src="https://github.com/user-attachments/assets/fe5c1bbd-6c23-4093-b9b2-52cd5ecd3bc7" />
