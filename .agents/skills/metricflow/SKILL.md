@@ -4,7 +4,8 @@ description: >-
   Guides developers and AI agents on integrating DotnetKit.MetricFlow into .NET projects (ASP.NET Core,
   Worker Services, Console applications, and OpenTelemetry). Use this skill when installing MetricFlow,
   configuring dependency injection, instrumenting code with counters (duration, throughput, memory,
-  dimension, hierarchy, exception), configuring sinks (Console, ILogger/Serilog), or exporting metrics.
+  dimension, hierarchy, exception), configuring sinks (Console, Table, Live Dashboard, ILogger/Serilog),
+  querying operation summaries, or exporting metrics (Markdown, CSV, JSON).
 ---
 
 # MetricFlow Integration Skill
@@ -195,20 +196,39 @@ public class BillingProcessor([FromKeyedServices("BillingTopic")] IMetricTracker
 
 ---
 
-### Recipe D: Standalone Console or Micro-Benchmark (No DI)
+### Recipe D: Standalone Console, CLI Utilities & Micro-Benchmarks (No DI)
 
-Ideal for algorithms, benchmark utilities, and CLI scripts:
+Ideal for algorithms, benchmark utilities, CLI tools, and data migration scripts. Standalone trackers have full fluent parity with DI—sinks, triggers, and periodic flushes can be chained directly:
 
 ```csharp
 using DotnetKit.MetricFlow;
+using DotnetKit.MetricFlow.Counters;
+using DotnetKit.MetricFlow.Exporters;
+using DotnetKit.MetricFlow.Sinks.Console;
 
-var tracker = new MetricTracker("ImportJob", new Dictionary<string, string>
+using var tracker = new MetricTracker("ImportJob", new()
 {
     ["run_id"] = Guid.NewGuid().ToString("N")
 })
 .AddThroughputCounter()
 .AddMemoryCounter()
-.AddExceptionCounter();
+.AddFailureCounter()
+// 1. Fluent sink configuration directly on tracker instance
+.AddConsoleSink(opt =>
+{
+    opt.DisplayMode = ConsoleDisplayMode.Table; // Formatted multi-column table
+    opt.Colorize = true;
+    opt.AddThreshold<DurationSnapshot>(warn: TimeSpan.FromMilliseconds(50), critical: TimeSpan.FromMilliseconds(100));
+})
+// 2. Lifecycle triggers (timer-free)
+.ConfigureSinkSampling(triggers =>
+{
+    triggers.EmitEveryNExecutions = 25; // Stride
+    triggers.EmitOnFailure = true;      // Tail error
+});
+
+// Optional: Enable background periodic flush for long-running CLI apps
+// using var flushHandle = tracker.EnablePeriodicFlush(TimeSpan.FromSeconds(5));
 
 // Measure execution
 using (tracker.TrackItems("BatchProcess", 500))
@@ -216,8 +236,9 @@ using (tracker.TrackItems("BatchProcess", 500))
     await DoHeavyWorkAsync();
 }
 
-// Print formatted summary report
-Console.WriteLine(tracker.ToString());
+// Flush sinks or generate formatted reports
+tracker.FlushSinks();
+Console.WriteLine(tracker.ToMarkdownTable());
 ```
 
 ---
@@ -360,6 +381,34 @@ using (var scope = tracker.Track("Checkout", new() { ["country"] = "US" }))
 
 ---
 
+### 6. Correlated Operation Summaries & Cumulative Queries
+Aggregates all counter snapshots (`Throughput`, `Duration`, `Memory`, `Failure`, `Exception`, `Dimensions`, `Hierarchy`) for an operation into a single strongly-typed record:
+
+```csharp
+using DotnetKit.MetricFlow;
+using DotnetKit.MetricFlow.Presentation;
+
+// Query a single correlated operation summary
+OperationSummary? summary = tracker.GetOperationSummary("Checkout");
+if (summary != null)
+{
+    Console.WriteLine($"Op: {summary.OperationName}");
+    Console.WriteLine($"Total Ops: {summary.TotalOperations}, Failures: {summary.TotalFailures} ({summary.FailureRate:P1})");
+    Console.WriteLine($"Avg Duration: {summary.AverageDuration?.TotalMilliseconds:F2} ms");
+    Console.WriteLine($"Throughput: {summary.ItemsPerSecond:F1} items/sec");
+    Console.WriteLine($"Avg Memory: {summary.AverageAllocatedBytes:N0} bytes");
+}
+
+// Query all operations across the tracker
+IReadOnlyList<OperationSummary> allSummaries = tracker.GetOperationSummaries();
+
+// Cumulative topic-level queries across all operations
+long totalItems = tracker.GetTotalItemsProcessed();
+long totalAllocatedBytes = tracker.GetTotalMemoryAllocated();
+```
+
+---
+
 ## 5. Observability, Sinks & OpenTelemetry
 
 ### 1. OpenTelemetry Export (Prometheus, OTLP, Datadog)
@@ -415,17 +464,39 @@ using (tracker.Track("ProcessItem", tags))
 
 ### 3. Structured Real-Time Sinks & Timer-Free Sampling
 
-MetricFlow includes high-performance console and logger sinks driven by operation lifecycle triggers rather than CPU-burning background polling timers.
+MetricFlow includes high-performance console and logger sinks driven by operation lifecycle triggers rather than CPU-burning background polling timers. Supports flat line logs, auto-padded multi-column tables, markdown output, and cell-level threshold colorization.
 
 ```csharp
+using DotnetKit.MetricFlow.Counters;
+using DotnetKit.MetricFlow.Sinks.Console;
+
 services.AddMetricFlow("OrderService", options =>
 {
-    // A. Structured ANSI Console Sink
+    // A. Structured ANSI Console Sink (Table / FlatLog / Markdown)
     options.AddConsoleSink(opt =>
     {
+        opt.DisplayMode = ConsoleDisplayMode.Table; // Or FlatLog (default), Markdown
         opt.Colorize = true;
-        opt.TimestampFormat = "HH:mm:ss.fff";
-        opt.Prefix = "[OrderService]";
+        opt.ShowDimensionBreakdown = true;          // Renders category sub-rows (├─ , └─)
+        opt.MaxDimensionValuesToRender = 4;
+        opt.DurationUnit = DurationUnit.Auto;       // Scales between ms, s, m, h
+        opt.MemoryUnit = MemoryUnit.Auto;           // Scales between B, KB, MB, GB
+
+        // Declarative threshold color rules (highlights specific table cells)
+        opt.AddThreshold<DurationSnapshot>(
+            warn: TimeSpan.FromMilliseconds(50),
+            critical: TimeSpan.FromMilliseconds(100),
+            warnColor: ConsoleColor.DarkYellow,
+            criticalColor: ConsoleColor.Red
+        );
+
+        // Or dynamic pattern-matching selector for full control:
+        opt.ColorSelector = snapshot => snapshot switch
+        {
+            FailureSnapshot { TotalFailures: > 0 } => ConsoleColor.Red,
+            DurationSnapshot d when d.AverageDuration.TotalMilliseconds > 100 => ConsoleColor.Red,
+            _ => null // Uses default/neutral
+        };
     });
 
     // B. Structured ILogger / Serilog Sink
@@ -444,6 +515,46 @@ services.AddMetricFlow("OrderService", options =>
         sampling.EmitOnSlowDurationThreshold = TimeSpan.FromMilliseconds(200); // Latency spike trigger
     });
 });
+```
+
+---
+
+### 4. Live In-Place Console Dashboard (`AddLiveConsoleDashboard`)
+
+For interactive CLI apps, migrations, and long-running batch pipelines, render a live multi-stage dashboard that refreshes in-place using ANSI cursor controls:
+
+```csharp
+// Available via DI options or directly on IMetricTracker
+tracker.AddLiveConsoleDashboard(opt =>
+{
+    opt.Title = "Data Pipeline Ingestion Dashboard";
+    opt.RefreshInterval = TimeSpan.FromSeconds(1);
+    opt.ShowDimensionBreakdown = true;
+});
+```
+
+---
+
+### 5. Report Generation & Multi-Format Exporters (CI/CD, Benchmarks, Logs)
+
+MetricFlow includes zero-dependency exporters to export snapshots or operation summaries into Markdown tables, CSV text, or JSON:
+
+```csharp
+using DotnetKit.MetricFlow.Exporters;
+
+// 1. GitHub-Flavored Markdown Table (ideal for CI step summaries or PR comments)
+string markdownTable = tracker.ToMarkdownTable();
+if (Environment.GetEnvironmentVariable("GITHUB_STEP_SUMMARY") is { } summaryPath)
+{
+    File.AppendAllText(summaryPath, markdownTable);
+}
+
+// 2. RFC 4180 Compliant CSV (ideal for benchmark artifacts, Excel, Pandas)
+string csvReport = tracker.ToCsv();
+File.WriteAllText("benchmark-results.csv", csvReport);
+
+// 3. Structured JSON (ideal for log forwarders, Datadog/Elasticsearch file ingestion)
+string jsonPayload = tracker.ToJson();
 ```
 
 ---

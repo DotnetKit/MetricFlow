@@ -3,12 +3,10 @@
 ![internal](https://github.com/DotnetKit/MetricFlow/actions/workflows/publish-internal.yml/badge.svg)
 ![public](https://github.com/DotnetKit/MetricFlow/actions/workflows/publish-public.yml/badge.svg)
 [![DotnetKit.MetricFlow](https://img.shields.io/nuget/v/DotnetKit.MetricFlow)](https://www.nuget.org/packages/DotnetKit.MetricFlow)
-[![DotnetKit.MetricFlow.AspNetCore](https://img.shields.io/nuget/v/DotnetKit.MetricFlow.AspNetCore)](https://www.nuget.org/packages/DotnetKit.MetricFlow.AspNetCore)
-[![DotnetKit.MetricFlow.OpenTelemetry](https://img.shields.io/nuget/v/DotnetKit.MetricFlow.OpenTelemetry)](https://www.nuget.org/packages/DotnetKit.MetricFlow.OpenTelemetry)
+[![DotnetKit.MetricFlow](https://img.shields.io/nuget/vpre/DotnetKit.MetricFlow)](https://www.nuget.org/packages/DotnetKit.MetricFlow)
 
 MetricFlow is a lightweight and standalone .NET library designed to simplify the way developers define and track technical and business related metrics (such as counters, timers, throughput and dimensional breakdowns).
 Full documentation, architecture guides, and API references are available on our [GitHub Pages Documentation Portal](https://dotnetkit.github.io/MetricFlow/)
- 
 
 ## What Can We Do with MetricFlow?
 
@@ -19,15 +17,15 @@ It can be used in both ASP.NET Core and non-ASP.NET Core applications.
 
 ### Streamlined Use Cases
 
-| Use Case                          | Best For                                                    | Registration Style                 | Primary Injections / APIs                              | Example Project                                                                                                 |
-| :-------------------------------- | :---------------------------------------------------------- | :--------------------------------- | :----------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------- |
-| [**Simple Implementation**](docs/use-cases/simple-implementation.md)         | Targeted method/loop profiling, CLI jobs, algorithms        | Standalone instantiation           | `new MetricTracker(...)`                               | [BasicConsoleExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/BasicConsoleExample) & [AdvancedConsoleExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/AdvancedConsoleExample) |
-| [**DI-Based Implementation**](docs/use-cases/di-based-implementation.md)       | Background workers, daemons, multi-tenant                   | Standard DI (`IServiceCollection`) | `IMetricTracker`, `[FromKeyedServices]`, `IMetricFlow` | [AdvancedConsoleWithDIExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/AdvancedConsoleWithDIExample)                                           |
-| [**Console Log Sink & Triggers**](docs/use-cases/console-log-sink.md)   | Real-time formatted console logging, timer-free sampling    | Standalone or DI                   | `AddConsoleSink(...)`, `ConfigureSinkSampling(...)`    | [ConsoleSinkExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/ConsoleSinkExample)                                                               |
-| [**Hierarchical Scope Trees**](docs/use-cases/hierarchical-scope-trees.md)      | Parent-child execution flows, self-time / self-memory       | Standalone or DI                   | `AddHierarchyCounter()`, `GetHierarchySnapshot(...)`   | [ConsoleSinkExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/ConsoleSinkExample)                                                               |
-| [**Logger Sink (Serilog / ILogger)**](docs/use-cases/logger-sink.md) | Centralized structured logging, APM forwarders, log files   | Standalone or DI                   | `AddLoggerSink(...)`, `ConfigureSinkSampling(...)`     | [LoggerSinkExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/LoggerSinkExample)                                                                 |
-| [**Web Implementation**](docs/use-cases/web-implementation.md)            | Web APIs, microservices, HTTP routing                       | ASP.NET Core pipeline              | `app.UseMetricFlow()`, `app.MapMetricFlow("/metrics")` | [WebApiExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/WebApiExample)                                                                         |
-| [**OpenTelemetry & Observability**](docs/use-cases/opentelemetry-observability.md) | Prometheus, Grafana, Datadog, OTLP collectors, CLI counters | OpenTelemetry SDK / BCL            | `.AddMetricFlowInstrumentation()`, `dotnet-counters`   | [OpenTelemetryConsoleExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/OpenTelemetryConsoleExample)                                             |
+| Use Case                                                                           | Best For                                                    | Registration Style                 | Primary Injections / APIs                              | Example Project                                                                                                                                                                                                     |
+| :--------------------------------------------------------------------------------- | :---------------------------------------------------------- | :--------------------------------- | :----------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [**Simple Implementation**](docs/use-cases/simple-implementation.md)               | Targeted method/loop profiling, CLI jobs, algorithms        | Standalone instantiation           | `new MetricTracker(...)`                               | [BasicConsoleExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/BasicConsoleExample) & [AdvancedConsoleExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/AdvancedConsoleExample) |
+| [**DI-Based Implementation**](docs/use-cases/di-based-implementation.md)           | Background workers, daemons, multi-tenant                   | Standard DI (`IServiceCollection`) | `IMetricTracker`, `[FromKeyedServices]`, `IMetricFlow` | [AdvancedConsoleWithDIExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/AdvancedConsoleWithDIExample)                                                                                             |
+| [**Console Log Sink & Triggers**](docs/use-cases/console-log-sink.md)              | Real-time formatted console logging, timer-free sampling    | Standalone or DI                   | `AddConsoleSink(...)`, `ConfigureSinkSampling(...)`    | [ConsoleSinkExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/ConsoleSinkExample)                                                                                                                 |
+| [**Hierarchical Scope Trees**](docs/use-cases/hierarchical-scope-trees.md)         | Parent-child execution flows, self-time / self-memory       | Standalone or DI                   | `AddHierarchyCounter()`, `GetHierarchySnapshot(...)`   | [ConsoleSinkExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/ConsoleSinkExample)                                                                                                                 |
+| [**Logger Sink (Serilog / ILogger)**](docs/use-cases/logger-sink.md)               | Centralized structured logging, APM forwarders, log files   | Standalone or DI                   | `AddLoggerSink(...)`, `ConfigureSinkSampling(...)`     | [LoggerSinkExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/LoggerSinkExample)                                                                                                                   |
+| [**Web Implementation**](docs/use-cases/web-implementation.md)                     | Web APIs, microservices, HTTP routing                       | ASP.NET Core pipeline              | `app.UseMetricFlow()`, `app.MapMetricFlow("/metrics")` | [WebApiExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/WebApiExample)                                                                                                                           |
+| [**OpenTelemetry & Observability**](docs/use-cases/opentelemetry-observability.md) | Prometheus, Grafana, Datadog, OTLP collectors, CLI counters | OpenTelemetry SDK / BCL            | `.AddMetricFlowInstrumentation()`, `dotnet-counters`   | [OpenTelemetryConsoleExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/OpenTelemetryConsoleExample)                                                                                               |
 
 ---
 
@@ -67,7 +65,6 @@ It can be used in both ASP.NET Core and non-ASP.NET Core applications.
 - **Multi-Targeting**: Native support for `.NET 8.0` and `.NET 10.0`.
 
 <img width="1057" height="319" alt="image" src="https://github.com/user-attachments/assets/fe5c1bbd-6c23-4093-b9b2-52cd5ecd3bc7" />
-
 
 ## Getting Started
 

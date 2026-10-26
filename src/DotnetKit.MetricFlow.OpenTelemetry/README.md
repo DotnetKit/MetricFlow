@@ -1,6 +1,6 @@
 # DotnetKit.MetricFlow.OpenTelemetry
 
-[![NuGet](https://img.shields.io/nuget/v/DotnetKit.MetricFlow.OpenTelemetry)](https://www.nuget.org/packages/DotnetKit.MetricFlow.OpenTelemetry)
+[![NuGet](https://img.shields.io/nuget/vpre/DotnetKit.MetricFlow.OpenTelemetry)](https://www.nuget.org/packages/DotnetKit.MetricFlow.OpenTelemetry)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 OpenTelemetry integration package for [MetricFlow](https://github.com/DotnetKit/MetricFlow), providing turnkey integration between MetricFlow trackers and the standard OpenTelemetry .NET ecosystem.

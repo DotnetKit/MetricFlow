@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.0.56] - 2026-10-18
+## [1.0.55] - preview release - 2026-10-18
 
 ### Added
 
@@ -37,7 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.0.55] - 2026-10-17
+## [1.0.55] - alpha release - 2026-10-17
 
 ### Added
 
@@ -108,9 +108,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Implementation of `IMetricSink` and `IObservable<IReadOnlyList<IMetricSnapshot>>` enabling standard reactive subscriptions (`sink.Subscribe(...)`) for piping metric snapshots to Rx.NET queries, event channels, or custom log writers.
 - **Timer-Free Sampling Triggers (`MetricSinkTriggerOptions`)**:
   - First-class support for execution-lifecycle triggers evaluated during operation completion (`Out` / `Dispose`), completely avoiding mandatory background timers or polling threads:
-    - *Stride Sampling*: Emit snapshots every $N$ executions (`EmitEveryNExecutions`).
-    - *Tail / Outlier Sampling*: Immediately emit on operation failure (`EmitOnFailure`) or when duration exceeds latency thresholds (`EmitOnSlowDurationThreshold`).
-    - *Probabilistic Sampling*: Random percentage sampling (`EmitSampleRate`).
+    - _Stride Sampling_: Emit snapshots every $N$ executions (`EmitEveryNExecutions`).
+    - _Tail / Outlier Sampling_: Immediately emit on operation failure (`EmitOnFailure`) or when duration exceeds latency thresholds (`EmitOnSlowDurationThreshold`).
+    - _Probabilistic Sampling_: Random percentage sampling (`EmitSampleRate`).
   - Zero idle CPU and thread overhead; ideal for serverless (AWS Lambda), CLI utilities, and short-lived batch jobs.
 - **Structured Console Log Sink (`ConsoleMetricSink` & `ConsoleMetricSinkOptions`)**:
   - High-performance console sink formatting metric snapshots into human-readable single-line structured log entries.
@@ -158,8 +158,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 ## [1.0.51] - 2026-09-27
-
-
 
 ### Added
 
