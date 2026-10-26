@@ -3,7 +3,7 @@
 ![internal](https://github.com/DotnetKit/MetricFlow/actions/workflows/publish-internal.yml/badge.svg)
 ![public](https://github.com/DotnetKit/MetricFlow/actions/workflows/publish-public.yml/badge.svg)
 [![DotnetKit.MetricFlow](https://img.shields.io/nuget/v/DotnetKit.MetricFlow)](https://www.nuget.org/packages/DotnetKit.MetricFlow)
-[![DotnetKit.MetricFlow](https://img.shields.io/nuget/vpre/DotnetKit.MetricFlow)](https://www.nuget.org/packages/DotnetKit.MetricFlow)
+[![DotnetKit.MetricFlow](https://img.shields.io/nuget/vpre/DotnetKit.MetricFlow?label=nuget%20preview)](https://www.nuget.org/packages/DotnetKit.MetricFlow/absoluteLatest)
 
 MetricFlow is a lightweight and standalone .NET library designed to simplify the way developers define and track technical and business related metrics (such as counters, timers, throughput and dimensional breakdowns).
 Full documentation, architecture guides, and API references are available on our [GitHub Pages Documentation Portal](https://dotnetkit.github.io/MetricFlow/)
