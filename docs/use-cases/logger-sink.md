@@ -1,6 +1,6 @@
 # Logger Sink (Serilog & Microsoft.Extensions.Logging)
 
-The **Logger Sink** pattern routes MetricFlow snapshots into the standard .NET logging abstraction ([`ILogger`](file:///Users/evomac1/gh/DotnetKit/MetricFlow/src/DotnetKit.MetricFlow/Sinks/Logger/LoggerMetricSink.cs)). It supports modern structured logging frameworks such as **Serilog**, **NLog**, **Log4Net**, and cloud log forwarders (Datadog Logs, ELK Stack, AWS CloudWatch, Azure Application Insights).
+The **Logger Sink** pattern routes MetricFlow snapshots into the standard .NET logging abstraction ([`ILogger`](https://learn.microsoft.com/dotnet/api/microsoft.extensions.logging.ilogger) / [`LoggerMetricSink`](xref:DotnetKit.MetricFlow.Sinks.Logger.LoggerMetricSink)). It supports modern structured logging frameworks such as **Serilog**, **NLog**, **Log4Net**, and cloud log forwarders (Datadog Logs, ELK Stack, AWS CloudWatch, Azure Application Insights).
 
 ---
 
@@ -15,7 +15,7 @@ The **Logger Sink** pattern routes MetricFlow snapshots into the standard .NET l
 
 ## Quick Start
 
-Register [`LoggerMetricSink`](file:///Users/evomac1/gh/DotnetKit/MetricFlow/src/DotnetKit.MetricFlow/Sinks/Logger/LoggerMetricSink.cs) using an `ILoggerFactory`, an existing `ILogger`, or via standard dependency injection:
+Register [`LoggerMetricSink`](xref:DotnetKit.MetricFlow.Sinks.Logger.LoggerMetricSink) using an `ILoggerFactory`, an existing `ILogger`, or via standard dependency injection:
 
 ```csharp
 using DotnetKit.MetricFlow;
@@ -69,7 +69,7 @@ using (tracker.Track("AuthorizePayment"))
 
 ### 1. `LoggerMetricSinkOptions`
 
-[`LoggerMetricSinkOptions`](file:///Users/evomac1/gh/DotnetKit/MetricFlow/src/DotnetKit.MetricFlow/Sinks/Logger/LoggerMetricSinkOptions.cs) configures log categories, severity levels, event IDs, and message prefixes:
+[`LoggerMetricSinkOptions`](xref:DotnetKit.MetricFlow.Sinks.Logger.LoggerMetricSinkOptions) configures log categories, severity levels, event IDs, and message prefixes:
 
 | Option | Type | Default | Description |
 | :--- | :--- | :--- | :--- |

@@ -1,6 +1,6 @@
 # DI-Based Implementation (Dependency Injection)
 
-The **DI-Based Implementation** integrates MetricFlow into .NET applications utilizing standard Microsoft Dependency Injection (`IServiceCollection`). It enables clean separation of concerns, centralized configuration, and seamless injection of [`IMetricTracker`](file:///Users/evomac1/gh/DotnetKit/MetricFlow/src/DotnetKit.MetricFlow/Abstractions/IMetricTracker.cs) and [`IMetricFlow`](file:///Users/evomac1/gh/DotnetKit/MetricFlow/src/DotnetKit.MetricFlow/Abstractions/IMetricFlow.cs) into your application services and workers.
+The **DI-Based Implementation** integrates MetricFlow into .NET applications utilizing standard Microsoft Dependency Injection (`IServiceCollection`). It enables clean separation of concerns, centralized configuration, and seamless injection of [`IMetricTracker`](xref:DotnetKit.MetricFlow.Abstractions.IMetricTracker) and [`IMetricFlow`](xref:DotnetKit.MetricFlow.Abstractions.IMetricFlow) into your application services and workers.
 
 ---
 
@@ -15,7 +15,7 @@ The **DI-Based Implementation** integrates MetricFlow into .NET applications uti
 
 ## Quick Start
 
-Register MetricFlow during service configuration and inject [`IMetricTracker`](file:///Users/evomac1/gh/DotnetKit/MetricFlow/src/DotnetKit.MetricFlow/Abstractions/IMetricTracker.cs) into worker constructors:
+Register MetricFlow during service configuration and inject [`IMetricTracker`](xref:DotnetKit.MetricFlow.Abstractions.IMetricTracker) into worker constructors:
 
 ```csharp
 using DotnetKit.MetricFlow;
@@ -59,7 +59,7 @@ await host.RunAsync();
 
 | Extension Method | Description |
 | :--- | :--- |
-| `services.AddMetricFlow(string topic, Action<MetricFlowOptions>? configure = null)` | Registers MetricFlow with a default primary topic and returns an [`IMetricFlowBuilder`](file:///Users/evomac1/gh/DotnetKit/MetricFlow/src/DotnetKit.MetricFlow/Abstractions/IMetricFlowBuilder.cs). |
+| `services.AddMetricFlow(string topic, Action<MetricFlowOptions>? configure = null)` | Registers MetricFlow with a default primary topic and returns an [`IMetricFlowBuilder`](xref:DotnetKit.MetricFlow.Abstractions.IMetricFlowBuilder). |
 | `services.AddMetricFlow(Action<MetricFlowOptions> configure)` | Registers MetricFlow using configuration provided in the options action. |
 
 ### 2. Fluent Builder Methods (`IMetricFlowBuilder`)
@@ -90,9 +90,9 @@ await host.RunAsync();
 
 | Interface | Injection Style | Description |
 | :--- | :--- | :--- |
-| [`IMetricTracker`](file:///Users/evomac1/gh/DotnetKit/MetricFlow/src/DotnetKit.MetricFlow/Abstractions/IMetricTracker.cs) | `public MyService(IMetricTracker tracker)` | Injects the primary default topic tracker. |
-| [`IMetricTracker`](file:///Users/evomac1/gh/DotnetKit/MetricFlow/src/DotnetKit.MetricFlow/Abstractions/IMetricTracker.cs) | `public MyService([FromKeyedServices("AuditWorker")] IMetricTracker auditTracker)` | Injects a specific keyed topic tracker. |
-| [`IMetricFlow`](file:///Users/evomac1/gh/DotnetKit/MetricFlow/src/DotnetKit.MetricFlow/Abstractions/IMetricFlow.cs) | `public MyService(IMetricFlow metricFlow)` | Top-level coordinator providing access to all registered trackers (`Trackers`, `GetTracker(name)`, `DefaultTracker`). |
+| [`IMetricTracker`](xref:DotnetKit.MetricFlow.Abstractions.IMetricTracker) | `public MyService(IMetricTracker tracker)` | Injects the primary default topic tracker. |
+| [`IMetricTracker`](xref:DotnetKit.MetricFlow.Abstractions.IMetricTracker) | `public MyService([FromKeyedServices("AuditWorker")] IMetricTracker auditTracker)` | Injects a specific keyed topic tracker. |
+| [`IMetricFlow`](xref:DotnetKit.MetricFlow.Abstractions.IMetricFlow) | `public MyService(IMetricFlow metricFlow)` | Top-level coordinator providing access to all registered trackers (`Trackers`, `GetTracker(name)`, `DefaultTracker`). |
 
 ---
 
@@ -130,7 +130,7 @@ public class AuditService([FromKeyedServices("AuditTopic")] IMetricTracker audit
 
 ### Q: How can I inspect or report metrics across all registered trackers simultaneously?
 
-**A:** Inject the top-level [`IMetricFlow`](file:///Users/evomac1/gh/DotnetKit/MetricFlow/src/DotnetKit.MetricFlow/Abstractions/IMetricFlow.cs) facade, which exposes all active trackers:
+**A:** Inject the top-level [`IMetricFlow`](xref:DotnetKit.MetricFlow.Abstractions.IMetricFlow) facade, which exposes all active trackers:
 
 ```csharp
 public class TelemetryHealthReporter(IMetricFlow metricFlow)
@@ -174,7 +174,7 @@ builder.Services.AddMetricFlow("IngestionService", options =>
 
 ### Q: How can I dynamically enable or disable counters at runtime without restarting the app?
 
-**A:** Pass an `ICounterConfigObservable` or use [`CounterConfigNotifier`](file:///Users/evomac1/gh/DotnetKit/MetricFlow/src/DotnetKit.MetricFlow/Configuration/CounterConfigNotifier.cs) on `options.ConfigObservable`:
+**A:** Pass an `ICounterConfigObservable` or use [`CounterConfigNotifier`](xref:DotnetKit.MetricFlow.Configuration.CounterConfigNotifier) on `options.ConfigObservable`:
 
 ```csharp
 var notifier = new CounterConfigNotifier();

@@ -1,6 +1,6 @@
 # Web Implementation (ASP.NET Core)
 
-The **Web Implementation** package ([`DotnetKit.MetricFlow.AspNetCore`](file:///Users/evomac1/gh/DotnetKit/MetricFlow/src/DotnetKit.MetricFlow.AspNetCore/MetricFlowAspNetCoreOptions.cs)) provides turnkey middleware and endpoint routing for ASP.NET Core Web APIs, Minimal APIs, and MVC applications. It automatically instruments incoming HTTP requests, tracks latency, status codes, and exceptions, and exposes a formatted metrics endpoint.
+The **Web Implementation** package ([`DotnetKit.MetricFlow.AspNetCore`](xref:DotnetKit.MetricFlow.AspNetCore)) provides turnkey middleware and endpoint routing for ASP.NET Core Web APIs, Minimal APIs, and MVC applications. It automatically instruments incoming HTTP requests, tracks latency, status codes, and exceptions, and exposes a formatted metrics endpoint.
 
 ---
 
@@ -60,7 +60,7 @@ app.Run();
 
 ### 1. `MetricFlowAspNetCoreOptions`
 
-[`MetricFlowAspNetCoreOptions`](file:///Users/evomac1/gh/DotnetKit/MetricFlow/src/DotnetKit.MetricFlow.AspNetCore/MetricFlowAspNetCoreOptions.cs) extends [`MetricFlowOptions`](file:///Users/evomac1/gh/DotnetKit/MetricFlow/src/DotnetKit.MetricFlow/MetricFlowOptions.cs) with ASP.NET Core-specific pipeline controls:
+[`MetricFlowAspNetCoreOptions`](xref:DotnetKit.MetricFlow.AspNetCore.MetricFlowAspNetCoreOptions) extends [`MetricFlowOptions`](xref:DotnetKit.MetricFlow.MetricFlowOptions) with ASP.NET Core-specific pipeline controls:
 
 | Option | Type | Default | Description |
 | :--- | :--- | :--- | :--- |

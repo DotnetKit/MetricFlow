@@ -1,6 +1,6 @@
 # Simple Implementation (Standalone Tracker)
 
-The **Simple Implementation** pattern uses a standalone, lightweight [`MetricTracker`](file:///Users/evomac1/gh/DotnetKit/MetricFlow/src/DotnetKit.MetricFlow/MetricTracker.cs) instance directly in your application without requiring dependency injection, an inversion-of-control container, or external configuration files.
+The **Simple Implementation** pattern uses a standalone, lightweight [`MetricTracker`](xref:DotnetKit.MetricFlow.MetricTracker) instance directly in your application without requiring dependency injection, an inversion-of-control container, or external configuration files.
 
 ---
 
@@ -15,7 +15,7 @@ The **Simple Implementation** pattern uses a standalone, lightweight [`MetricTra
 
 ## Quick Start
 
-By default, [`MetricTracker`](file:///Users/evomac1/gh/DotnetKit/MetricFlow/src/DotnetKit.MetricFlow/MetricTracker.cs) records high-precision execution duration via lock-free stopwatch ticks:
+By default, [`MetricTracker`](xref:DotnetKit.MetricFlow.MetricTracker) records high-precision execution duration via lock-free stopwatch ticks:
 
 ```csharp
 using DotnetKit.MetricFlow;
@@ -50,7 +50,7 @@ Console.WriteLine(tracker.ToString());
 | :--- | :--- |
 | `new MetricTracker(string topic = "Application")` | Initializes a tracker with a topic name and default duration tracking. |
 | `new MetricTracker(string topic, Dictionary<string, string>? topicTags)` | Initializes a tracker with topic name and contextual topic-level tags. |
-| `new MetricTracker(MetricFlowOptions options)` | Initializes a tracker using a pre-configured [`MetricFlowOptions`](file:///Users/evomac1/gh/DotnetKit/MetricFlow/src/DotnetKit.MetricFlow/MetricFlowOptions.cs) object. |
+| `new MetricTracker(MetricFlowOptions options)` | Initializes a tracker using a pre-configured [`MetricFlowOptions`](xref:DotnetKit.MetricFlow.MetricFlowOptions) object. |
 
 ### 2. Primary Tracking Methods
 
@@ -177,7 +177,7 @@ await File.WriteAllTextAsync("telemetry-report.csv", csv);
 
 ### Q: How do I configure sampling to reduce overhead in ultra-high frequency loops?
 
-**A:** Initialize the tracker using [`MetricFlowOptions`](file:///Users/evomac1/gh/DotnetKit/MetricFlow/src/DotnetKit.MetricFlow/MetricFlowOptions.cs) and set the `SamplingRate` property (between `0.0` and `1.0`):
+**A:** Initialize the tracker using [`MetricFlowOptions`](xref:DotnetKit.MetricFlow.MetricFlowOptions) and set the `SamplingRate` property (between `0.0` and `1.0`):
 
 ```csharp
 var options = new MetricFlowOptions

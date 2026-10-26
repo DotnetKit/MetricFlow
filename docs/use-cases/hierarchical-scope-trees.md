@@ -1,6 +1,6 @@
 # Hierarchical Scope Trees
 
-The **Hierarchical Scope Trees** pattern automatically correlates parent and child tracking scopes across asynchronous execution flows (`AsyncLocal`). Powered by [`HierarchyCounter`](file:///Users/evomac1/gh/DotnetKit/MetricFlow/src/DotnetKit.MetricFlow/Counters/HierarchyCounter.cs), it calculates **exclusive self-duration** and **self-allocated memory** for each node, renders visual execution trees (`▼`, `├─`, `└─`), and automatically bridges nested spans into ambient OpenTelemetry `Activity` distributed traces.
+The **Hierarchical Scope Trees** pattern automatically correlates parent and child tracking scopes across asynchronous execution flows (`AsyncLocal`). Powered by [`HierarchyCounter`](xref:DotnetKit.MetricFlow.Counters.HierarchyCounter), it calculates **exclusive self-duration** and **self-allocated memory** for each node, renders visual execution trees (`▼`, `├─`, `└─`), and automatically bridges nested spans into ambient OpenTelemetry `Activity` distributed traces.
 
 ---
 
@@ -78,12 +78,12 @@ await tracker.FlushSinksAsync();
 
 | Method | Description |
 | :--- | :--- |
-| `AddHierarchyCounter(string name = "Hierarchy")` | Registers a [`HierarchyCounter`](file:///Users/evomac1/gh/DotnetKit/MetricFlow/src/DotnetKit.MetricFlow/Counters/HierarchyCounter.cs) with an optional custom counter name. |
-| `EnableHierarchical(bool enabled = true)` | Fluent helper alias on [`MetricFlowOptions`](file:///Users/evomac1/gh/DotnetKit/MetricFlow/src/DotnetKit.MetricFlow/MetricFlowOptions.cs) to ensure the hierarchy counter is active. |
+| `AddHierarchyCounter(string name = "Hierarchy")` | Registers a [`HierarchyCounter`](xref:DotnetKit.MetricFlow.Counters.HierarchyCounter) with an optional custom counter name. |
+| `EnableHierarchical(bool enabled = true)` | Fluent helper alias on [`MetricFlowOptions`](xref:DotnetKit.MetricFlow.MetricFlowOptions) to ensure the hierarchy counter is active. |
 
 ### 2. Node Properties in `HierarchyNode`
 
-When inspecting nodes via [`HierarchyNode`](file:///Users/evomac1/gh/DotnetKit/MetricFlow/src/DotnetKit.MetricFlow/Hierarchy/HierarchyNode.cs):
+When inspecting nodes via [`HierarchyNode`](xref:DotnetKit.MetricFlow.Hierarchy.HierarchyNode):
 
 | Property | Type | Description |
 | :--- | :--- | :--- |

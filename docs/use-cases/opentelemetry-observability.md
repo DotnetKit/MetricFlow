@@ -1,6 +1,6 @@
 # OpenTelemetry & Observability
 
-The **OpenTelemetry & Observability** pattern bridges MetricFlow into the standard OpenTelemetry .NET ecosystem via [`DotnetKit.MetricFlow.OpenTelemetry`](file:///Users/evomac1/gh/DotnetKit/MetricFlow/src/DotnetKit.MetricFlow.OpenTelemetry/MetricFlowInstrumentationOptions.cs). It maps MetricFlow counters directly to native .NET BCL `System.Diagnostics.Metrics` instruments, correlates metrics with ambient distributed traces, provides built-in tag cardinality protection, and allows live terminal inspection via `dotnet-counters`.
+The **OpenTelemetry & Observability** pattern bridges MetricFlow into the standard OpenTelemetry .NET ecosystem via [`DotnetKit.MetricFlow.OpenTelemetry`](xref:DotnetKit.MetricFlow.OpenTelemetry). It maps MetricFlow counters directly to native .NET BCL `System.Diagnostics.Metrics` instruments, correlates metrics with ambient distributed traces, provides built-in tag cardinality protection, and allows live terminal inspection via `dotnet-counters`.
 
 ---
 
@@ -61,7 +61,7 @@ using var provider = services.BuildServiceProvider();
 
 ### 1. `MetricFlowInstrumentationOptions`
 
-[`MetricFlowInstrumentationOptions`](file:///Users/evomac1/gh/DotnetKit/MetricFlow/src/DotnetKit.MetricFlow.OpenTelemetry/MetricFlowInstrumentationOptions.cs) configures OpenTelemetry meter subscriptions:
+[`MetricFlowInstrumentationOptions`](xref:DotnetKit.MetricFlow.OpenTelemetry.MetricFlowInstrumentationOptions) configures OpenTelemetry meter subscriptions:
 
 | Option | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
@@ -72,7 +72,7 @@ using var provider = services.BuildServiceProvider();
 
 ### 2. `MetricFlowMeterOptions` (Cardinality Guard & Trace Context)
 
-[`MetricFlowMeterOptions`](file:///Users/evomac1/gh/DotnetKit/MetricFlow/src/DotnetKit.MetricFlow/Meters/MetricFlowMeterOptions.cs) configures low-level BCL meter behavior and safeguards:
+[`MetricFlowMeterOptions`](xref:DotnetKit.MetricFlow.Meters.MetricFlowMeterOptions) configures low-level BCL meter behavior and safeguards:
 
 | Option | Type | Default | Description |
 | :--- | :--- | :--- | :--- |

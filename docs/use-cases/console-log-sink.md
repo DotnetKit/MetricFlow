@@ -15,7 +15,7 @@ The **Console Log Sink & Triggers** pattern enables real-time formatted console 
 
 ## Quick Start
 
-Register [`ConsoleMetricSink`](file:///Users/evomac1/gh/DotnetKit/MetricFlow/src/DotnetKit.MetricFlow/Sinks/Console/ConsoleMetricSink.cs) directly on a standalone tracker or during DI setup, and configure lifecycle sampling triggers:
+Register [`ConsoleMetricSink`](xref:DotnetKit.MetricFlow.Sinks.Console.ConsoleMetricSink) directly on a standalone tracker or during DI setup, and configure lifecycle sampling triggers:
 
 ```csharp
 using DotnetKit.MetricFlow;
@@ -58,7 +58,7 @@ using (tracker.Track("ProcessOrder"))
 
 ### 1. `ConsoleMetricSinkOptions`
 
-[`ConsoleMetricSinkOptions`](file:///Users/evomac1/gh/DotnetKit/MetricFlow/src/DotnetKit.MetricFlow/Sinks/Console/ConsoleMetricSinkOptions.cs) controls the formatting, visual appearance, and threshold rules for console output:
+[`ConsoleMetricSinkOptions`](xref:DotnetKit.MetricFlow.Sinks.Console.ConsoleMetricSinkOptions) controls the formatting, visual appearance, and threshold rules for console output:
 
 | Option | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
@@ -85,7 +85,7 @@ using (tracker.Track("ProcessOrder"))
 
 ### 2. `MetricSinkTriggerOptions`
 
-[`MetricSinkTriggerOptions`](file:///Users/evomac1/gh/DotnetKit/MetricFlow/src/DotnetKit.MetricFlow/Sinks/MetricSinkTriggerOptions.cs) configures timer-free execution triggers:
+[`MetricSinkTriggerOptions`](xref:DotnetKit.MetricFlow.Sinks.MetricSinkTriggerOptions) configures timer-free execution triggers:
 
 | Option | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
