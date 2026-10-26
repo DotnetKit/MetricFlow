@@ -580,3 +580,5 @@ dotnet-counters monitor -p <PID> --counters DotnetKit.MetricFlow
 - [ ] **CallerMemberName Idiom**: For clean code, omit the operation name in `tracker.Track()` when instrumenting the entire body of a method.
 - [ ] **Disposal**: Always scope tracking with `using (tracker.Track(...))` or `using var _ = tracker.Track(...)` to guarantee that operation completion (`OnOut`) executes even if exceptions are thrown.
 - [ ] **Exception Preservation**: `tracker.TrackAction` rethrows captured exceptions after recording them in `ExceptionCounter` and `FailureCounter`.
+- [ ] **Production Console Sink**: MetricFlow sinks are opt-in. In production environments, guard `AddConsoleSink` with `if (configuration.GetValue<bool>("MetricFlow:EnableConsoleSink"))` or `if (env.IsDevelopment())` to avoid stdout pollution.
+

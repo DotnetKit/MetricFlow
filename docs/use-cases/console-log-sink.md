@@ -205,3 +205,55 @@ tracker.AddConsoleSink(opt =>
     };
 });
 ```
+
+---
+
+### Q: How do I disable or conditionally enable the console sink in Production (via `appsettings.json`)?
+
+**A:** MetricFlow sinks are opt-in. Only call `AddConsoleSink` when your configuration flag is `true` (or when running in Development).
+
+**1. Configure your settings files:**
+
+```json
+// appsettings.json (Development / default)
+{
+  "MetricFlow": {
+    "EnableConsoleSink": true
+  }
+}
+
+// appsettings.Production.json
+{
+  "MetricFlow": {
+    "EnableConsoleSink": false
+  }
+}
+```
+
+**2. Conditionally register in Dependency Injection:**
+
+```csharp
+var enableConsoleSink = configuration.GetValue<bool>("MetricFlow:EnableConsoleSink", defaultValue: false);
+
+builder.Services.AddMetricFlow("Application", options =>
+{
+    if (enableConsoleSink)
+    {
+        options.AddConsoleSink(opt =>
+        {
+            opt.DisplayMode = ConsoleDisplayMode.Table;
+            opt.Colorize = true;
+        });
+    }
+
+    options.AddThroughputCounter()
+           .AddMemoryCounter();
+});
+```
+
+> [!TIP]
+> You can also use `environment.IsDevelopment()` as a sensible fallback if no configuration value is explicitly set:
+> ```csharp
+> var enableConsoleSink = configuration.GetValue<bool?>("MetricFlow:EnableConsoleSink") ?? environment.IsDevelopment();
+> ```
+
