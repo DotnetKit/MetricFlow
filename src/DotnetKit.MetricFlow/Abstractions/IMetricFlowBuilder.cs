@@ -74,7 +74,7 @@ public interface IMetricFlowBuilder : IFluentBuilder<IServiceCollection>, IServi
     /// </summary>
     /// <param name="enabled">True to flush sinks on disposal; otherwise false. Defaults to true.</param>
     /// <returns>The builder instance for fluent chaining.</returns>
-    IMetricFlowBuilder WithAutoFlushOnDispose(bool enabled = true);
+    IMetricFlowBuilder WithFlushOnDispose(bool enabled = true);
 
     /// <summary>
     /// Enables automatic sink flushing upon tracker disposal and optionally at a periodic background interval.

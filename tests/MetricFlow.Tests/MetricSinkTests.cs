@@ -619,7 +619,7 @@ public class MetricSinkTests
         {
             opt.AddSink(sinkB);
         })
-        .WithAutoFlushOnDispose();
+        .WithFlushOnDispose();
 
         await using (var provider = services.BuildServiceProvider())
         {

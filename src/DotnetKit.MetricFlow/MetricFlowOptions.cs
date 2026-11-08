@@ -102,7 +102,7 @@ public class MetricFlowOptions
     /// </summary>
     /// <param name="enabled">True to flush sinks on disposal; otherwise false. Defaults to true.</param>
     /// <returns>This options instance for fluent chaining.</returns>
-    public MetricFlowOptions WithAutoFlushOnDispose(bool enabled = true)
+    public MetricFlowOptions WithFlushOnDispose(bool enabled = true)
     {
         AutoFlushOnDispose = enabled;
         return this;
