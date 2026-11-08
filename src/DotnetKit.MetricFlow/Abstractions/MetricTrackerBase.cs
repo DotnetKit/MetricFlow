@@ -471,8 +471,9 @@ public abstract class MetricTrackerBase : IMetricTracker
 
     /// <summary>
     /// Gets or sets whether registered sinks should be automatically flushed when this tracker is disposed.
+    /// Defaults to true.
     /// </summary>
-    public bool AutoFlushOnDispose { get; set; }
+    public bool AutoFlushOnDispose { get; set; } = true;
 
 
     /// <summary>

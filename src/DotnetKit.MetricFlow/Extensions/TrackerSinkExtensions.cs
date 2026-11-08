@@ -193,19 +193,17 @@ public static class TrackerSinkExtensions
         => tracker.ConfigureSinkTriggers(configure);
 
     /// <summary>
-    /// Configures whether registered sinks should be automatically flushed when the tracker is disposed.
+    /// Disables automatic sink flushing upon tracker disposal.
+    /// By default, trackers flush registered sinks automatically when disposed.
     /// </summary>
     /// <typeparam name="T">The metric tracker type.</typeparam>
     /// <param name="tracker">The tracker instance.</param>
-    /// <param name="enabled">True to flush sinks on disposal; otherwise false. Defaults to true.</param>
     /// <returns>The same tracker instance for method chaining.</returns>
-    public static T WithAutoFlushOnDispose<T>(
-        this T tracker,
-        bool enabled = true)
+    public static T DisableAutoFlush<T>(this T tracker)
         where T : IMetricTracker
     {
         ArgumentNullException.ThrowIfNull(tracker);
-        tracker.AutoFlushOnDispose = enabled;
+        tracker.AutoFlushOnDispose = false;
         return tracker;
     }
 
@@ -223,23 +221,6 @@ public static class TrackerSinkExtensions
     {
         ArgumentNullException.ThrowIfNull(tracker);
         tracker.DisposeSinks = enabled;
-        return tracker;
-    }
-
-    /// <summary>
-    /// Enables automatic sink flushing upon tracker disposal.
-    /// </summary>
-    /// <typeparam name="T">The metric tracker type.</typeparam>
-    /// <param name="tracker">The tracker instance.</param>
-    /// <param name="flushOnDispose">Whether to flush sinks when the tracker is disposed. Defaults to true.</param>
-    /// <returns>The same tracker instance for method chaining.</returns>
-    public static T EnableAutoFlush<T>(
-        this T tracker,
-        bool flushOnDispose = true)
-        where T : IMetricTracker
-    {
-        ArgumentNullException.ThrowIfNull(tracker);
-        tracker.AutoFlushOnDispose = flushOnDispose;
         return tracker;
     }
 

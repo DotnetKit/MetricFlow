@@ -236,7 +236,7 @@ public static class MetricFlowServiceCollectionExtensions
                 tracker.AddExceptionCounter();
             }
 
-            tracker.AutoFlushOnDispose = trackerOptions.AutoFlushOnDispose || (globalOptions?.AutoFlushOnDispose ?? false);
+            tracker.AutoFlushOnDispose = (globalOptions?.AutoFlushOnDispose ?? true) && trackerOptions.AutoFlushOnDispose;
             return tracker;
         });
 

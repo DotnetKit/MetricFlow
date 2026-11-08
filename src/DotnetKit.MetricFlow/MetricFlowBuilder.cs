@@ -94,9 +94,9 @@ public class MetricFlowBuilder : IMetricFlowBuilder
     }
 
     /// <inheritdoc />
-    public IMetricFlowBuilder WithFlushOnDispose(bool enabled = true)
+    public IMetricFlowBuilder DisableAutoFlush()
     {
-        ConfigureOptionsInServices(opt => opt.WithFlushOnDispose(enabled));
+        ConfigureOptionsInServices(opt => opt.DisableAutoFlush());
         return this;
     }
 
@@ -104,13 +104,6 @@ public class MetricFlowBuilder : IMetricFlowBuilder
     public IMetricFlowBuilder WithDisposeSinks(bool enabled = true)
     {
         ConfigureOptionsInServices(opt => opt.WithDisposeSinks(enabled));
-        return this;
-    }
-
-    /// <inheritdoc />
-    public IMetricFlowBuilder EnableAutoFlush(bool flushOnDispose = true)
-    {
-        ConfigureOptionsInServices(opt => opt.EnableAutoFlush(flushOnDispose));
         return this;
     }
 

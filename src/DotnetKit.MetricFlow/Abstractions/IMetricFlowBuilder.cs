@@ -70,11 +70,11 @@ public interface IMetricFlowBuilder : IFluentBuilder<IServiceCollection>, IServi
     IMetricFlowBuilder AddSink(IMetricSink sink);
 
     /// <summary>
-    /// Configures whether registered sinks should be automatically flushed when trackers are disposed.
+    /// Disables automatic sink flushing upon tracker disposal.
+    /// By default, trackers flush registered sinks automatically when disposed.
     /// </summary>
-    /// <param name="enabled">True to flush sinks on disposal; otherwise false. Defaults to true.</param>
     /// <returns>The builder instance for fluent chaining.</returns>
-    IMetricFlowBuilder WithFlushOnDispose(bool enabled = true);
+    IMetricFlowBuilder DisableAutoFlush();
 
     /// <summary>
     /// Configures whether registered sinks should be disposed when trackers are disposed.
@@ -82,12 +82,5 @@ public interface IMetricFlowBuilder : IFluentBuilder<IServiceCollection>, IServi
     /// <param name="enabled">True to dispose sinks on tracker disposal; otherwise false. Defaults to true.</param>
     /// <returns>The builder instance for fluent chaining.</returns>
     IMetricFlowBuilder WithDisposeSinks(bool enabled = true);
-
-    /// <summary>
-    /// Enables automatic sink flushing upon tracker disposal.
-    /// </summary>
-    /// <param name="flushOnDispose">Whether to flush sinks when trackers are disposed. Defaults to true.</param>
-    /// <returns>The builder instance for fluent chaining.</returns>
-    IMetricFlowBuilder EnableAutoFlush(bool flushOnDispose = true);
 }
 

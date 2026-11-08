@@ -225,9 +225,9 @@ await using var tracker = new MetricTracker("ImportJob", new()
 {
     triggers.EmitEveryNExecutions = 25; // Stride
     triggers.EmitOnFailure = true;      // Tail error
-})
-// 3. Optional: Automatically flush sinks on Dispose/DisposeAsync (and/or periodically in the background)
-.WithAutoFlushOnDispose();
+});
+// Note: Sinks are automatically flushed on Dispose/DisposeAsync by default.
+// Call .DisableAutoFlush() if you want to opt out.
 
 // Measure execution
 using (tracker.TrackItems("BatchProcess", 500))
@@ -235,7 +235,7 @@ using (tracker.TrackItems("BatchProcess", 500))
     await DoHeavyWorkAsync();
 }
 
-// Generate formatted reports (sinks are automatically flushed on disposal via WithAutoFlushOnDispose)
+// Generate formatted reports (sinks are automatically flushed on disposal by default)
 Console.WriteLine(tracker.ToMarkdownTable());
 ```
 

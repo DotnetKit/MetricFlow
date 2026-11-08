@@ -168,7 +168,7 @@ public interface IMetricTracker : IMetricSnapshotsSource, IDisposable, IAsyncDis
     /// </summary>
     bool AutoFlushOnDispose
     {
-        get => false;
+        get => true;
         set => _ = value;
     }
 

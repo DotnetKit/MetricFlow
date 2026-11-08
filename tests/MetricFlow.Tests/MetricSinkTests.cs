@@ -527,14 +527,13 @@ public class MetricSinkTests
     }
 
     [Fact]
-    public async Task MetricTracker_WithAutoFlushOnDispose_FlushesAsyncOnDisposeAsync()
+    public async Task MetricTracker_AutoFlushOnDispose_EnabledByDefault_FlushesAsyncOnDisposeAsync()
     {
         // Arrange
         var asyncSink = new AsyncRecordingMetricSink();
 
         await using (var tracker = new MetricTracker("BatchJob")
-            .RegisterSink(asyncSink)
-            .WithAutoFlushOnDispose())
+            .RegisterSink(asyncSink))
         {
             using (tracker.Track("Step1")) { }
             using (tracker.Track("Step2")) { }
@@ -549,14 +548,13 @@ public class MetricSinkTests
     }
 
     [Fact]
-    public void MetricTracker_WithAutoFlushOnDispose_FlushesSyncOnDispose()
+    public void MetricTracker_AutoFlushOnDispose_EnabledByDefault_FlushesSyncOnDispose()
     {
         // Arrange
         var testSink = new RecordingMetricSink();
 
         using (var tracker = new MetricTracker("SyncJob")
-            .RegisterSink(testSink)
-            .WithAutoFlushOnDispose())
+            .RegisterSink(testSink))
         {
             using (tracker.Track("Work")) { }
             testSink.EmittedBatches.Should().BeEmpty();
@@ -568,13 +566,14 @@ public class MetricSinkTests
     }
 
     [Fact]
-    public async Task MetricTracker_WhenAutoFlushDisabledByDefault_DoesNotFlushOnDispose()
+    public async Task MetricTracker_DisableAutoFlush_DoesNotFlushOnDispose()
     {
         // Arrange
         var asyncSink = new AsyncRecordingMetricSink();
 
         await using (var tracker = new MetricTracker("NoAutoFlushJob")
-            .RegisterSink(asyncSink))
+            .RegisterSink(asyncSink)
+            .DisableAutoFlush())
         {
             using (tracker.Track("Work")) { }
         }
@@ -585,24 +584,25 @@ public class MetricSinkTests
     }
 
     [Fact]
-    public async Task MetricTracker_EnableAutoFlush_FlushesAsyncOnDispose()
+    public async Task DependencyInjection_DisableAutoFlush_DoesNotFlushOnProviderDisposeAsync()
     {
         // Arrange
-        var asyncSink = new AsyncRecordingMetricSink();
+        var sink = new AsyncRecordingMetricSink();
+        var services = new ServiceCollection();
+        services.AddMetricFlow("TestTopic", opt => opt.AddSink(sink))
+            .DisableAutoFlush();
 
-        await using (var tracker = new MetricTracker("AutoFlushJob")
-            .RegisterSink(asyncSink)
-            .EnableAutoFlush(flushOnDispose: true))
+        await using (var provider = services.BuildServiceProvider())
         {
-            using (tracker.Track("Work")) { }
-            asyncSink.AsyncEmittedBatches.Should().BeEmpty();
+            var flow = provider.GetRequiredService<IMetricFlow>();
+            using (flow.GetTracker("TestTopic").Track("Work")) { }
         }
 
-        asyncSink.AsyncEmittedBatches.Should().HaveCount(1);
+        sink.AsyncEmittedBatches.Should().BeEmpty();
     }
 
     [Fact]
-    public async Task DependencyInjection_WithAutoFlushOnDispose_FlushesAllTrackersOnProviderDisposeAsync()
+    public async Task DependencyInjection_AutoFlushEnabledByDefault_FlushesAllTrackersOnProviderDisposeAsync()
     {
         // Arrange
         var sinkA = new AsyncRecordingMetricSink("SinkA");
@@ -616,8 +616,7 @@ public class MetricSinkTests
         .AddMetricTracker("TopicB", opt =>
         {
             opt.AddSink(sinkB);
-        })
-        .WithFlushOnDispose();
+        });
 
         await using (var provider = services.BuildServiceProvider())
         {
@@ -647,10 +646,9 @@ public class MetricSinkTests
         );
 
         var services = new ServiceCollection();
-        services.AddMetricFlow("Billing", opt => opt.WithFlushOnDispose())
-            .AddMetricTracker("Orders", opt => opt.WithFlushOnDispose())
-            .AddSink(sharedSink)
-            .WithFlushOnDispose();
+        services.AddMetricFlow("Billing")
+            .AddMetricTracker("Orders")
+            .AddSink(sharedSink);
 
         // Act
         await using (var provider = services.BuildServiceProvider())
@@ -677,10 +675,9 @@ public class MetricSinkTests
         using var sub = sharedSink.Subscribe(batch => receivedBatches.Add(batch));
 
         var services = new ServiceCollection();
-        services.AddMetricFlow("Billing", opt => opt.WithFlushOnDispose())
-            .AddMetricTracker("Orders", opt => opt.WithFlushOnDispose())
-            .AddSink(sharedSink)
-            .WithFlushOnDispose();
+        services.AddMetricFlow("Billing")
+            .AddMetricTracker("Orders")
+            .AddSink(sharedSink);
 
         // Act
         using (var provider = services.BuildServiceProvider())
@@ -702,8 +699,8 @@ public class MetricSinkTests
     {
         // Arrange
         var sharedSink = new TrackingDisposableSink();
-        var trackerA = new MetricTracker("A").RegisterSink(sharedSink).WithAutoFlushOnDispose();
-        var trackerB = new MetricTracker("B").RegisterSink(sharedSink).WithAutoFlushOnDispose();
+        var trackerA = new MetricTracker("A").RegisterSink(sharedSink);
+        var trackerB = new MetricTracker("B").RegisterSink(sharedSink);
 
         var registry = new MetricFlowRegistry(initialTrackers: [trackerA, trackerB], sharedSinks: [sharedSink]);
 
@@ -727,8 +724,8 @@ public class MetricSinkTests
     {
         // Arrange
         var sharedSink = new TrackingDisposableSink();
-        var trackerA = new MetricTracker("A").RegisterSink(sharedSink).WithAutoFlushOnDispose();
-        var trackerB = new MetricTracker("B").RegisterSink(sharedSink).WithAutoFlushOnDispose();
+        var trackerA = new MetricTracker("A").RegisterSink(sharedSink);
+        var trackerB = new MetricTracker("B").RegisterSink(sharedSink);
 
         var registry = new MetricFlowRegistry(initialTrackers: [trackerA, trackerB], sharedSinks: [sharedSink]);
 
