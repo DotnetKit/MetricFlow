@@ -94,11 +94,6 @@ public static class MetricFlowServiceCollectionExtensions
                     }
 
                     tracker.AutoFlushOnDispose = defaultOptions.AutoFlushOnDispose;
-                    if (defaultOptions.PeriodicFlushInterval is { } interval && interval > TimeSpan.Zero)
-                    {
-                        tracker.StartPeriodicFlush(interval);
-                    }
-
                     return tracker;
                 },
                 sharedSinks: allSinks);
@@ -189,7 +184,6 @@ public static class MetricFlowServiceCollectionExtensions
             opt.MeterOptions = trackerOptions.MeterOptions;
             opt.SinkTriggers = trackerOptions.SinkTriggers;
             opt.AutoFlushOnDispose = trackerOptions.AutoFlushOnDispose;
-            opt.PeriodicFlushInterval = trackerOptions.PeriodicFlushInterval;
             opt.DurationOptions = trackerOptions.DurationOptions;
             foreach (var sink in trackerOptions.Sinks)
             {
@@ -243,12 +237,6 @@ public static class MetricFlowServiceCollectionExtensions
             }
 
             tracker.AutoFlushOnDispose = trackerOptions.AutoFlushOnDispose || (globalOptions?.AutoFlushOnDispose ?? false);
-            var flushInterval = trackerOptions.PeriodicFlushInterval ?? globalOptions?.PeriodicFlushInterval;
-            if (flushInterval is { } interval && interval > TimeSpan.Zero)
-            {
-                tracker.StartPeriodicFlush(interval);
-            }
-
             return tracker;
         });
 

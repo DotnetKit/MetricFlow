@@ -227,31 +227,19 @@ public static class TrackerSinkExtensions
     }
 
     /// <summary>
-    /// Enables automatic sink flushing upon tracker disposal and optionally starts a periodic background async flush timer tied to the tracker's lifetime.
+    /// Enables automatic sink flushing upon tracker disposal.
     /// </summary>
     /// <typeparam name="T">The metric tracker type.</typeparam>
     /// <param name="tracker">The tracker instance.</param>
-    /// <param name="periodicInterval">Optional interval for background periodic async flushes.</param>
-    /// <param name="flushOnDispose">Whether to also flush sinks when the tracker is disposed. Defaults to true.</param>
+    /// <param name="flushOnDispose">Whether to flush sinks when the tracker is disposed. Defaults to true.</param>
     /// <returns>The same tracker instance for method chaining.</returns>
     public static T EnableAutoFlush<T>(
         this T tracker,
-        TimeSpan? periodicInterval = null,
         bool flushOnDispose = true)
         where T : IMetricTracker
     {
         ArgumentNullException.ThrowIfNull(tracker);
-        if (periodicInterval.HasValue && periodicInterval.Value <= TimeSpan.Zero)
-        {
-            throw new ArgumentOutOfRangeException(nameof(periodicInterval), "Interval must be greater than zero.");
-        }
-
         tracker.AutoFlushOnDispose = flushOnDispose;
-        if (periodicInterval is { } interval && tracker is MetricTrackerBase trackerBase)
-        {
-            trackerBase.StartPeriodicFlush(interval);
-        }
-
         return tracker;
     }
 

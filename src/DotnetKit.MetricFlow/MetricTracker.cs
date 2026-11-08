@@ -93,10 +93,6 @@ public class MetricTracker : MetricTrackerBase
         }
 
         AutoFlushOnDispose = options.AutoFlushOnDispose;
-        if (options.PeriodicFlushInterval is { } interval && interval > TimeSpan.Zero)
-        {
-            StartPeriodicFlush(interval);
-        }
     }
 
     /// <summary>

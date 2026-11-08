@@ -108,9 +108,9 @@ public class MetricFlowBuilder : IMetricFlowBuilder
     }
 
     /// <inheritdoc />
-    public IMetricFlowBuilder EnableAutoFlush(TimeSpan? periodicInterval = null, bool flushOnDispose = true)
+    public IMetricFlowBuilder EnableAutoFlush(bool flushOnDispose = true)
     {
-        ConfigureOptionsInServices(opt => opt.EnableAutoFlush(periodicInterval, flushOnDispose));
+        ConfigureOptionsInServices(opt => opt.EnableAutoFlush(flushOnDispose));
         return this;
     }
 

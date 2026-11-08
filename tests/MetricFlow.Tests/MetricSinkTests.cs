@@ -585,22 +585,20 @@ public class MetricSinkTests
     }
 
     [Fact]
-    public async Task MetricTracker_EnableAutoFlush_PeriodicallyFlushesAsyncAndFlushesOnDispose()
+    public async Task MetricTracker_EnableAutoFlush_FlushesAsyncOnDispose()
     {
         // Arrange
         var asyncSink = new AsyncRecordingMetricSink();
 
-        await using (var tracker = new MetricTracker("PeriodicJob")
+        await using (var tracker = new MetricTracker("AutoFlushJob")
             .RegisterSink(asyncSink)
-            .EnableAutoFlush(periodicInterval: TimeSpan.FromMilliseconds(35), flushOnDispose: true))
+            .EnableAutoFlush(flushOnDispose: true))
         {
-            using (tracker.Track("PeriodicWork")) { }
-            await Task.Delay(120);
-            asyncSink.AsyncEmittedBatches.Count.Should().BeGreaterThanOrEqualTo(1);
+            using (tracker.Track("Work")) { }
+            asyncSink.AsyncEmittedBatches.Should().BeEmpty();
         }
 
-        var countAfterDispose = asyncSink.AsyncEmittedBatches.Count;
-        countAfterDispose.Should().BeGreaterThanOrEqualTo(2);
+        asyncSink.AsyncEmittedBatches.Should().HaveCount(1);
     }
 
     [Fact]

@@ -31,10 +31,6 @@ public abstract class MetricTrackerBase : IMetricTracker
 
     private readonly double? _samplingRate;
     private readonly IMetricMeterBridge? _meterBridge;
-    private readonly object _periodicFlushLock = new();
-    private CancellationTokenSource? _periodicFlushCts;
-    private Task? _periodicFlushTask;
-    private int _isFlushing;
     private int _disposed;
     private int _flushOnDisposeExecuted;
 
@@ -478,111 +474,6 @@ public abstract class MetricTrackerBase : IMetricTracker
     /// </summary>
     public bool AutoFlushOnDispose { get; set; }
 
-    /// <summary>
-    /// Gets the configured periodic background flush interval, if active.
-    /// </summary>
-    public TimeSpan? PeriodicFlushInterval { get; private set; }
-
-    /// <summary>
-    /// Starts or updates an asynchronous background periodic timer that calls <see cref="FlushSinksAsync"/> at the specified interval.
-    /// Automatically stopped when <see cref="StopPeriodicFlush"/> or <see cref="Dispose()"/> / <see cref="DisposeAsync()"/> is called.
-    /// </summary>
-    /// <param name="interval">The time interval between periodic flushes.</param>
-    /// <returns>This tracker instance for fluent chaining.</returns>
-    public IMetricTracker StartPeriodicFlush(TimeSpan interval)
-    {
-        if (interval <= TimeSpan.Zero)
-        {
-            throw new ArgumentOutOfRangeException(nameof(interval), "Interval must be greater than zero.");
-        }
-
-        lock (_periodicFlushLock)
-        {
-            if (Volatile.Read(ref _disposed) != 0)
-            {
-                return this;
-            }
-
-            StopPeriodicFlushCore();
-            PeriodicFlushInterval = interval;
-            var cts = new CancellationTokenSource();
-            _periodicFlushCts = cts;
-            _periodicFlushTask = RunPeriodicFlushLoopAsync(interval, cts.Token);
-        }
-
-        return this;
-    }
-
-    /// <summary>
-    /// Stops any active background periodic flush loop on this tracker.
-    /// </summary>
-    public void StopPeriodicFlush()
-    {
-        lock (_periodicFlushLock)
-        {
-            StopPeriodicFlushCore();
-        }
-    }
-
-    private void StopPeriodicFlushCore()
-    {
-        PeriodicFlushInterval = null;
-        if (_periodicFlushCts != null)
-        {
-            try
-            {
-                _periodicFlushCts.Cancel();
-                _periodicFlushCts.Dispose();
-            }
-            catch
-            {
-                // Ignore cancellation disposal errors
-            }
-            _periodicFlushCts = null;
-            _periodicFlushTask = null;
-        }
-    }
-
-    private async Task RunPeriodicFlushLoopAsync(TimeSpan interval, CancellationToken cancellationToken)
-    {
-        try
-        {
-            using var timer = new PeriodicTimer(interval);
-            while (await timer.WaitForNextTickAsync(cancellationToken).ConfigureAwait(false))
-            {
-                if (Volatile.Read(ref _disposed) != 0)
-                {
-                    break;
-                }
-
-                if (Interlocked.CompareExchange(ref _isFlushing, 1, 0) != 0)
-                {
-                    continue;
-                }
-
-                try
-                {
-                    await FlushSinksAsync(cancellationToken).ConfigureAwait(false);
-                }
-                catch
-                {
-                    // Sinks must not crash the periodic timer loop
-                }
-                finally
-                {
-                    Interlocked.Exchange(ref _isFlushing, 0);
-                }
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            // Expected on cancellation / disposal
-        }
-        catch
-        {
-            // Prevent background task fault
-        }
-    }
 
     /// <summary>
     /// Synchronously flushes all active snapshots across all registered counters to all registered sinks.
@@ -722,7 +613,7 @@ public abstract class MetricTrackerBase : IMetricTracker
     }
 
     /// <summary>
-    /// Performs asynchronous cleanup of managed resources, including stopping periodic flushes,
+    /// Performs asynchronous cleanup of managed resources,
     /// flushing sinks if <see cref="AutoFlushOnDispose"/> is enabled, and disposing sinks.
     /// </summary>
     /// <returns>A ValueTask representing the asynchronous cleanup operation.</returns>
@@ -731,25 +622,6 @@ public abstract class MetricTrackerBase : IMetricTracker
         if (Interlocked.Exchange(ref _disposed, 1) != 0)
         {
             return;
-        }
-
-        Task? pendingFlushTask;
-        lock (_periodicFlushLock)
-        {
-            pendingFlushTask = _periodicFlushTask;
-            StopPeriodicFlushCore();
-        }
-
-        if (pendingFlushTask != null)
-        {
-            try
-            {
-                await pendingFlushTask.ConfigureAwait(false);
-            }
-            catch
-            {
-                // Ignore background task cancellation/completion exceptions
-            }
         }
 
         await ExecuteAutoFlushOnDisposeAsync(CancellationToken.None).ConfigureAwait(false);
@@ -793,8 +665,6 @@ public abstract class MetricTrackerBase : IMetricTracker
         {
             return;
         }
-
-        StopPeriodicFlush();
 
         ExecuteAutoFlushOnDispose();
 

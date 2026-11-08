@@ -98,12 +98,6 @@ public class MetricFlowOptions
     public bool DisposeSinks { get; set; } = true;
 
     /// <summary>
-    /// Optional time interval for periodically flushing registered sinks in the background using <see cref="IMetricTracker.FlushSinksAsync"/>.
-    /// Defaults to null (disabled).
-    /// </summary>
-    public TimeSpan? PeriodicFlushInterval { get; set; }
-
-    /// <summary>
     /// Configures whether registered sinks should be automatically flushed when the tracker is disposed.
     /// </summary>
     /// <param name="enabled">True to flush sinks on disposal; otherwise false. Defaults to true.</param>
@@ -113,6 +107,13 @@ public class MetricFlowOptions
         AutoFlushOnDispose = enabled;
         return this;
     }
+
+    /// <summary>
+    /// Configures whether registered sinks should be automatically flushed when the tracker is disposed.
+    /// </summary>
+    /// <param name="enabled">True to flush sinks on disposal; otherwise false. Defaults to true.</param>
+    /// <returns>This options instance for fluent chaining.</returns>
+    public MetricFlowOptions WithAutoFlushOnDispose(bool enabled = true) => WithFlushOnDispose(enabled);
 
     /// <summary>
     /// Configures whether registered sinks should be disposed when the tracker is disposed.
@@ -126,22 +127,11 @@ public class MetricFlowOptions
     }
 
     /// <summary>
-    /// Enables automatic sink flushing upon tracker disposal and optionally at a periodic background interval.
+    /// Enables automatic sink flushing upon tracker disposal.
     /// </summary>
-    /// <param name="periodicInterval">Optional interval for background periodic async flushes.</param>
-    /// <param name="flushOnDispose">Whether to also flush sinks when the tracker is disposed. Defaults to true.</param>
+    /// <param name="flushOnDispose">Whether to flush sinks when the tracker is disposed. Defaults to true.</param>
     /// <returns>This options instance for fluent chaining.</returns>
-    public MetricFlowOptions EnableAutoFlush(TimeSpan? periodicInterval = null, bool flushOnDispose = true)
-    {
-        if (periodicInterval.HasValue && periodicInterval.Value <= TimeSpan.Zero)
-        {
-            throw new ArgumentOutOfRangeException(nameof(periodicInterval), "Interval must be greater than zero.");
-        }
-
-        AutoFlushOnDispose = flushOnDispose;
-        PeriodicFlushInterval = periodicInterval;
-        return this;
-    }
+    public MetricFlowOptions EnableAutoFlush(bool flushOnDispose = true) => WithFlushOnDispose(flushOnDispose);
 
     /// <summary>
     /// Registers a custom metric sink to receive snapshot emissions.
