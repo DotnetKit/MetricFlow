@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using DotnetKit.MetricFlow.Abstractions;
+using DotnetKit.MetricFlow.Sinks;
 
 namespace DotnetKit.MetricFlow;
 
@@ -11,6 +12,8 @@ public class MetricFlowRegistry : IMetricFlow
     private readonly ConcurrentDictionary<string, IMetricTracker> _trackers = new(
         StringComparer.OrdinalIgnoreCase
     );
+    private readonly List<IMetricSink> _sharedSinks = [];
+    private readonly object _sinksLock = new();
     private readonly Func<string, IMetricTracker>? _trackerFactory;
     private readonly string _defaultTopic;
     private volatile IMetricTracker? _defaultTracker;
@@ -22,14 +25,24 @@ public class MetricFlowRegistry : IMetricFlow
     /// <param name="defaultTopic">The fallback topic name when no tracker is registered.</param>
     /// <param name="initialTrackers">Optional initial trackers to register.</param>
     /// <param name="trackerFactory">Optional factory to produce trackers dynamically for unconfigured topics.</param>
+    /// <param name="sharedSinks">Optional shared sinks owned by this registry.</param>
     public MetricFlowRegistry(
         string defaultTopic = "Application",
         IEnumerable<IMetricTracker>? initialTrackers = null,
-        Func<string, IMetricTracker>? trackerFactory = null
+        Func<string, IMetricTracker>? trackerFactory = null,
+        IEnumerable<IMetricSink>? sharedSinks = null
     )
     {
         _defaultTopic = string.IsNullOrWhiteSpace(defaultTopic) ? "Application" : defaultTopic;
         _trackerFactory = trackerFactory;
+
+        if (sharedSinks != null)
+        {
+            foreach (var sink in sharedSinks)
+            {
+                RegisterSharedSink(sink);
+            }
+        }
 
         if (initialTrackers != null)
         {
@@ -39,6 +52,39 @@ public class MetricFlowRegistry : IMetricFlow
             }
         }
     }
+
+    /// <summary>
+    /// Registers a shared sink owned by this registry.
+    /// </summary>
+    /// <param name="sink">The shared metric sink instance.</param>
+    public void RegisterSharedSink(IMetricSink sink)
+    {
+        ArgumentNullException.ThrowIfNull(sink);
+        lock (_sinksLock)
+        {
+            if (!_sharedSinks.Contains(sink))
+            {
+                _sharedSinks.Add(sink);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Gets all shared metric sinks owned by this registry.
+    /// </summary>
+    public IReadOnlyList<IMetricSink> SharedSinks
+    {
+        get
+        {
+            lock (_sinksLock)
+            {
+                return _sharedSinks.ToArray();
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    IEnumerable<IMetricSink> IMetricFlow.SharedSinks => SharedSinks;
 
     /// <inheritdoc />
     public IMetricTracker? DefaultTracker
@@ -73,24 +119,28 @@ public class MetricFlowRegistry : IMetricFlow
             topic,
             key =>
             {
+                IMetricTracker factoryTracker;
                 if (_trackerFactory != null)
                 {
-                    var factoryTracker = _trackerFactory(key);
-                    // ReSharper disable once ConvertIfStatementToNullCoalescingAssignment
-                    if (_defaultTracker == null)
-                    {
-                        _defaultTracker = factoryTracker;
-                    }
-                    return factoryTracker;
+                    factoryTracker = _trackerFactory(key);
+                }
+                else
+                {
+                    factoryTracker = new MetricTracker(key);
                 }
 
-                var fallback = new MetricTracker(key);
+                foreach (var sink in factoryTracker.GetSinks())
+                {
+                    RegisterSharedSink(sink);
+                }
+                factoryTracker.DisposeSinks = false;
+
                 // ReSharper disable once ConvertIfStatementToNullCoalescingAssignment
                 if (_defaultTracker == null)
                 {
-                    _defaultTracker = fallback;
+                    _defaultTracker = factoryTracker;
                 }
-                return fallback;
+                return factoryTracker;
             }
         );
     }
@@ -116,6 +166,12 @@ public class MetricFlowRegistry : IMetricFlow
         {
             _defaultTracker = tracker;
         }
+
+        foreach (var sink in tracker.GetSinks())
+        {
+            RegisterSharedSink(sink);
+        }
+        tracker.DisposeSinks = false;
     }
 
     /// <summary>
@@ -163,7 +219,8 @@ public class MetricFlowRegistry : IMetricFlow
     }
 
     /// <summary>
-    /// Performs asynchronous cleanup of all registered metric trackers.
+    /// Performs asynchronous cleanup of all registered metric trackers and shared sinks.
+    /// Flushes all opted-in trackers before closing shared sinks once.
     /// </summary>
     /// <returns>A ValueTask representing the asynchronous cleanup operation.</returns>
     protected virtual async ValueTask DisposeAsyncCore()
@@ -173,6 +230,35 @@ public class MetricFlowRegistry : IMetricFlow
             return;
         }
 
+        // 1. Flush all opted-in trackers before closing shared sinks
+        foreach (var tracker in _trackers.Values)
+        {
+            if (tracker is MetricTrackerBase trackerBase)
+            {
+                await trackerBase.ExecuteAutoFlushOnDisposeAsync().ConfigureAwait(false);
+            }
+            else if (tracker.AutoFlushOnDispose)
+            {
+                try
+                {
+                    await tracker.FlushSinksAsync().ConfigureAwait(false);
+                }
+                catch
+                {
+                    // Trackers should not prevent other resources from disposing
+                }
+            }
+        }
+
+        // 2. Collect all sinks across registered trackers to ensure all shared sinks are closed once
+        List<IMetricSink> sinksToDispose;
+        lock (_sinksLock)
+        {
+            sinksToDispose = _sharedSinks.Concat(_trackers.Values.SelectMany(t => t.GetSinks())).Distinct().ToList();
+            _sharedSinks.Clear();
+        }
+
+        // 3. Dispose all registered trackers
         foreach (var tracker in _trackers.Values)
         {
             try
@@ -192,10 +278,31 @@ public class MetricFlowRegistry : IMetricFlow
             }
         }
         _trackers.Clear();
+
+        // 4. Close shared sinks once
+        foreach (var sink in sinksToDispose)
+        {
+            try
+            {
+                if (sink is IAsyncDisposable asyncDisposable)
+                {
+                    await asyncDisposable.DisposeAsync().ConfigureAwait(false);
+                }
+                else if (sink is IDisposable disposable)
+                {
+                    disposable.Dispose();
+                }
+            }
+            catch
+            {
+                // Sinks should not prevent other resources from disposing
+            }
+        }
     }
 
     /// <summary>
     /// Releases the unmanaged resources used by the <see cref="MetricFlowRegistry"/> and optionally releases the managed resources.
+    /// Flushes all opted-in trackers before closing shared sinks once.
     /// </summary>
     /// <param name="disposing">true to release both managed and unmanaged resources; false to release only unmanaged resources.</param>
     protected virtual void Dispose(bool disposing)
@@ -206,8 +313,39 @@ public class MetricFlowRegistry : IMetricFlow
         }
 
         if (Interlocked.Exchange(ref _disposed, 1) != 0)
+        {
             return;
+        }
 
+        // 1. Flush all opted-in trackers before closing shared sinks
+        foreach (var tracker in _trackers.Values)
+        {
+            if (tracker is MetricTrackerBase trackerBase)
+            {
+                trackerBase.ExecuteAutoFlushOnDispose();
+            }
+            else if (tracker.AutoFlushOnDispose)
+            {
+                try
+                {
+                    tracker.FlushSinks();
+                }
+                catch
+                {
+                    // Trackers should not prevent other resources from disposing
+                }
+            }
+        }
+
+        // 2. Collect all sinks across registered trackers to ensure all shared sinks are closed once
+        List<IMetricSink> sinksToDispose;
+        lock (_sinksLock)
+        {
+            sinksToDispose = _sharedSinks.Concat(_trackers.Values.SelectMany(t => t.GetSinks())).Distinct().ToList();
+            _sharedSinks.Clear();
+        }
+
+        // 3. Dispose all registered trackers
         foreach (var tracker in _trackers.Values)
         {
             if (tracker is IDisposable disposable)
@@ -223,5 +361,21 @@ public class MetricFlowRegistry : IMetricFlow
             }
         }
         _trackers.Clear();
+
+        // 4. Close shared sinks once
+        foreach (var sink in sinksToDispose)
+        {
+            if (sink is IDisposable disposable)
+            {
+                try
+                {
+                    disposable.Dispose();
+                }
+                catch
+                {
+                    // Sinks should not prevent other resources from disposing
+                }
+            }
+        }
     }
 }

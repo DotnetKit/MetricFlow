@@ -173,6 +173,17 @@ public interface IMetricTracker : IMetricSnapshotsSource, IDisposable, IAsyncDis
     }
 
     /// <summary>
+    /// Gets or sets whether registered sinks should be disposed when this tracker is disposed.
+    /// Defaults to true. When sinks are shared across trackers (such as in DI or multi-topic registries),
+    /// this should be set to false so that the registry or provider manages sink disposal.
+    /// </summary>
+    bool DisposeSinks
+    {
+        get => true;
+        set => _ = value;
+    }
+
+    /// <summary>
     /// Synchronously flushes all current snapshots to registered sinks.
     /// </summary>
     void FlushSinks() { }

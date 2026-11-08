@@ -101,6 +101,13 @@ public class MetricFlowBuilder : IMetricFlowBuilder
     }
 
     /// <inheritdoc />
+    public IMetricFlowBuilder WithDisposeSinks(bool enabled = true)
+    {
+        ConfigureOptionsInServices(opt => opt.WithDisposeSinks(enabled));
+        return this;
+    }
+
+    /// <inheritdoc />
     public IMetricFlowBuilder EnableAutoFlush(TimeSpan? periodicInterval = null, bool flushOnDispose = true)
     {
         ConfigureOptionsInServices(opt => opt.EnableAutoFlush(periodicInterval, flushOnDispose));

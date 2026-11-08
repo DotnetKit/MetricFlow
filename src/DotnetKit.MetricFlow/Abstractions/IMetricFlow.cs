@@ -32,6 +32,11 @@ public interface IMetricFlow : IDisposable, IAsyncDisposable
     IEnumerable<IMetricTracker> Trackers { get; }
 
     /// <summary>
+    /// Gets all shared metric sinks owned by this registry or facade.
+    /// </summary>
+    IEnumerable<Sinks.IMetricSink> SharedSinks => [];
+
+    /// <summary>
     /// Gets a metric tracker by topic name using indexer syntax.
     /// </summary>
     /// <param name="topic">The metric topic name.</param>

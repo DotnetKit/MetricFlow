@@ -637,6 +637,156 @@ public class MetricSinkTests
         sinkB.AsyncEmittedBatches.Should().HaveCount(2);
     }
 
+    [Fact]
+    public async Task DependencyInjection_SharedObservableSink_EmitsAllTrackersMetricsBeforeDisposal_Async()
+    {
+        // Arrange
+        var sharedSink = new ObservableMetricSink("SharedRx");
+        var receivedBatches = new List<IReadOnlyList<IMetricSnapshot>>();
+
+        using var sub = sharedSink.Subscribe(
+            onNext: batch => receivedBatches.Add(batch)
+        );
+
+        var services = new ServiceCollection();
+        services.AddMetricFlow("Billing", opt => opt.WithFlushOnDispose())
+            .AddMetricTracker("Orders", opt => opt.WithFlushOnDispose())
+            .AddSink(sharedSink)
+            .WithFlushOnDispose();
+
+        // Act
+        await using (var provider = services.BuildServiceProvider())
+        {
+            var flow = provider.GetRequiredService<IMetricFlow>();
+            using (flow.GetTracker("Billing").Track("BillOp")) { }
+            using (flow.GetTracker("Orders").Track("OrderOp")) { }
+        }
+
+        // Assert - Both topics' final metrics were emitted to the shared sink before it was closed
+        receivedBatches.Should().HaveCount(2);
+        var metricNames = receivedBatches.SelectMany(b => b).Select(s => s.MetricName).ToList();
+        metricNames.Should().Contain("BillOp");
+        metricNames.Should().Contain("OrderOp");
+    }
+
+    [Fact]
+    public void DependencyInjection_SharedObservableSink_EmitsAllTrackersMetricsBeforeDisposal_Sync()
+    {
+        // Arrange
+        var sharedSink = new ObservableMetricSink("SharedRx");
+        var receivedBatches = new List<IReadOnlyList<IMetricSnapshot>>();
+
+        using var sub = sharedSink.Subscribe(batch => receivedBatches.Add(batch));
+
+        var services = new ServiceCollection();
+        services.AddMetricFlow("Billing", opt => opt.WithFlushOnDispose())
+            .AddMetricTracker("Orders", opt => opt.WithFlushOnDispose())
+            .AddSink(sharedSink)
+            .WithFlushOnDispose();
+
+        // Act
+        using (var provider = services.BuildServiceProvider())
+        {
+            var flow = provider.GetRequiredService<IMetricFlow>();
+            using (flow.GetTracker("Billing").Track("BillOp")) { }
+            using (flow.GetTracker("Orders").Track("OrderOp")) { }
+        }
+
+        // Assert - Both topics' final metrics were emitted to the shared sink before it was closed
+        receivedBatches.Should().HaveCount(2);
+        var metricNames = receivedBatches.SelectMany(b => b).Select(s => s.MetricName).ToList();
+        metricNames.Should().Contain("BillOp");
+        metricNames.Should().Contain("OrderOp");
+    }
+
+    [Fact]
+    public void MetricFlowRegistry_Dispose_SynchronousPath_FlushesAllOptedInTrackersBeforeClosingSharedSinksOnce()
+    {
+        // Arrange
+        var sharedSink = new TrackingDisposableSink();
+        var trackerA = new MetricTracker("A").RegisterSink(sharedSink).WithAutoFlushOnDispose();
+        var trackerB = new MetricTracker("B").RegisterSink(sharedSink).WithAutoFlushOnDispose();
+
+        var registry = new MetricFlowRegistry(initialTrackers: [trackerA, trackerB], sharedSinks: [sharedSink]);
+
+        using (trackerA.Track("OpA")) { }
+        using (trackerB.Track("OpB")) { }
+
+        // Act - Synchronous dispose at MetricFlowRegistry.cs:217
+        registry.Dispose();
+
+        // Assert
+        sharedSink.IsDisposed.Should().BeTrue();
+        sharedSink.DisposeCallCount.Should().Be(1);
+        sharedSink.EmittedAfterDisposalCount.Should().Be(0);
+        sharedSink.Events.Should().HaveCount(3);
+        sharedSink.Events.Take(2).Should().Contain("Emit:OpA").And.Contain("Emit:OpB");
+        sharedSink.Events[^1].Should().Be("Disposed");
+    }
+
+    [Fact]
+    public async Task MetricFlowRegistry_DisposeAsync_FlushesAllOptedInTrackersBeforeClosingSharedSinksOnce()
+    {
+        // Arrange
+        var sharedSink = new TrackingDisposableSink();
+        var trackerA = new MetricTracker("A").RegisterSink(sharedSink).WithAutoFlushOnDispose();
+        var trackerB = new MetricTracker("B").RegisterSink(sharedSink).WithAutoFlushOnDispose();
+
+        var registry = new MetricFlowRegistry(initialTrackers: [trackerA, trackerB], sharedSinks: [sharedSink]);
+
+        using (trackerA.Track("OpA")) { }
+        using (trackerB.Track("OpB")) { }
+
+        // Act - Asynchronous dispose
+        await registry.DisposeAsync();
+
+        // Assert
+        sharedSink.IsDisposed.Should().BeTrue();
+        sharedSink.DisposeCallCount.Should().Be(1);
+        sharedSink.EmittedAfterDisposalCount.Should().Be(0);
+        sharedSink.Events.Should().HaveCount(3);
+        sharedSink.Events.Take(2).Should().Contain("Emit:OpA").And.Contain("Emit:OpB");
+        sharedSink.Events[^1].Should().Be("Disposed");
+    }
+
+    private sealed class TrackingDisposableSink(string name = "TrackingSink") : IMetricSink, IDisposable, IAsyncDisposable
+    {
+        public string Name { get; } = name;
+        public List<string> Events { get; } = [];
+        public bool IsDisposed { get; private set; }
+        public int EmittedAfterDisposalCount { get; private set; }
+        public int DisposeCallCount { get; private set; }
+
+        public void Emit(IReadOnlyList<IMetricSnapshot> snapshots)
+        {
+            if (IsDisposed)
+            {
+                EmittedAfterDisposalCount++;
+                return;
+            }
+            Events.Add($"Emit:{snapshots[0].MetricName}");
+        }
+
+        public ValueTask EmitAsync(IReadOnlyList<IMetricSnapshot> snapshots, CancellationToken cancellationToken = default)
+        {
+            Emit(snapshots);
+            return ValueTask.CompletedTask;
+        }
+
+        public void Dispose()
+        {
+            DisposeCallCount++;
+            IsDisposed = true;
+            Events.Add("Disposed");
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            Dispose();
+            return ValueTask.CompletedTask;
+        }
+    }
+
     private sealed class AsyncRecordingMetricSink(string name = "AsyncRecordingSink") : IMetricSink, IAsyncDisposable
     {
         public string Name { get; } = name;

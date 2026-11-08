@@ -48,6 +48,9 @@ public static class MetricFlowServiceCollectionExtensions
             var defaultOptions = sp.GetService<MetricFlowOptions>() ?? options;
             var meterRegistry = sp.GetRequiredService<MetricFlowMeterRegistry>();
 
+            var diSinks = sp.GetServices<IMetricSink>();
+            var allSinks = defaultOptions.Sinks.Concat(diSinks).Distinct().ToList();
+
             var registry = new MetricFlowRegistry(
                 defaultTopic: defaultOptions.Topic,
                 initialTrackers: null,
@@ -60,8 +63,6 @@ public static class MetricFlowServiceCollectionExtensions
                     }
 
                     var meterBridge = meterRegistry.GetOrCreateBridge(topic, defaultOptions.TopicTags);
-                    var diSinks = sp.GetServices<IMetricSink>();
-                    var allSinks = defaultOptions.Sinks.Concat(diSinks).Distinct().ToList();
 
                     var loggerFactory = sp.GetService<ILoggerFactory>();
                     if (loggerFactory != null)
@@ -84,7 +85,8 @@ public static class MetricFlowServiceCollectionExtensions
                         meterBridge: meterBridge,
                         sinks: allSinks,
                         sinkTriggers: defaultOptions.SinkTriggers,
-                        durationCounter: new DurationCounter(DurationCounter.DefaultCounterName, defaultOptions.DurationOptions));
+                        durationCounter: new DurationCounter(DurationCounter.DefaultCounterName, defaultOptions.DurationOptions),
+                        disposeSinks: false);
 
                     if (defaultOptions.AutoAddExceptionCounter)
                     {
@@ -98,7 +100,8 @@ public static class MetricFlowServiceCollectionExtensions
                     }
 
                     return tracker;
-                });
+                },
+                sharedSinks: allSinks);
 
 
             // Register all statically configured topic trackers into the registry
@@ -231,7 +234,8 @@ public static class MetricFlowServiceCollectionExtensions
                 meterBridge: meterBridge,
                 sinks: allSinks,
                 sinkTriggers: trackerOptions.SinkTriggers,
-                durationCounter: new DurationCounter(DurationCounter.DefaultCounterName, trackerOptions.DurationOptions));
+                durationCounter: new DurationCounter(DurationCounter.DefaultCounterName, trackerOptions.DurationOptions),
+                disposeSinks: false);
 
             if (trackerOptions.AutoAddExceptionCounter)
             {

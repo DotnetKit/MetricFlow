@@ -210,6 +210,23 @@ public static class TrackerSinkExtensions
     }
 
     /// <summary>
+    /// Configures whether registered sinks should be disposed when the tracker is disposed.
+    /// </summary>
+    /// <typeparam name="T">The metric tracker type.</typeparam>
+    /// <param name="tracker">The tracker instance.</param>
+    /// <param name="enabled">True to dispose sinks on tracker disposal; otherwise false. Defaults to true.</param>
+    /// <returns>The same tracker instance for method chaining.</returns>
+    public static T WithDisposeSinks<T>(
+        this T tracker,
+        bool enabled = true)
+        where T : IMetricTracker
+    {
+        ArgumentNullException.ThrowIfNull(tracker);
+        tracker.DisposeSinks = enabled;
+        return tracker;
+    }
+
+    /// <summary>
     /// Enables automatic sink flushing upon tracker disposal and optionally starts a periodic background async flush timer tied to the tracker's lifetime.
     /// </summary>
     /// <typeparam name="T">The metric tracker type.</typeparam>

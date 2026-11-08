@@ -92,6 +92,12 @@ public class MetricFlowOptions
     public bool AutoFlushOnDispose { get; set; }
 
     /// <summary>
+    /// Whether registered sinks should be disposed when the tracker is disposed. Defaults to true.
+    /// In shared sink environments (such as DI or multi-topic registries), set to false so the registry/provider owns sink disposal.
+    /// </summary>
+    public bool DisposeSinks { get; set; } = true;
+
+    /// <summary>
     /// Optional time interval for periodically flushing registered sinks in the background using <see cref="IMetricTracker.FlushSinksAsync"/>.
     /// Defaults to null (disabled).
     /// </summary>
@@ -105,6 +111,17 @@ public class MetricFlowOptions
     public MetricFlowOptions WithFlushOnDispose(bool enabled = true)
     {
         AutoFlushOnDispose = enabled;
+        return this;
+    }
+
+    /// <summary>
+    /// Configures whether registered sinks should be disposed when the tracker is disposed.
+    /// </summary>
+    /// <param name="enabled">True to dispose sinks on disposal; otherwise false. Defaults to true.</param>
+    /// <returns>This options instance for fluent chaining.</returns>
+    public MetricFlowOptions WithDisposeSinks(bool enabled = true)
+    {
+        DisposeSinks = enabled;
         return this;
     }
 
