@@ -9,6 +9,7 @@ public class MemoryCounter : ICounter
     public const string DefaultCounterName = "Memory";
 
     private readonly ConcurrentDictionary<string, MetricMemoryState> _states = new();
+    private long _sequenceCounter;
 
     public string Name { get; }
     public bool IsEnabled { get; set; } = true;
@@ -21,6 +22,11 @@ public class MemoryCounter : ICounter
     public object? OnIn(in InContext context)
     {
         if (!IsEnabled) return null;
+
+        _ = _states.GetOrAdd(
+            context.MetricName,
+            name => new MetricMemoryState(name, Interlocked.Increment(ref _sequenceCounter))
+        );
 
         return new MemoryTrackingToken(
             Environment.CurrentManagedThreadId,
@@ -47,7 +53,10 @@ public class MemoryCounter : ICounter
             }
         }
 
-        var metricState = _states.GetOrAdd(context.MetricName, static name => new MetricMemoryState(name));
+        var metricState = _states.GetOrAdd(
+            context.MetricName,
+            name => new MetricMemoryState(name, Interlocked.Increment(ref _sequenceCounter))
+        );
         metricState.Record(allocatedBytes);
     }
 
@@ -60,13 +69,17 @@ public class MemoryCounter : ICounter
 
     public IEnumerable<IMetricSnapshot> GetAllSnapshots()
     {
-        foreach (var state in _states.Values)
+        foreach (var state in _states.Values.OrderBy(static s => s.Sequence))
         {
             yield return state.ToSnapshot(Name);
         }
     }
 
-    public void Reset() => _states.Clear();
+    public void Reset()
+    {
+        _states.Clear();
+        Interlocked.Exchange(ref _sequenceCounter, 0);
+    }
 
     public MetricMemoryState? GetState(string metricName)
     {
@@ -74,7 +87,7 @@ public class MemoryCounter : ICounter
         return state;
     }
 
-    public class MetricMemoryState(string metricName)
+    public class MetricMemoryState(string metricName, long sequence = 0)
     {
         private long _operationCount;
         private long _totalAllocatedBytes;
@@ -82,6 +95,7 @@ public class MemoryCounter : ICounter
         private long _maxAllocatedBytes;
 
         public string MetricName => metricName;
+        public long Sequence => sequence;
         public long OperationCount => Interlocked.Read(ref _operationCount);
         public long TotalAllocatedBytes => Interlocked.Read(ref _totalAllocatedBytes);
         public long MinAllocatedBytes => Interlocked.Read(ref _minAllocatedBytes);

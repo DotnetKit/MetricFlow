@@ -1,6 +1,7 @@
 using DotnetKit.MetricFlow;
 using DotnetKit.MetricFlow.Abstractions;
 using DotnetKit.MetricFlow.Counters;
+using DotnetKit.MetricFlow.Sinks.Console;
 using FluentAssertions;
 using Xunit;
 
@@ -161,5 +162,100 @@ public class OperationSummaryTests
     {
         using var tracker = new MetricTracker("TestTopic");
         tracker.GetOperationSummary("MissingOp").Should().BeNull();
+    }
+
+    [Fact]
+    public void Tracker_GetOperationSummaries_PreservesRegistrationOrderOfOperations()
+    {
+        using var tracker = new MetricTracker("OrderPreservationTopic")
+            .AddThroughputCounter()
+            .AddMemoryCounter()
+            .AddFailureCounter()
+            .AddExceptionCounter()
+            .AddDimensionCounter("entity_type");
+
+        string[] expectedOrder =
+        [
+            "RunSample",
+            "Add first entity",
+            "Validate entity",
+            "Persist to store",
+            "Publish event",
+            "Cleanup resources",
+        ];
+
+        foreach (var opName in expectedOrder)
+        {
+            using (tracker.Track(opName, new() { ["entity_type"] = "User" }))
+            {
+                // Track first time in registration order
+            }
+        }
+
+        // Track again in reverse order to ensure initial registration order is preserved
+        for (var i = expectedOrder.Length - 1; i >= 0; i--)
+        {
+            using (tracker.TrackItems(expectedOrder[i], 10, new() { ["entity_type"] = "Order" }))
+            {
+                // Subsequent tracking
+            }
+        }
+
+        var summaries = tracker.GetOperationSummaries();
+        summaries.Select(s => s.OperationName).Should().ContainInOrder(expectedOrder);
+        summaries.Select(s => s.OperationName).Should().Equal(expectedOrder);
+
+        // Also verify individual counter GetAllSnapshots() preserve insertion sequence
+        foreach (var counter in tracker.GetCounters())
+        {
+            counter
+                .GetAllSnapshots()
+                .Select(s => s.MetricName)
+                .Should()
+                .Equal(expectedOrder, $"Counter '{counter.Name}' should preserve insertion sequence");
+        }
+    }
+
+    [Fact]
+    public void ConsoleMetricSink_TableMode_ListsOperationsInRegistrationOrder()
+    {
+        using var writer = new StringWriter();
+        using var tracker = new MetricTracker("TableOrderTopic")
+            .AddThroughputCounter()
+            .AddMemoryCounter()
+            .AddFailureCounter()
+            .AddConsoleSink(opt =>
+            {
+                opt.OutputWriter = writer;
+                opt.DisplayMode = ConsoleDisplayMode.Table;
+                opt.Colorize = false;
+                opt.IncludeTimestamp = false;
+            });
+
+        string[] operations =
+        [
+            "RunSample",
+            "Add first entity",
+            "Fetch dependencies",
+            "Finalize batch",
+        ];
+
+        foreach (var op in operations)
+        {
+            using (tracker.TrackItems(op, 5)) { }
+        }
+
+        tracker.FlushSinks();
+
+        var output = writer.ToString();
+        var runSampleIdx = output.IndexOf("RunSample", StringComparison.Ordinal);
+        var addFirstEntityIdx = output.IndexOf("Add first entity", StringComparison.Ordinal);
+        var fetchDepsIdx = output.IndexOf("Fetch dependencies", StringComparison.Ordinal);
+        var finalizeBatchIdx = output.IndexOf("Finalize batch", StringComparison.Ordinal);
+
+        runSampleIdx.Should().BeGreaterThanOrEqualTo(0);
+        addFirstEntityIdx.Should().BeGreaterThan(runSampleIdx);
+        fetchDepsIdx.Should().BeGreaterThan(addFirstEntityIdx);
+        finalizeBatchIdx.Should().BeGreaterThan(fetchDepsIdx);
     }
 }

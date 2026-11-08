@@ -21,6 +21,8 @@ public class HierarchyCounter : ICounter
         typeof(HierarchyCounter).Assembly.GetName().Version?.ToString(3) ?? "1.0.0");
 
     private readonly ConcurrentDictionary<string, HierarchyTreeSnapshot> _trees = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, long> _sequences = new(StringComparer.OrdinalIgnoreCase);
+    private long _sequenceCounter;
     private readonly AsyncLocal<HierarchyNode?> _currentScope = new();
 
     /// <inheritdoc />
@@ -57,6 +59,11 @@ public class HierarchyCounter : ICounter
         }
 
         var parent = _currentScope.Value;
+        if (parent == null && !_sequences.ContainsKey(context.MetricName))
+        {
+            _sequences.GetOrAdd(context.MetricName, _ => Interlocked.Increment(ref _sequenceCounter));
+        }
+
         var node = new HierarchyNode(context.MetricName, parent, context.UtcTimestamp);
         parent?.AddChild(node);
         _currentScope.Value = node;
@@ -141,6 +148,10 @@ public class HierarchyCounter : ICounter
         // If root node, create and register final snapshot
         if (node.Parent == null)
         {
+            if (!_sequences.ContainsKey(node.MetricName))
+            {
+                _sequences.GetOrAdd(node.MetricName, _ => Interlocked.Increment(ref _sequenceCounter));
+            }
             var snapshot = new HierarchyTreeSnapshot(node.MetricName, Name, node, DateTime.UtcNow);
             _trees[node.MetricName] = snapshot;
         }
@@ -155,13 +166,17 @@ public class HierarchyCounter : ICounter
     /// <inheritdoc />
     public IEnumerable<IMetricSnapshot> GetAllSnapshots()
     {
-        return _trees.Values;
+        return _trees.Values.OrderBy(s =>
+            _sequences.TryGetValue(s.MetricName, out var seq) ? seq : long.MaxValue
+        );
     }
 
     /// <inheritdoc />
     public void Reset()
     {
         _trees.Clear();
+        _sequences.Clear();
+        Interlocked.Exchange(ref _sequenceCounter, 0);
     }
 
     private sealed record HierarchyStateToken(HierarchyNode Node, long StartAllocatedBytes, Activity? Activity);

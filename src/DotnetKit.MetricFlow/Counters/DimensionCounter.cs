@@ -14,6 +14,7 @@ public class DimensionCounter : CounterBase<object?>
     private readonly ConcurrentDictionary<string, MetricDimensionState> _states = new(
         StringComparer.OrdinalIgnoreCase
     );
+    private long _sequenceCounter;
     private readonly Func<
         IReadOnlyDictionary<string, string>?,
         IReadOnlyDictionary<string, long>?,
@@ -113,7 +114,24 @@ public class DimensionCounter : CounterBase<object?>
         OverflowBucket = overflowBucket;
     }
 
-    public override object? OnIn(in InContext context) => null;
+    public override object? OnIn(in InContext context)
+    {
+        if (!IsEnabled)
+            return null;
+
+        _ = _states.GetOrAdd(
+            context.MetricName,
+            name =>
+                new MetricDimensionState(
+                    name,
+                    DimensionName,
+                    MaxUniqueValues,
+                    OverflowBucket,
+                    Interlocked.Increment(ref _sequenceCounter)
+                )
+        );
+        return null;
+    }
 
     public override void OnOut(object? state, in OutContext context)
     {
@@ -122,14 +140,14 @@ public class DimensionCounter : CounterBase<object?>
 
         var breakdownState = _states.GetOrAdd(
             context.MetricName,
-            static (name, arg) =>
+            name =>
                 new MetricDimensionState(
                     name,
-                    arg.DimensionName,
-                    arg.MaxUniqueValues,
-                    arg.OverflowBucket
-                ),
-            (DimensionName, MaxUniqueValues, OverflowBucket)
+                    DimensionName,
+                    MaxUniqueValues,
+                    OverflowBucket,
+                    Interlocked.Increment(ref _sequenceCounter)
+                )
         );
 
         string? dimensionValue;
@@ -153,13 +171,17 @@ public class DimensionCounter : CounterBase<object?>
 
     public override IEnumerable<IMetricSnapshot> GetAllSnapshots()
     {
-        foreach (var state in _states.Values)
+        foreach (var state in _states.Values.OrderBy(static s => s.Sequence))
         {
             yield return state.ToSnapshot(Name);
         }
     }
 
-    public override void Reset() => _states.Clear();
+    public override void Reset()
+    {
+        _states.Clear();
+        Interlocked.Exchange(ref _sequenceCounter, 0);
+    }
 
     public MetricDimensionState? GetState(string metricName)
     {
@@ -242,7 +264,8 @@ public class DimensionCounter : CounterBase<object?>
         string metricName,
         string dimensionName,
         int maxUniqueValues,
-        string overflowBucket
+        string overflowBucket,
+        long sequence = 0
     )
     {
         private long _totalOperations;
@@ -257,6 +280,7 @@ public class DimensionCounter : CounterBase<object?>
         public string DimensionName => dimensionName;
         public int MaxUniqueValues => maxUniqueValues;
         public string OverflowBucket => overflowBucket;
+        public long Sequence => sequence;
 
         public long TotalOperations => Interlocked.Read(ref _totalOperations);
         public long TaggedOperations => Interlocked.Read(ref _taggedOperations);

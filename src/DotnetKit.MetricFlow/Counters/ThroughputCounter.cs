@@ -15,10 +15,15 @@ public class ThroughputCounter(string name = ThroughputCounter.DefaultCounterNam
     public const string DefaultCounterName = "Throughput";
 
     private readonly ConcurrentDictionary<string, MetricThroughputState> _states = new();
+    private long _sequenceCounter;
 
     public override long OnIn(in InContext context)
     {
         if (!IsEnabled) return 0;
+        _ = _states.GetOrAdd(
+            context.MetricName,
+            name => new MetricThroughputState(name, Interlocked.Increment(ref _sequenceCounter))
+        );
         return Stopwatch.GetTimestamp();
     }
 
@@ -26,7 +31,10 @@ public class ThroughputCounter(string name = ThroughputCounter.DefaultCounterNam
     {
         if (!IsEnabled) return;
 
-        var throughputState = _states.GetOrAdd(context.MetricName, static name => new MetricThroughputState(name));
+        var throughputState = _states.GetOrAdd(
+            context.MetricName,
+            name => new MetricThroughputState(name, Interlocked.Increment(ref _sequenceCounter))
+        );
 
         long items = 1;
         if (ItemCountExtractor.TryExtractItemCount(context.Tags, context.Metadata, out var parsedItems))
@@ -45,13 +53,17 @@ public class ThroughputCounter(string name = ThroughputCounter.DefaultCounterNam
 
     public override IEnumerable<IMetricSnapshot> GetAllSnapshots()
     {
-        foreach (var state in _states.Values)
+        foreach (var state in _states.Values.OrderBy(static s => s.Sequence))
         {
             yield return state.ToSnapshot(Name);
         }
     }
 
-    public override void Reset() => _states.Clear();
+    public override void Reset()
+    {
+        _states.Clear();
+        Interlocked.Exchange(ref _sequenceCounter, 0);
+    }
 
     public MetricThroughputState? GetState(string metricName)
     {
@@ -59,7 +71,7 @@ public class ThroughputCounter(string name = ThroughputCounter.DefaultCounterNam
         return state;
     }
 
-    public class MetricThroughputState(string metricName)
+    public class MetricThroughputState(string metricName, long sequence = 0)
     {
         private long _totalItems;
         private long _totalOperations;
@@ -67,6 +79,7 @@ public class ThroughputCounter(string name = ThroughputCounter.DefaultCounterNam
         private long _totalDurationTicks;
 
         public string MetricName => metricName;
+        public long Sequence => sequence;
         public long TotalItems => Interlocked.Read(ref _totalItems);
         public long TotalOperations => Interlocked.Read(ref _totalOperations);
         public long FailedOperations => Interlocked.Read(ref _failedOperations);
