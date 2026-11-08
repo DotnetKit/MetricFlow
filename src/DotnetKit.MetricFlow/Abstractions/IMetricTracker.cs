@@ -6,7 +6,7 @@ namespace DotnetKit.MetricFlow.Abstractions;
 /// <summary>
 /// Defines the core contract for tracking and observing application metrics across registered counters and sinks.
 /// </summary>
-public interface IMetricTracker : IMetricSnapshotsSource
+public interface IMetricTracker : IMetricSnapshotsSource, IDisposable, IAsyncDisposable
 {
     /// <summary>
     /// Gets the topic or subsystem name associated with this metric tracker.
@@ -164,6 +164,15 @@ public interface IMetricTracker : IMetricSnapshotsSource
     Sinks.MetricSinkTriggerOptions? SinkTriggers => null;
 
     /// <summary>
+    /// Gets or sets whether registered sinks should be automatically flushed when this tracker is disposed.
+    /// </summary>
+    bool AutoFlushOnDispose
+    {
+        get => false;
+        set => _ = value;
+    }
+
+    /// <summary>
     /// Synchronously flushes all current snapshots to registered sinks.
     /// </summary>
     void FlushSinks() { }
@@ -179,4 +188,14 @@ public interface IMetricTracker : IMetricSnapshotsSource
     /// Clears all recorded metric states across all registered counters.
     /// </summary>
     void Clear();
+
+    /// <inheritdoc />
+    void IDisposable.Dispose() => GC.SuppressFinalize(this);
+
+    /// <inheritdoc />
+    ValueTask IAsyncDisposable.DisposeAsync()
+    {
+        GC.SuppressFinalize(this);
+        return ValueTask.CompletedTask;
+    }
 }

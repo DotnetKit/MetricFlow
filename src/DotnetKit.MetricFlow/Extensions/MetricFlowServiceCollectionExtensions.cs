@@ -91,6 +91,12 @@ public static class MetricFlowServiceCollectionExtensions
                         tracker.AddExceptionCounter();
                     }
 
+                    tracker.AutoFlushOnDispose = defaultOptions.AutoFlushOnDispose;
+                    if (defaultOptions.PeriodicFlushInterval is { } interval && interval > TimeSpan.Zero)
+                    {
+                        tracker.StartPeriodicFlush(interval);
+                    }
+
                     return tracker;
                 });
 
@@ -179,6 +185,8 @@ public static class MetricFlowServiceCollectionExtensions
             opt.AutoAddExceptionCounter = trackerOptions.AutoAddExceptionCounter;
             opt.MeterOptions = trackerOptions.MeterOptions;
             opt.SinkTriggers = trackerOptions.SinkTriggers;
+            opt.AutoFlushOnDispose = trackerOptions.AutoFlushOnDispose;
+            opt.PeriodicFlushInterval = trackerOptions.PeriodicFlushInterval;
             opt.DurationOptions = trackerOptions.DurationOptions;
             foreach (var sink in trackerOptions.Sinks)
             {
@@ -196,6 +204,7 @@ public static class MetricFlowServiceCollectionExtensions
         // Keyed registrations
         services.AddKeyedSingleton<MetricTracker>(topic, (sp, key) =>
         {
+            var globalOptions = sp.GetService<MetricFlowOptions>();
             var meterRegistry = sp.GetRequiredService<MetricFlowMeterRegistry>();
             var meterBridge = meterRegistry.GetOrCreateBridge(trackerOptions.Topic, trackerOptions.TopicTags);
             var diSinks = sp.GetServices<IMetricSink>();
@@ -227,6 +236,13 @@ public static class MetricFlowServiceCollectionExtensions
             if (trackerOptions.AutoAddExceptionCounter)
             {
                 tracker.AddExceptionCounter();
+            }
+
+            tracker.AutoFlushOnDispose = trackerOptions.AutoFlushOnDispose || (globalOptions?.AutoFlushOnDispose ?? false);
+            var flushInterval = trackerOptions.PeriodicFlushInterval ?? globalOptions?.PeriodicFlushInterval;
+            if (flushInterval is { } interval && interval > TimeSpan.Zero)
+            {
+                tracker.StartPeriodicFlush(interval);
             }
 
             return tracker;

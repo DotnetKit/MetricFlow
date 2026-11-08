@@ -3,7 +3,7 @@ namespace DotnetKit.MetricFlow.Abstractions;
 /// <summary>
 /// Top-level facade providing access to metric trackers and metric aggregation across topics.
 /// </summary>
-public interface IMetricFlow
+public interface IMetricFlow : IDisposable, IAsyncDisposable
 {
     /// <summary>
     /// Gets the metric tracker associated with the specified topic.
@@ -37,4 +37,38 @@ public interface IMetricFlow
     /// <param name="topic">The metric topic name.</param>
     /// <returns>The metric tracker instance.</returns>
     IMetricTracker this[string topic] => GetTracker(topic);
+
+    /// <summary>
+    /// Synchronously flushes all active snapshots across all registered topic trackers to their respective sinks.
+    /// </summary>
+    void FlushAllSinks()
+    {
+        foreach (var tracker in Trackers)
+        {
+            tracker.FlushSinks();
+        }
+    }
+
+    /// <summary>
+    /// Asynchronously flushes all active snapshots across all registered topic trackers to their respective sinks.
+    /// </summary>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>A ValueTask representing the asynchronous flush operation.</returns>
+    async ValueTask FlushAllSinksAsync(CancellationToken cancellationToken = default)
+    {
+        foreach (var tracker in Trackers)
+        {
+            await tracker.FlushSinksAsync(cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    /// <inheritdoc />
+    void IDisposable.Dispose() => GC.SuppressFinalize(this);
+
+    /// <inheritdoc />
+    ValueTask IAsyncDisposable.DisposeAsync()
+    {
+        GC.SuppressFinalize(this);
+        return ValueTask.CompletedTask;
+    }
 }

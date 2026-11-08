@@ -6,7 +6,7 @@ namespace DotnetKit.MetricFlow;
 /// <summary>
 /// Central registry managing all metric trackers across topics.
 /// </summary>
-public class MetricFlowRegistry : IMetricFlow, IDisposable
+public class MetricFlowRegistry : IMetricFlow
 {
     private readonly ConcurrentDictionary<string, IMetricTracker> _trackers = new(
         StringComparer.OrdinalIgnoreCase
@@ -119,6 +119,30 @@ public class MetricFlowRegistry : IMetricFlow, IDisposable
     }
 
     /// <summary>
+    /// Synchronously flushes all active snapshots across all registered topic trackers to their respective sinks.
+    /// </summary>
+    public void FlushAllSinks()
+    {
+        foreach (var tracker in _trackers.Values)
+        {
+            tracker.FlushSinks();
+        }
+    }
+
+    /// <summary>
+    /// Asynchronously flushes all active snapshots across all registered topic trackers to their respective sinks.
+    /// </summary>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>A ValueTask representing the asynchronous flush operation.</returns>
+    public async ValueTask FlushAllSinksAsync(CancellationToken cancellationToken = default)
+    {
+        foreach (var tracker in _trackers.Values)
+        {
+            await tracker.FlushSinksAsync(cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
     /// Disposes all registered metric trackers that implement IDisposable.
     /// </summary>
     public void Dispose()
@@ -128,31 +152,76 @@ public class MetricFlowRegistry : IMetricFlow, IDisposable
     }
 
     /// <summary>
+    /// Asynchronously disposes all registered metric trackers.
+    /// </summary>
+    /// <returns>A ValueTask representing the asynchronous disposal operation.</returns>
+    public async ValueTask DisposeAsync()
+    {
+        await DisposeAsyncCore().ConfigureAwait(false);
+        Dispose(false);
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// Performs asynchronous cleanup of all registered metric trackers.
+    /// </summary>
+    /// <returns>A ValueTask representing the asynchronous cleanup operation.</returns>
+    protected virtual async ValueTask DisposeAsyncCore()
+    {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+        {
+            return;
+        }
+
+        foreach (var tracker in _trackers.Values)
+        {
+            try
+            {
+                if (tracker is IAsyncDisposable asyncDisposable)
+                {
+                    await asyncDisposable.DisposeAsync().ConfigureAwait(false);
+                }
+                else if (tracker is IDisposable disposable)
+                {
+                    disposable.Dispose();
+                }
+            }
+            catch
+            {
+                // Trackers should not prevent other resources from disposing
+            }
+        }
+        _trackers.Clear();
+    }
+
+    /// <summary>
     /// Releases the unmanaged resources used by the <see cref="MetricFlowRegistry"/> and optionally releases the managed resources.
     /// </summary>
     /// <param name="disposing">true to release both managed and unmanaged resources; false to release only unmanaged resources.</param>
     protected virtual void Dispose(bool disposing)
     {
+        if (!disposing)
+        {
+            return;
+        }
+
         if (Interlocked.Exchange(ref _disposed, 1) != 0)
             return;
 
-        if (disposing)
+        foreach (var tracker in _trackers.Values)
         {
-            foreach (var tracker in _trackers.Values)
+            if (tracker is IDisposable disposable)
             {
-                if (tracker is IDisposable disposable)
+                try
                 {
-                    try
-                    {
-                        disposable.Dispose();
-                    }
-                    catch
-                    {
-                        // Trackers should not prevent other resources from disposing
-                    }
+                    disposable.Dispose();
+                }
+                catch
+                {
+                    // Trackers should not prevent other resources from disposing
                 }
             }
-            _trackers.Clear();
         }
+        _trackers.Clear();
     }
 }

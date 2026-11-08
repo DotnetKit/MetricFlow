@@ -89,6 +89,12 @@ public class MetricTracker : MetricTrackerBase
         {
             this.AddExceptionCounter();
         }
+
+        AutoFlushOnDispose = options.AutoFlushOnDispose;
+        if (options.PeriodicFlushInterval is { } interval && interval > TimeSpan.Zero)
+        {
+            StartPeriodicFlush(interval);
+        }
     }
 
     /// <summary>

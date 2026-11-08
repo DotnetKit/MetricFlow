@@ -87,6 +87,46 @@ public class MetricFlowOptions
     public MetricSinkTriggerOptions SinkTriggers { get; set; } = new();
 
     /// <summary>
+    /// Whether to automatically flush registered sinks when the tracker is disposed. Defaults to false.
+    /// </summary>
+    public bool AutoFlushOnDispose { get; set; }
+
+    /// <summary>
+    /// Optional time interval for periodically flushing registered sinks in the background using <see cref="IMetricTracker.FlushSinksAsync"/>.
+    /// Defaults to null (disabled).
+    /// </summary>
+    public TimeSpan? PeriodicFlushInterval { get; set; }
+
+    /// <summary>
+    /// Configures whether registered sinks should be automatically flushed when the tracker is disposed.
+    /// </summary>
+    /// <param name="enabled">True to flush sinks on disposal; otherwise false. Defaults to true.</param>
+    /// <returns>This options instance for fluent chaining.</returns>
+    public MetricFlowOptions WithAutoFlushOnDispose(bool enabled = true)
+    {
+        AutoFlushOnDispose = enabled;
+        return this;
+    }
+
+    /// <summary>
+    /// Enables automatic sink flushing upon tracker disposal and optionally at a periodic background interval.
+    /// </summary>
+    /// <param name="periodicInterval">Optional interval for background periodic async flushes.</param>
+    /// <param name="flushOnDispose">Whether to also flush sinks when the tracker is disposed. Defaults to true.</param>
+    /// <returns>This options instance for fluent chaining.</returns>
+    public MetricFlowOptions EnableAutoFlush(TimeSpan? periodicInterval = null, bool flushOnDispose = true)
+    {
+        if (periodicInterval.HasValue && periodicInterval.Value <= TimeSpan.Zero)
+        {
+            throw new ArgumentOutOfRangeException(nameof(periodicInterval), "Interval must be greater than zero.");
+        }
+
+        AutoFlushOnDispose = flushOnDispose;
+        PeriodicFlushInterval = periodicInterval;
+        return this;
+    }
+
+    /// <summary>
     /// Registers a custom metric sink to receive snapshot emissions.
     /// </summary>
     /// <param name="sink">The metric sink instance.</param>

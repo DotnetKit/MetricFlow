@@ -68,5 +68,20 @@ public interface IMetricFlowBuilder : IFluentBuilder<IServiceCollection>, IServi
     /// <param name="sink">The metric sink instance.</param>
     /// <returns>The builder instance for fluent chaining.</returns>
     IMetricFlowBuilder AddSink(IMetricSink sink);
+
+    /// <summary>
+    /// Configures whether registered sinks should be automatically flushed when trackers are disposed.
+    /// </summary>
+    /// <param name="enabled">True to flush sinks on disposal; otherwise false. Defaults to true.</param>
+    /// <returns>The builder instance for fluent chaining.</returns>
+    IMetricFlowBuilder WithAutoFlushOnDispose(bool enabled = true);
+
+    /// <summary>
+    /// Enables automatic sink flushing upon tracker disposal and optionally at a periodic background interval.
+    /// </summary>
+    /// <param name="periodicInterval">Optional interval for background periodic async flushes.</param>
+    /// <param name="flushOnDispose">Whether to also flush sinks when trackers are disposed. Defaults to true.</param>
+    /// <returns>The builder instance for fluent chaining.</returns>
+    IMetricFlowBuilder EnableAutoFlush(TimeSpan? periodicInterval = null, bool flushOnDispose = true);
 }
 

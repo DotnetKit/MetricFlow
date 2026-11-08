@@ -13,7 +13,7 @@ namespace DotnetKit.MetricFlow.Abstractions;
 /// Provides the abstract base implementation of <see cref="IMetricTracker"/>, managing topic tags,
 /// counter registrations, sampling rates, System.Diagnostics.Metrics instrumentation bridges, and metric sinks.
 /// </summary>
-public abstract class MetricTrackerBase : IMetricTracker, IDisposable
+public abstract class MetricTrackerBase : IMetricTracker
 {
     private readonly ConcurrentDictionary<string, ICounter> _counters = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, long> _counterRegistrationSequences = new(StringComparer.OrdinalIgnoreCase);
@@ -31,6 +31,11 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
 
     private readonly double? _samplingRate;
     private readonly IMetricMeterBridge? _meterBridge;
+    private readonly object _periodicFlushLock = new();
+    private CancellationTokenSource? _periodicFlushCts;
+    private Task? _periodicFlushTask;
+    private int _isFlushing;
+    private int _disposed;
 
     /// <summary>
     /// Gets the topic name assigned to this metric tracker.
@@ -458,6 +463,117 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
     public MetricSinkTriggerOptions SinkTriggers => _sinkTriggers;
 
     /// <summary>
+    /// Gets or sets whether registered sinks should be automatically flushed when this tracker is disposed.
+    /// </summary>
+    public bool AutoFlushOnDispose { get; set; }
+
+    /// <summary>
+    /// Gets the configured periodic background flush interval, if active.
+    /// </summary>
+    public TimeSpan? PeriodicFlushInterval { get; private set; }
+
+    /// <summary>
+    /// Starts or updates an asynchronous background periodic timer that calls <see cref="FlushSinksAsync"/> at the specified interval.
+    /// Automatically stopped when <see cref="StopPeriodicFlush"/> or <see cref="Dispose()"/> / <see cref="DisposeAsync()"/> is called.
+    /// </summary>
+    /// <param name="interval">The time interval between periodic flushes.</param>
+    /// <returns>This tracker instance for fluent chaining.</returns>
+    public IMetricTracker StartPeriodicFlush(TimeSpan interval)
+    {
+        if (interval <= TimeSpan.Zero)
+        {
+            throw new ArgumentOutOfRangeException(nameof(interval), "Interval must be greater than zero.");
+        }
+
+        lock (_periodicFlushLock)
+        {
+            if (Volatile.Read(ref _disposed) != 0)
+            {
+                return this;
+            }
+
+            StopPeriodicFlushCore();
+            PeriodicFlushInterval = interval;
+            var cts = new CancellationTokenSource();
+            _periodicFlushCts = cts;
+            _periodicFlushTask = RunPeriodicFlushLoopAsync(interval, cts.Token);
+        }
+
+        return this;
+    }
+
+    /// <summary>
+    /// Stops any active background periodic flush loop on this tracker.
+    /// </summary>
+    public void StopPeriodicFlush()
+    {
+        lock (_periodicFlushLock)
+        {
+            StopPeriodicFlushCore();
+        }
+    }
+
+    private void StopPeriodicFlushCore()
+    {
+        PeriodicFlushInterval = null;
+        if (_periodicFlushCts != null)
+        {
+            try
+            {
+                _periodicFlushCts.Cancel();
+                _periodicFlushCts.Dispose();
+            }
+            catch
+            {
+                // Ignore cancellation disposal errors
+            }
+            _periodicFlushCts = null;
+            _periodicFlushTask = null;
+        }
+    }
+
+    private async Task RunPeriodicFlushLoopAsync(TimeSpan interval, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var timer = new PeriodicTimer(interval);
+            while (await timer.WaitForNextTickAsync(cancellationToken).ConfigureAwait(false))
+            {
+                if (Volatile.Read(ref _disposed) != 0)
+                {
+                    break;
+                }
+
+                if (Interlocked.CompareExchange(ref _isFlushing, 1, 0) != 0)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    await FlushSinksAsync(cancellationToken).ConfigureAwait(false);
+                }
+                catch
+                {
+                    // Sinks must not crash the periodic timer loop
+                }
+                finally
+                {
+                    Interlocked.Exchange(ref _isFlushing, 0);
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected on cancellation / disposal
+        }
+        catch
+        {
+            // Prevent background task fault
+        }
+    }
+
+    /// <summary>
     /// Synchronously flushes all active snapshots across all registered counters to all registered sinks.
     /// </summary>
     public void FlushSinks()
@@ -537,7 +653,8 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
     }
 
     /// <summary>
-    /// Disposes the tracker, disposing all registered disposable sinks and instrumentation bridges.
+    /// Disposes the tracker, optionally flushing registered sinks if <see cref="AutoFlushOnDispose"/> is enabled,
+    /// and disposing all registered disposable sinks and instrumentation bridges.
     /// </summary>
     public void Dispose()
     {
@@ -546,29 +663,125 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
     }
 
     /// <summary>
+    /// Asynchronously disposes the tracker, awaiting <see cref="FlushSinksAsync"/> if <see cref="AutoFlushOnDispose"/> is enabled,
+    /// and asynchronously disposing all registered sinks and instrumentation bridges.
+    /// </summary>
+    /// <returns>A ValueTask representing the asynchronous disposal operation.</returns>
+    public async ValueTask DisposeAsync()
+    {
+        await DisposeAsyncCore().ConfigureAwait(false);
+        Dispose(false);
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// Performs asynchronous cleanup of managed resources, including stopping periodic flushes,
+    /// flushing sinks if <see cref="AutoFlushOnDispose"/> is enabled, and disposing sinks.
+    /// </summary>
+    /// <returns>A ValueTask representing the asynchronous cleanup operation.</returns>
+    protected virtual async ValueTask DisposeAsyncCore()
+    {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+        {
+            return;
+        }
+
+        Task? pendingFlushTask;
+        lock (_periodicFlushLock)
+        {
+            pendingFlushTask = _periodicFlushTask;
+            StopPeriodicFlushCore();
+        }
+
+        if (pendingFlushTask != null)
+        {
+            try
+            {
+                await pendingFlushTask.ConfigureAwait(false);
+            }
+            catch
+            {
+                // Ignore background task cancellation/completion exceptions
+            }
+        }
+
+        if (AutoFlushOnDispose)
+        {
+            try
+            {
+                await FlushSinksAsync(CancellationToken.None).ConfigureAwait(false);
+            }
+            catch
+            {
+                // Sinks should not prevent disposal
+            }
+        }
+
+        _meterBridge?.Dispose();
+        foreach (var sink in _sinks.Values)
+        {
+            try
+            {
+                if (sink is IAsyncDisposable asyncDisposable)
+                {
+                    await asyncDisposable.DisposeAsync().ConfigureAwait(false);
+                }
+                else if (sink is IDisposable disposable)
+                {
+                    disposable.Dispose();
+                }
+            }
+            catch
+            {
+                // Sinks should not prevent other resources from disposing
+            }
+        }
+    }
+
+    /// <summary>
     /// Releases the unmanaged resources used by the <see cref="MetricTrackerBase"/> and optionally releases the managed resources.
     /// </summary>
     /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
     protected virtual void Dispose(bool disposing)
     {
-        if (disposing)
+        if (!disposing)
         {
-            _meterBridge?.Dispose();
-            foreach (var sink in _sinks.Values)
+            return;
+        }
+
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+        {
+            return;
+        }
+
+        StopPeriodicFlush();
+
+        if (AutoFlushOnDispose)
+        {
+            try
             {
-                if (sink is IDisposable disposable)
+                FlushSinks();
+            }
+            catch
+            {
+                // Sinks should not prevent disposal
+            }
+        }
+
+        _meterBridge?.Dispose();
+        foreach (var sink in _sinks.Values)
+        {
+            if (sink is IDisposable disposable)
+            {
+                try
                 {
-                    try
-                    {
-                        disposable.Dispose();
-                    }
-                    catch
-                    {
-                        // Sinks should not prevent other resources from disposing
-                    }
+                    disposable.Dispose();
+                }
+                catch
+                {
+                    // Sinks should not prevent other resources from disposing
                 }
             }
-
         }
     }
 

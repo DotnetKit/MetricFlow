@@ -526,6 +526,136 @@ public class MetricSinkTests
         tracker.GetSinks().Should().Contain(s => s.Name == "Logger");
     }
 
+    [Fact]
+    public async Task MetricTracker_WithAutoFlushOnDispose_FlushesAsyncOnDisposeAsync()
+    {
+        // Arrange
+        var asyncSink = new AsyncRecordingMetricSink();
+
+        await using (var tracker = new MetricTracker("BatchJob")
+            .RegisterSink(asyncSink)
+            .WithAutoFlushOnDispose())
+        {
+            using (tracker.Track("Step1")) { }
+            using (tracker.Track("Step2")) { }
+            asyncSink.AsyncEmittedBatches.Should().BeEmpty();
+        }
+
+        // Assert
+        asyncSink.AsyncEmittedBatches.Should().HaveCount(1);
+        asyncSink.AsyncEmittedBatches[0].Select(s => s.MetricName).Distinct()
+            .Should().Contain(["Step1", "Step2"]);
+        asyncSink.AsyncDisposed.Should().BeTrue();
+    }
+
+    [Fact]
+    public void MetricTracker_WithAutoFlushOnDispose_FlushesSyncOnDispose()
+    {
+        // Arrange
+        var testSink = new RecordingMetricSink();
+
+        using (var tracker = new MetricTracker("SyncJob")
+            .RegisterSink(testSink)
+            .WithAutoFlushOnDispose())
+        {
+            using (tracker.Track("Work")) { }
+            testSink.EmittedBatches.Should().BeEmpty();
+        }
+
+        // Assert
+        testSink.EmittedBatches.Should().HaveCount(1);
+        testSink.EmittedBatches[0].Should().Contain(s => s.MetricName == "Work");
+    }
+
+    [Fact]
+    public async Task MetricTracker_WhenAutoFlushDisabledByDefault_DoesNotFlushOnDispose()
+    {
+        // Arrange
+        var asyncSink = new AsyncRecordingMetricSink();
+
+        await using (var tracker = new MetricTracker("NoAutoFlushJob")
+            .RegisterSink(asyncSink))
+        {
+            using (tracker.Track("Work")) { }
+        }
+
+        // Assert
+        asyncSink.AsyncEmittedBatches.Should().BeEmpty();
+        asyncSink.AsyncDisposed.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task MetricTracker_EnableAutoFlush_PeriodicallyFlushesAsyncAndFlushesOnDispose()
+    {
+        // Arrange
+        var asyncSink = new AsyncRecordingMetricSink();
+
+        await using (var tracker = new MetricTracker("PeriodicJob")
+            .RegisterSink(asyncSink)
+            .EnableAutoFlush(periodicInterval: TimeSpan.FromMilliseconds(35), flushOnDispose: true))
+        {
+            using (tracker.Track("PeriodicWork")) { }
+            await Task.Delay(120);
+            asyncSink.AsyncEmittedBatches.Count.Should().BeGreaterThanOrEqualTo(1);
+        }
+
+        var countAfterDispose = asyncSink.AsyncEmittedBatches.Count;
+        countAfterDispose.Should().BeGreaterThanOrEqualTo(2);
+    }
+
+    [Fact]
+    public async Task DependencyInjection_WithAutoFlushOnDispose_FlushesAllTrackersOnProviderDisposeAsync()
+    {
+        // Arrange
+        var sinkA = new AsyncRecordingMetricSink("SinkA");
+        var sinkB = new AsyncRecordingMetricSink("SinkB");
+        var services = new ServiceCollection();
+
+        services.AddMetricFlow("TopicA", opt =>
+        {
+            opt.AddSink(sinkA);
+        })
+        .AddMetricTracker("TopicB", opt =>
+        {
+            opt.AddSink(sinkB);
+        })
+        .WithAutoFlushOnDispose();
+
+        await using (var provider = services.BuildServiceProvider())
+        {
+            var flow = provider.GetRequiredService<IMetricFlow>();
+            using (flow.GetTracker("TopicA").Track("OpA")) { }
+            using (flow.GetTracker("TopicB").Track("OpB")) { }
+
+            await flow.FlushAllSinksAsync();
+            sinkA.AsyncEmittedBatches.Should().HaveCount(1);
+            sinkB.AsyncEmittedBatches.Should().HaveCount(1);
+        }
+
+        // Provider DisposeAsync triggers AutoFlushOnDispose across trackers
+        sinkA.AsyncEmittedBatches.Should().HaveCount(2);
+        sinkB.AsyncEmittedBatches.Should().HaveCount(2);
+    }
+
+    private sealed class AsyncRecordingMetricSink(string name = "AsyncRecordingSink") : IMetricSink, IAsyncDisposable
+    {
+        public string Name { get; } = name;
+        public List<IReadOnlyList<IMetricSnapshot>> AsyncEmittedBatches { get; } = [];
+        public bool AsyncDisposed { get; private set; }
+
+        public ValueTask EmitAsync(IReadOnlyList<IMetricSnapshot> snapshots, CancellationToken cancellationToken = default)
+        {
+            AsyncEmittedBatches.Add(snapshots);
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            AsyncDisposed = true;
+            return ValueTask.CompletedTask;
+        }
+    }
+
     private sealed class TestLogger : ILogger
     {
         public List<(LogLevel Level, EventId EventId, string Message, Exception? Exception)> Logs { get; } = new();
