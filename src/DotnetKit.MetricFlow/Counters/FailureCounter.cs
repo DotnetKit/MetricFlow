@@ -12,17 +12,30 @@ public class FailureCounter(string name = FailureCounter.DefaultCounterName) : I
     public const string DefaultCounterName = "Failure";
 
     private readonly ConcurrentDictionary<string, MetricFailureState> _states = new();
+    private long _sequenceCounter;
 
     public string Name { get; } = name;
     public bool IsEnabled { get; set; } = true;
 
-    public object? OnIn(in InContext context) => null;
+    public object? OnIn(in InContext context)
+    {
+        if (!IsEnabled) return null;
+
+        _ = _states.GetOrAdd(
+            context.MetricName,
+            name => new MetricFailureState(name, Interlocked.Increment(ref _sequenceCounter))
+        );
+        return null;
+    }
 
     public void OnOut(object? state, in OutContext context)
     {
         if (!IsEnabled) return;
 
-        var metricState = _states.GetOrAdd(context.MetricName, static name => new MetricFailureState(name));
+        var metricState = _states.GetOrAdd(
+            context.MetricName,
+            name => new MetricFailureState(name, Interlocked.Increment(ref _sequenceCounter))
+        );
         metricState.Record(context.Failed, context.Exception != null);
     }
 
@@ -33,13 +46,17 @@ public class FailureCounter(string name = FailureCounter.DefaultCounterName) : I
 
     public IEnumerable<IMetricSnapshot> GetAllSnapshots()
     {
-        foreach (var state in _states.Values)
+        foreach (var state in _states.Values.OrderBy(static s => s.Sequence))
         {
             yield return state.ToSnapshot(Name);
         }
     }
 
-    public void Reset() => _states.Clear();
+    public void Reset()
+    {
+        _states.Clear();
+        Interlocked.Exchange(ref _sequenceCounter, 0);
+    }
 
     public MetricFailureState? GetState(string metricName)
     {
@@ -47,7 +64,7 @@ public class FailureCounter(string name = FailureCounter.DefaultCounterName) : I
         return state;
     }
 
-    public class MetricFailureState(string metricName)
+    public class MetricFailureState(string metricName, long sequence = 0)
     {
         private long _totalOperations;
         private long _totalFailures;
@@ -55,6 +72,7 @@ public class FailureCounter(string name = FailureCounter.DefaultCounterName) : I
         private long _exceptionFailures;
 
         public string MetricName => metricName;
+        public long Sequence => sequence;
         public long TotalOperations => Interlocked.Read(ref _totalOperations);
         public long TotalFailures => Interlocked.Read(ref _totalFailures);
         public long LogicalFailures => Interlocked.Read(ref _logicalFailures);

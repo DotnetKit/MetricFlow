@@ -9,6 +9,7 @@ public class ExceptionCounter : ICounter
     public const string DefaultCounterName = "Exception";
 
     private readonly ConcurrentDictionary<string, MetricExceptionState> _states = new();
+    private long _sequenceCounter;
 
     public string Name { get; }
     public bool IsEnabled { get; set; } = true;
@@ -18,13 +19,25 @@ public class ExceptionCounter : ICounter
         Name = name;
     }
 
-    public object? OnIn(in InContext context) => null;
+    public object? OnIn(in InContext context)
+    {
+        if (!IsEnabled) return null;
+
+        _ = _states.GetOrAdd(
+            context.MetricName,
+            name => new MetricExceptionState(name, Interlocked.Increment(ref _sequenceCounter))
+        );
+        return null;
+    }
 
     public void OnOut(object? state, in OutContext context)
     {
         if (!IsEnabled) return;
 
-        var metricState = _states.GetOrAdd(context.MetricName, static name => new MetricExceptionState(name));
+        var metricState = _states.GetOrAdd(
+            context.MetricName,
+            name => new MetricExceptionState(name, Interlocked.Increment(ref _sequenceCounter))
+        );
         metricState.Record(context.Exception);
     }
 
@@ -35,13 +48,17 @@ public class ExceptionCounter : ICounter
 
     public IEnumerable<IMetricSnapshot> GetAllSnapshots()
     {
-        foreach (var state in _states.Values)
+        foreach (var state in _states.Values.OrderBy(static s => s.Sequence))
         {
             yield return state.ToSnapshot(Name);
         }
     }
 
-    public void Reset() => _states.Clear();
+    public void Reset()
+    {
+        _states.Clear();
+        Interlocked.Exchange(ref _sequenceCounter, 0);
+    }
 
     public MetricExceptionState? GetState(string metricName)
     {
@@ -49,13 +66,14 @@ public class ExceptionCounter : ICounter
         return state;
     }
 
-    public class MetricExceptionState(string metricName)
+    public class MetricExceptionState(string metricName, long sequence = 0)
     {
         private long _totalOperations;
         private long _totalExceptions;
         private readonly ConcurrentDictionary<string, long> _exceptionsByType = new();
 
         public string MetricName => metricName;
+        public long Sequence => sequence;
         public long TotalOperations => Interlocked.Read(ref _totalOperations);
         public long TotalExceptions => Interlocked.Read(ref _totalExceptions);
         public long TotalFailures => TotalExceptions;

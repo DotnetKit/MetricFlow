@@ -19,6 +19,8 @@ public class LiveConsoleMetricSink : IMetricSink, IDisposable, IAsyncDisposable
 
     private readonly LiveConsoleMetricSinkOptions _options;
     private readonly ConcurrentDictionary<string, IMetricSnapshot> _latestSnapshots = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, long> _operationSequences = new(StringComparer.OrdinalIgnoreCase);
+    private long _sequenceCounter;
     private readonly Stopwatch _stopwatch = Stopwatch.StartNew();
     private readonly Timer? _refreshTimer;
     private readonly object _renderLock = new();
@@ -66,6 +68,10 @@ public class LiveConsoleMetricSink : IMetricSink, IDisposable, IAsyncDisposable
         for (int i = 0; i < snapshots.Count; i++)
         {
             var s = snapshots[i];
+            if (!string.IsNullOrWhiteSpace(s.MetricName) && !_operationSequences.ContainsKey(s.MetricName))
+            {
+                _operationSequences.GetOrAdd(s.MetricName, _ => Interlocked.Increment(ref _sequenceCounter));
+            }
             var key = $"{s.MetricName}::{s.CounterName}";
             _latestSnapshots[key] = s;
         }
@@ -91,7 +97,11 @@ public class LiveConsoleMetricSink : IMetricSink, IDisposable, IAsyncDisposable
                 return;
             }
 
-            var snapshots = _latestSnapshots.Values.ToList();
+            var snapshots = _latestSnapshots
+                .Values.OrderBy(s =>
+                    _operationSequences.TryGetValue(s.MetricName, out var seq) ? seq : long.MaxValue
+                )
+                .ToList();
             if (snapshots.Count == 0)
             {
                 return;

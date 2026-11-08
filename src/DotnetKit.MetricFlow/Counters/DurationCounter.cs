@@ -11,6 +11,7 @@ public class DurationCounter : ICounter
 
     private readonly ConcurrentDictionary<string, MetricDurationState> _states = new();
     private readonly DurationCounterOptions _options;
+    private long _sequenceCounter;
 
     public string Name { get; }
     public bool IsEnabled { get; set; } = true;
@@ -36,7 +37,10 @@ public class DurationCounter : ICounter
     {
         if (!IsEnabled) return null;
 
-        var state = _states.GetOrAdd(context.MetricName, name => new MetricDurationState(name, _options));
+        var state = _states.GetOrAdd(
+            context.MetricName,
+            name => new MetricDurationState(name, _options, Interlocked.Increment(ref _sequenceCounter))
+        );
         state.IncrementIn();
         return Stopwatch.GetTimestamp();
     }
@@ -45,7 +49,10 @@ public class DurationCounter : ICounter
     {
         if (!IsEnabled) return;
 
-        var metricState = _states.GetOrAdd(context.MetricName, name => new MetricDurationState(name, _options));
+        var metricState = _states.GetOrAdd(
+            context.MetricName,
+            name => new MetricDurationState(name, _options, Interlocked.Increment(ref _sequenceCounter))
+        );
 
         TimeSpan elapsed;
         if (context.Duration.HasValue)
@@ -71,13 +78,17 @@ public class DurationCounter : ICounter
 
     public IEnumerable<IMetricSnapshot> GetAllSnapshots()
     {
-        foreach (var state in _states.Values)
+        foreach (var state in _states.Values.OrderBy(static s => s.Sequence))
         {
             yield return state.ToSnapshot(Name);
         }
     }
 
-    public void Reset() => _states.Clear();
+    public void Reset()
+    {
+        _states.Clear();
+        Interlocked.Exchange(ref _sequenceCounter, 0);
+    }
 
     public MetricDurationState? GetState(string metricName)
     {
@@ -85,7 +96,7 @@ public class DurationCounter : ICounter
         return state;
     }
 
-    public class MetricDurationState(string metricName, DurationCounterOptions? options = null)
+    public class MetricDurationState(string metricName, DurationCounterOptions? options = null, long sequence = 0)
     {
         private readonly DurationCounterOptions _options = options ?? new DurationCounterOptions();
         private readonly QuantileReservoir? _reservoir = (options?.EnablePercentiles ?? true)
@@ -100,6 +111,7 @@ public class DurationCounter : ICounter
         private long _maxDurationTicks;
 
         public string MetricName => metricName;
+        public long Sequence => sequence;
         public long InCount => Interlocked.Read(ref _inCount);
         public long OutCount => Interlocked.Read(ref _outCount);
         public long FailedCount => Interlocked.Read(ref _failedCount);

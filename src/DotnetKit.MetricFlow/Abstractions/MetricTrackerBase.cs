@@ -16,11 +16,15 @@ namespace DotnetKit.MetricFlow.Abstractions;
 public abstract class MetricTrackerBase : IMetricTracker, IDisposable
 {
     private readonly ConcurrentDictionary<string, ICounter> _counters = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, long> _counterRegistrationSequences = new(StringComparer.OrdinalIgnoreCase);
+    private long _counterSequenceCounter;
     private volatile ICounter[] _activeCounters = [];
 
     private readonly ConcurrentDictionary<string, IMetricSink> _sinks = new(StringComparer.OrdinalIgnoreCase);
     private readonly MetricSinkTriggerOptions _sinkTriggers;
     private readonly ConcurrentDictionary<string, long> _metricExecutionCounts = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, long> _operationSequences = new(StringComparer.OrdinalIgnoreCase);
+    private long _operationSequenceCounter;
 
     private readonly AsyncLocal<Dictionary<string, Stack<InOperationState>>?> _asyncOperations = new();
     private readonly AsyncLocal<Dictionary<string, int>?> _asyncDroppedCounts = new();
@@ -122,6 +126,10 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
     {
         ArgumentNullException.ThrowIfNull(counter);
         _counters[counter.Name] = counter;
+        _counterRegistrationSequences.GetOrAdd(
+            counter.Name,
+            _ => Interlocked.Increment(ref _counterSequenceCounter)
+        );
         RebuildActiveCounters();
         return this;
     }
@@ -136,6 +144,7 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
         var removed = _counters.TryRemove(counterName, out _);
         if (removed)
         {
+            _counterRegistrationSequences.TryRemove(counterName, out _);
             RebuildActiveCounters();
         }
         return removed;
@@ -159,7 +168,11 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
     /// Gets all registered counters on this tracker.
     /// </summary>
     /// <returns>An enumerable collection of registered counters.</returns>
-    public IEnumerable<ICounter> GetCounters() => _counters.Values;
+    public IEnumerable<ICounter> GetCounters() =>
+        _counters
+            .Values.OrderBy(c =>
+                _counterRegistrationSequences.TryGetValue(c.Name, out var seq) ? seq : long.MaxValue
+            );
 
     /// <summary>
     /// Retrieves a registered counter by name.
@@ -199,6 +212,7 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
             onCompleted = HandleOperationCompleted;
         }
 
+        EnsureOperationSequence(metricName);
         return new CodeTracker(active, metricName, tags, metadata, _meterBridge, onCompleted);
     }
 
@@ -225,6 +239,8 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
             RecordDropped(metricName);
             return;
         }
+
+        EnsureOperationSequence(metricName);
 
         var active = _activeCounters;
         var states = new object?[active.Length];
@@ -331,6 +347,7 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
         }
         else
         {
+            EnsureOperationSequence(metricName);
             // Fallback: If Out was called without a preceding In on this async context
             var active = _activeCounters;
             foreach (var t in active)
@@ -369,7 +386,7 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
     /// <returns>An enumerable collection of snapshots for this metric.</returns>
     public IEnumerable<IMetricSnapshot> GetSnapshots(string metricName)
     {
-        foreach (var counter in _counters.Values)
+        foreach (var counter in GetCounters())
         {
             var snapshot = counter.GetSnapshot(metricName);
             if (snapshot != null)
@@ -380,18 +397,31 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
     }
 
     /// <summary>
-    /// Gets all snapshots across all registered counters and metrics.
+    /// Gets all snapshots across all registered counters and metrics, ordered by the sequence in which operations were first tracked.
     /// </summary>
     /// <returns>An enumerable collection of all current snapshots.</returns>
     public IEnumerable<IMetricSnapshot> GetAllSnapshots()
     {
-        foreach (var counter in _counters.Values)
+        var snapshots = new List<IMetricSnapshot>();
+        var counterOrder = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        var counterIdx = 0;
+
+        foreach (var counter in GetCounters())
         {
+            counterOrder[counter.Name] = counterIdx++;
             foreach (var snapshot in counter.GetAllSnapshots())
             {
-                yield return snapshot;
+                snapshots.Add(snapshot);
             }
         }
+
+        return snapshots
+            .OrderBy(s =>
+                _operationSequences.TryGetValue(s.MetricName, out var seq) ? seq : long.MaxValue
+            )
+            .ThenBy(s =>
+                counterOrder.TryGetValue(s.CounterName, out var cIdx) ? cIdx : int.MaxValue
+            );
     }
 
     /// <summary>
@@ -501,6 +531,8 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
             counter.Reset();
         }
         _metricExecutionCounts.Clear();
+        _operationSequences.Clear();
+        Interlocked.Exchange(ref _operationSequenceCounter, 0);
         _meterBridge?.Reset();
     }
 
@@ -565,7 +597,18 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
 
     private void RebuildActiveCounters()
     {
-        _activeCounters = [.. _counters.Values.Where(c => c.IsEnabled)];
+        _activeCounters = [.. GetCounters().Where(c => c.IsEnabled)];
+    }
+
+    private void EnsureOperationSequence(string metricName)
+    {
+        if (!_operationSequences.ContainsKey(metricName))
+        {
+            _operationSequences.GetOrAdd(
+                metricName,
+                _ => Interlocked.Increment(ref _operationSequenceCounter)
+            );
+        }
     }
 
     private static bool ShouldDrop(double? rate)
