@@ -55,8 +55,9 @@ public class MetricTracker : MetricTrackerBase
         IMetricMeterBridge? meterBridge,
         IEnumerable<IMetricSink>? sinks,
         MetricSinkTriggerOptions? sinkTriggers,
-        DurationCounter? durationCounter = null)
-        : base(topic, topicTags, samplingRate, configObservable, meterBridge, sinks, sinkTriggers)
+        DurationCounter? durationCounter = null,
+        bool disposeSinks = true)
+        : base(topic, topicTags, samplingRate, configObservable, meterBridge, sinks, sinkTriggers, disposeSinks)
     {
         DurationCounter = durationCounter ?? new DurationCounter();
         RegisterCounter(DurationCounter);
@@ -83,12 +84,15 @@ public class MetricTracker : MetricTrackerBase
             meterBridge: meterBridge ?? new MetricFlowMeterBridge(options.Topic, options.TopicTags, options.MeterOptions),
             sinks: options.Sinks,
             sinkTriggers: options.SinkTriggers,
-            durationCounter: new DurationCounter(DurationCounter.DefaultCounterName, options.DurationOptions))
+            durationCounter: new DurationCounter(DurationCounter.DefaultCounterName, options.DurationOptions),
+            disposeSinks: options.DisposeSinks)
     {
         if (options.AutoAddExceptionCounter)
         {
             this.AddExceptionCounter();
         }
+
+        AutoFlushOnDispose = options.AutoFlushOnDispose;
     }
 
     /// <summary>

@@ -372,6 +372,9 @@ using var tracker = new MetricTracker("OrderProcessing")
         trig.EmitOnSlowDurationThreshold = TimeSpan.FromMilliseconds(250); // Emit on slow operations
     });
 
+// Note: Sinks are automatically flushed upon tracker disposal by default.
+// Use .DisableAutoFlush() to opt out (e.g., for high-throughput per-request scoped trackers).
+
 // Optional: Enable periodic background sink flushes every 5 seconds (flushes final metrics on dispose)
 using var flushToken = tracker.EnablePeriodicFlush(TimeSpan.FromSeconds(5));
 

@@ -48,6 +48,9 @@ public static class MetricFlowServiceCollectionExtensions
             var defaultOptions = sp.GetService<MetricFlowOptions>() ?? options;
             var meterRegistry = sp.GetRequiredService<MetricFlowMeterRegistry>();
 
+            var diSinks = sp.GetServices<IMetricSink>();
+            var allSinks = defaultOptions.Sinks.Concat(diSinks).Distinct().ToList();
+
             var registry = new MetricFlowRegistry(
                 defaultTopic: defaultOptions.Topic,
                 initialTrackers: null,
@@ -60,8 +63,6 @@ public static class MetricFlowServiceCollectionExtensions
                     }
 
                     var meterBridge = meterRegistry.GetOrCreateBridge(topic, defaultOptions.TopicTags);
-                    var diSinks = sp.GetServices<IMetricSink>();
-                    var allSinks = defaultOptions.Sinks.Concat(diSinks).Distinct().ToList();
 
                     var loggerFactory = sp.GetService<ILoggerFactory>();
                     if (loggerFactory != null)
@@ -84,15 +85,18 @@ public static class MetricFlowServiceCollectionExtensions
                         meterBridge: meterBridge,
                         sinks: allSinks,
                         sinkTriggers: defaultOptions.SinkTriggers,
-                        durationCounter: new DurationCounter(DurationCounter.DefaultCounterName, defaultOptions.DurationOptions));
+                        durationCounter: new DurationCounter(DurationCounter.DefaultCounterName, defaultOptions.DurationOptions),
+                        disposeSinks: false);
 
                     if (defaultOptions.AutoAddExceptionCounter)
                     {
                         tracker.AddExceptionCounter();
                     }
 
+                    tracker.AutoFlushOnDispose = defaultOptions.AutoFlushOnDispose;
                     return tracker;
-                });
+                },
+                sharedSinks: allSinks);
 
 
             // Register all statically configured topic trackers into the registry
@@ -179,6 +183,7 @@ public static class MetricFlowServiceCollectionExtensions
             opt.AutoAddExceptionCounter = trackerOptions.AutoAddExceptionCounter;
             opt.MeterOptions = trackerOptions.MeterOptions;
             opt.SinkTriggers = trackerOptions.SinkTriggers;
+            opt.AutoFlushOnDispose = trackerOptions.AutoFlushOnDispose;
             opt.DurationOptions = trackerOptions.DurationOptions;
             foreach (var sink in trackerOptions.Sinks)
             {
@@ -196,6 +201,7 @@ public static class MetricFlowServiceCollectionExtensions
         // Keyed registrations
         services.AddKeyedSingleton<MetricTracker>(topic, (sp, key) =>
         {
+            var globalOptions = sp.GetService<MetricFlowOptions>();
             var meterRegistry = sp.GetRequiredService<MetricFlowMeterRegistry>();
             var meterBridge = meterRegistry.GetOrCreateBridge(trackerOptions.Topic, trackerOptions.TopicTags);
             var diSinks = sp.GetServices<IMetricSink>();
@@ -222,13 +228,15 @@ public static class MetricFlowServiceCollectionExtensions
                 meterBridge: meterBridge,
                 sinks: allSinks,
                 sinkTriggers: trackerOptions.SinkTriggers,
-                durationCounter: new DurationCounter(DurationCounter.DefaultCounterName, trackerOptions.DurationOptions));
+                durationCounter: new DurationCounter(DurationCounter.DefaultCounterName, trackerOptions.DurationOptions),
+                disposeSinks: false);
 
             if (trackerOptions.AutoAddExceptionCounter)
             {
                 tracker.AddExceptionCounter();
             }
 
+            tracker.AutoFlushOnDispose = (globalOptions?.AutoFlushOnDispose ?? true) && trackerOptions.AutoFlushOnDispose;
             return tracker;
         });
 

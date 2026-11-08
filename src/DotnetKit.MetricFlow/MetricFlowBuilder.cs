@@ -93,6 +93,31 @@ public class MetricFlowBuilder : IMetricFlowBuilder
         return this;
     }
 
+    /// <inheritdoc />
+    public IMetricFlowBuilder DisableAutoFlush()
+    {
+        ConfigureOptionsInServices(opt => opt.DisableAutoFlush());
+        return this;
+    }
+
+    /// <inheritdoc />
+    public IMetricFlowBuilder WithDisposeSinks(bool enabled = true)
+    {
+        ConfigureOptionsInServices(opt => opt.WithDisposeSinks(enabled));
+        return this;
+    }
+
+    private void ConfigureOptionsInServices(Action<MetricFlowOptions> configure)
+    {
+        foreach (var descriptor in Current)
+        {
+            if (descriptor.ServiceType == typeof(MetricFlowOptions) && descriptor.ImplementationInstance is MetricFlowOptions opt)
+            {
+                configure(opt);
+            }
+        }
+    }
+
 
     #region IServiceCollection delegation
 

@@ -526,6 +526,281 @@ public class MetricSinkTests
         tracker.GetSinks().Should().Contain(s => s.Name == "Logger");
     }
 
+    [Fact]
+    public async Task MetricTracker_AutoFlushOnDispose_EnabledByDefault_FlushesAsyncOnDisposeAsync()
+    {
+        // Arrange
+        var asyncSink = new AsyncRecordingMetricSink();
+
+        await using (var tracker = new MetricTracker("BatchJob")
+            .RegisterSink(asyncSink))
+        {
+            using (tracker.Track("Step1")) { }
+            using (tracker.Track("Step2")) { }
+            asyncSink.AsyncEmittedBatches.Should().BeEmpty();
+        }
+
+        // Assert
+        asyncSink.AsyncEmittedBatches.Should().HaveCount(1);
+        asyncSink.AsyncEmittedBatches[0].Select(s => s.MetricName).Distinct()
+            .Should().Contain(["Step1", "Step2"]);
+        asyncSink.AsyncDisposed.Should().BeTrue();
+    }
+
+    [Fact]
+    public void MetricTracker_AutoFlushOnDispose_EnabledByDefault_FlushesSyncOnDispose()
+    {
+        // Arrange
+        var testSink = new RecordingMetricSink();
+
+        using (var tracker = new MetricTracker("SyncJob")
+            .RegisterSink(testSink))
+        {
+            using (tracker.Track("Work")) { }
+            testSink.EmittedBatches.Should().BeEmpty();
+        }
+
+        // Assert
+        testSink.EmittedBatches.Should().HaveCount(1);
+        testSink.EmittedBatches[0].Should().Contain(s => s.MetricName == "Work");
+    }
+
+    [Fact]
+    public async Task MetricTracker_DisableAutoFlush_DoesNotFlushOnDispose()
+    {
+        // Arrange
+        var asyncSink = new AsyncRecordingMetricSink();
+
+        await using (var tracker = new MetricTracker("NoAutoFlushJob")
+            .RegisterSink(asyncSink)
+            .DisableAutoFlush())
+        {
+            using (tracker.Track("Work")) { }
+        }
+
+        // Assert
+        asyncSink.AsyncEmittedBatches.Should().BeEmpty();
+        asyncSink.AsyncDisposed.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task DependencyInjection_DisableAutoFlush_DoesNotFlushOnProviderDisposeAsync()
+    {
+        // Arrange
+        var sink = new AsyncRecordingMetricSink();
+        var services = new ServiceCollection();
+        services.AddMetricFlow("TestTopic", opt => opt.AddSink(sink))
+            .DisableAutoFlush();
+
+        await using (var provider = services.BuildServiceProvider())
+        {
+            var flow = provider.GetRequiredService<IMetricFlow>();
+            using (flow.GetTracker("TestTopic").Track("Work")) { }
+        }
+
+        sink.AsyncEmittedBatches.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task DependencyInjection_AutoFlushEnabledByDefault_FlushesAllTrackersOnProviderDisposeAsync()
+    {
+        // Arrange
+        var sinkA = new AsyncRecordingMetricSink("SinkA");
+        var sinkB = new AsyncRecordingMetricSink("SinkB");
+        var services = new ServiceCollection();
+
+        services.AddMetricFlow("TopicA", opt =>
+        {
+            opt.AddSink(sinkA);
+        })
+        .AddMetricTracker("TopicB", opt =>
+        {
+            opt.AddSink(sinkB);
+        });
+
+        await using (var provider = services.BuildServiceProvider())
+        {
+            var flow = provider.GetRequiredService<IMetricFlow>();
+            using (flow.GetTracker("TopicA").Track("OpA")) { }
+            using (flow.GetTracker("TopicB").Track("OpB")) { }
+
+            await flow.FlushAllSinksAsync();
+            sinkA.AsyncEmittedBatches.Should().HaveCount(1);
+            sinkB.AsyncEmittedBatches.Should().HaveCount(1);
+        }
+
+        // Provider DisposeAsync triggers AutoFlushOnDispose across trackers
+        sinkA.AsyncEmittedBatches.Should().HaveCount(2);
+        sinkB.AsyncEmittedBatches.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task DependencyInjection_SharedObservableSink_EmitsAllTrackersMetricsBeforeDisposal_Async()
+    {
+        // Arrange
+        var sharedSink = new ObservableMetricSink("SharedRx");
+        var receivedBatches = new List<IReadOnlyList<IMetricSnapshot>>();
+
+        using var sub = sharedSink.Subscribe(
+            onNext: batch => receivedBatches.Add(batch)
+        );
+
+        var services = new ServiceCollection();
+        services.AddMetricFlow("Billing")
+            .AddMetricTracker("Orders")
+            .AddSink(sharedSink);
+
+        // Act
+        await using (var provider = services.BuildServiceProvider())
+        {
+            var flow = provider.GetRequiredService<IMetricFlow>();
+            using (flow.GetTracker("Billing").Track("BillOp")) { }
+            using (flow.GetTracker("Orders").Track("OrderOp")) { }
+        }
+
+        // Assert - Both topics' final metrics were emitted to the shared sink before it was closed
+        receivedBatches.Should().HaveCount(2);
+        var metricNames = receivedBatches.SelectMany(b => b).Select(s => s.MetricName).ToList();
+        metricNames.Should().Contain("BillOp");
+        metricNames.Should().Contain("OrderOp");
+    }
+
+    [Fact]
+    public void DependencyInjection_SharedObservableSink_EmitsAllTrackersMetricsBeforeDisposal_Sync()
+    {
+        // Arrange
+        var sharedSink = new ObservableMetricSink("SharedRx");
+        var receivedBatches = new List<IReadOnlyList<IMetricSnapshot>>();
+
+        using var sub = sharedSink.Subscribe(batch => receivedBatches.Add(batch));
+
+        var services = new ServiceCollection();
+        services.AddMetricFlow("Billing")
+            .AddMetricTracker("Orders")
+            .AddSink(sharedSink);
+
+        // Act
+        using (var provider = services.BuildServiceProvider())
+        {
+            var flow = provider.GetRequiredService<IMetricFlow>();
+            using (flow.GetTracker("Billing").Track("BillOp")) { }
+            using (flow.GetTracker("Orders").Track("OrderOp")) { }
+        }
+
+        // Assert - Both topics' final metrics were emitted to the shared sink before it was closed
+        receivedBatches.Should().HaveCount(2);
+        var metricNames = receivedBatches.SelectMany(b => b).Select(s => s.MetricName).ToList();
+        metricNames.Should().Contain("BillOp");
+        metricNames.Should().Contain("OrderOp");
+    }
+
+    [Fact]
+    public void MetricFlowRegistry_Dispose_SynchronousPath_FlushesAllOptedInTrackersBeforeClosingSharedSinksOnce()
+    {
+        // Arrange
+        var sharedSink = new TrackingDisposableSink();
+        var trackerA = new MetricTracker("A").RegisterSink(sharedSink);
+        var trackerB = new MetricTracker("B").RegisterSink(sharedSink);
+
+        var registry = new MetricFlowRegistry(initialTrackers: [trackerA, trackerB], sharedSinks: [sharedSink]);
+
+        using (trackerA.Track("OpA")) { }
+        using (trackerB.Track("OpB")) { }
+
+        // Act - Synchronous dispose at MetricFlowRegistry.cs:217
+        registry.Dispose();
+
+        // Assert
+        sharedSink.IsDisposed.Should().BeTrue();
+        sharedSink.DisposeCallCount.Should().Be(1);
+        sharedSink.EmittedAfterDisposalCount.Should().Be(0);
+        sharedSink.Events.Should().HaveCount(3);
+        sharedSink.Events.Take(2).Should().Contain("Emit:OpA").And.Contain("Emit:OpB");
+        sharedSink.Events[^1].Should().Be("Disposed");
+    }
+
+    [Fact]
+    public async Task MetricFlowRegistry_DisposeAsync_FlushesAllOptedInTrackersBeforeClosingSharedSinksOnce()
+    {
+        // Arrange
+        var sharedSink = new TrackingDisposableSink();
+        var trackerA = new MetricTracker("A").RegisterSink(sharedSink);
+        var trackerB = new MetricTracker("B").RegisterSink(sharedSink);
+
+        var registry = new MetricFlowRegistry(initialTrackers: [trackerA, trackerB], sharedSinks: [sharedSink]);
+
+        using (trackerA.Track("OpA")) { }
+        using (trackerB.Track("OpB")) { }
+
+        // Act - Asynchronous dispose
+        await registry.DisposeAsync();
+
+        // Assert
+        sharedSink.IsDisposed.Should().BeTrue();
+        sharedSink.DisposeCallCount.Should().Be(1);
+        sharedSink.EmittedAfterDisposalCount.Should().Be(0);
+        sharedSink.Events.Should().HaveCount(3);
+        sharedSink.Events.Take(2).Should().Contain("Emit:OpA").And.Contain("Emit:OpB");
+        sharedSink.Events[^1].Should().Be("Disposed");
+    }
+
+    private sealed class TrackingDisposableSink(string name = "TrackingSink") : IMetricSink, IDisposable, IAsyncDisposable
+    {
+        public string Name { get; } = name;
+        public List<string> Events { get; } = [];
+        public bool IsDisposed { get; private set; }
+        public int EmittedAfterDisposalCount { get; private set; }
+        public int DisposeCallCount { get; private set; }
+
+        public void Emit(IReadOnlyList<IMetricSnapshot> snapshots)
+        {
+            if (IsDisposed)
+            {
+                EmittedAfterDisposalCount++;
+                return;
+            }
+            Events.Add($"Emit:{snapshots[0].MetricName}");
+        }
+
+        public ValueTask EmitAsync(IReadOnlyList<IMetricSnapshot> snapshots, CancellationToken cancellationToken = default)
+        {
+            Emit(snapshots);
+            return ValueTask.CompletedTask;
+        }
+
+        public void Dispose()
+        {
+            DisposeCallCount++;
+            IsDisposed = true;
+            Events.Add("Disposed");
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            Dispose();
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    private sealed class AsyncRecordingMetricSink(string name = "AsyncRecordingSink") : IMetricSink, IAsyncDisposable
+    {
+        public string Name { get; } = name;
+        public List<IReadOnlyList<IMetricSnapshot>> AsyncEmittedBatches { get; } = [];
+        public bool AsyncDisposed { get; private set; }
+
+        public ValueTask EmitAsync(IReadOnlyList<IMetricSnapshot> snapshots, CancellationToken cancellationToken = default)
+        {
+            AsyncEmittedBatches.Add(snapshots);
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            AsyncDisposed = true;
+            return ValueTask.CompletedTask;
+        }
+    }
+
     private sealed class TestLogger : ILogger
     {
         public List<(LogLevel Level, EventId EventId, string Message, Exception? Exception)> Logs { get; } = new();

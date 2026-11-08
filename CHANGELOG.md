@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Automatic Flush on Dispose by Default & `DisableAutoFlush()`**:
+  - `AutoFlushOnDispose` is now **enabled by default** across `MetricTrackerBase`, `MetricFlowOptions`, and DI. Sinks automatically receive final metric snapshots when a tracker or DI container is disposed.
+  - Added `.DisableAutoFlush()` fluent opt-out method on `IMetricTracker`, `MetricFlowOptions`, and `IMetricFlowBuilder` (e.g. for high-throughput per-request scoped trackers).
+  - Single shared sink ownership in `MetricFlowRegistry`: coordinates flush-before-close ordering across multi-topic trackers sharing disposable sinks (`ObservableMetricSink`, etc.) before disposing shared sinks once.
 - **Correlated Operation Summaries (`OperationSummary` & `OperationSummaryExtensions`)**:
   - Unified multi-metric correlation record `OperationSummary` aggregating `ThroughputSnapshot`, `DurationSnapshot`, `MemorySnapshot`, `FailureSnapshot`, `ExceptionSnapshot`, `DimensionSnapshot`s, and `HierarchyTreeSnapshot` by operation name.
   - Fluent projection extensions `source.GetOperationSummaries()`, `snapshots.GetOperationSummaries()`, and `tracker.GetOperationSummary("OperationName")`.

@@ -13,7 +13,7 @@ namespace DotnetKit.MetricFlow.Abstractions;
 /// Provides the abstract base implementation of <see cref="IMetricTracker"/>, managing topic tags,
 /// counter registrations, sampling rates, System.Diagnostics.Metrics instrumentation bridges, and metric sinks.
 /// </summary>
-public abstract class MetricTrackerBase : IMetricTracker, IDisposable
+public abstract class MetricTrackerBase : IMetricTracker
 {
     private readonly ConcurrentDictionary<string, ICounter> _counters = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, long> _counterRegistrationSequences = new(StringComparer.OrdinalIgnoreCase);
@@ -31,6 +31,8 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
 
     private readonly double? _samplingRate;
     private readonly IMetricMeterBridge? _meterBridge;
+    private int _disposed;
+    private int _flushOnDisposeExecuted;
 
     /// <summary>
     /// Gets the topic name assigned to this metric tracker.
@@ -46,6 +48,13 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
     /// Gets the <see cref="IMetricMeterBridge"/> used for System.Diagnostics.Metrics instrumentation, if configured.
     /// </summary>
     public IMetricMeterBridge? MeterBridge => _meterBridge;
+
+    /// <summary>
+    /// Gets or sets whether registered sinks should be disposed when this tracker is disposed.
+    /// Defaults to true. When sinks are shared across trackers (such as in DI or multi-topic registries),
+    /// this should be set to false so that the registry or provider manages sink disposal.
+    /// </summary>
+    public bool DisposeSinks { get; set; }
 
     /// <summary>
     /// Initializes a new instance of <see cref="MetricTrackerBase"/> with the specified topic and optional configuration.
@@ -91,6 +100,7 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
     /// <param name="meterBridge">Optional meter bridge for System.Diagnostics.Metrics instrumentation.</param>
     /// <param name="sinks">Optional collection of metric sinks.</param>
     /// <param name="sinkTriggers">Optional execution lifecycle triggers for sink emission.</param>
+    /// <param name="disposeSinks">Whether to dispose registered sinks when this tracker is disposed.</param>
     protected MetricTrackerBase(
         string topic,
         Dictionary<string, string>? topicTags,
@@ -98,13 +108,15 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
         ICounterConfigObservable? configObservable,
         IMetricMeterBridge? meterBridge,
         IEnumerable<IMetricSink>? sinks,
-        MetricSinkTriggerOptions? sinkTriggers)
+        MetricSinkTriggerOptions? sinkTriggers,
+        bool disposeSinks = true)
     {
         Topic = topic;
         TopicTags = topicTags;
         _samplingRate = samplingRate;
         _meterBridge = meterBridge ?? new MetricFlowMeterBridge(topic, topicTags, new MetricFlowMeterOptions());
         _sinkTriggers = sinkTriggers ?? new MetricSinkTriggerOptions();
+        DisposeSinks = disposeSinks;
 
         if (sinks != null)
         {
@@ -458,6 +470,13 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
     public MetricSinkTriggerOptions SinkTriggers => _sinkTriggers;
 
     /// <summary>
+    /// Gets or sets whether registered sinks should be automatically flushed when this tracker is disposed.
+    /// Defaults to true.
+    /// </summary>
+    public bool AutoFlushOnDispose { get; set; } = true;
+
+
+    /// <summary>
     /// Synchronously flushes all active snapshots across all registered counters to all registered sinks.
     /// </summary>
     public void FlushSinks()
@@ -537,7 +556,8 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
     }
 
     /// <summary>
-    /// Disposes the tracker, disposing all registered disposable sinks and instrumentation bridges.
+    /// Disposes the tracker, optionally flushing registered sinks if <see cref="AutoFlushOnDispose"/> is enabled,
+    /// and disposing all registered disposable sinks and instrumentation bridges.
     /// </summary>
     public void Dispose()
     {
@@ -546,14 +566,112 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
     }
 
     /// <summary>
+    /// Asynchronously disposes the tracker, awaiting <see cref="FlushSinksAsync"/> if <see cref="AutoFlushOnDispose"/> is enabled,
+    /// and asynchronously disposing all registered sinks and instrumentation bridges.
+    /// </summary>
+    /// <returns>A ValueTask representing the asynchronous disposal operation.</returns>
+    public async ValueTask DisposeAsync()
+    {
+        await DisposeAsyncCore().ConfigureAwait(false);
+        Dispose(false);
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// Flushes sinks on dispose if <see cref="AutoFlushOnDispose"/> is enabled and has not already been executed.
+    /// </summary>
+    internal async ValueTask ExecuteAutoFlushOnDisposeAsync(CancellationToken cancellationToken = default)
+    {
+        if (AutoFlushOnDispose && Interlocked.Exchange(ref _flushOnDisposeExecuted, 1) == 0)
+        {
+            try
+            {
+                await FlushSinksAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch
+            {
+                // Sinks should not prevent disposal
+            }
+        }
+    }
+
+    /// <summary>
+    /// Flushes sinks on dispose synchronously if <see cref="AutoFlushOnDispose"/> is enabled and has not already been executed.
+    /// </summary>
+    internal void ExecuteAutoFlushOnDispose()
+    {
+        if (AutoFlushOnDispose && Interlocked.Exchange(ref _flushOnDisposeExecuted, 1) == 0)
+        {
+            try
+            {
+                FlushSinks();
+            }
+            catch
+            {
+                // Sinks should not prevent disposal
+            }
+        }
+    }
+
+    /// <summary>
+    /// Performs asynchronous cleanup of managed resources,
+    /// flushing sinks if <see cref="AutoFlushOnDispose"/> is enabled, and disposing sinks.
+    /// </summary>
+    /// <returns>A ValueTask representing the asynchronous cleanup operation.</returns>
+    protected virtual async ValueTask DisposeAsyncCore()
+    {
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+        {
+            return;
+        }
+
+        await ExecuteAutoFlushOnDisposeAsync(CancellationToken.None).ConfigureAwait(false);
+
+        _meterBridge?.Dispose();
+        if (DisposeSinks)
+        {
+            foreach (var sink in _sinks.Values)
+            {
+                try
+                {
+                    if (sink is IAsyncDisposable asyncDisposable)
+                    {
+                        await asyncDisposable.DisposeAsync().ConfigureAwait(false);
+                    }
+                    else if (sink is IDisposable disposable)
+                    {
+                        disposable.Dispose();
+                    }
+                }
+                catch
+                {
+                    // Sinks should not prevent other resources from disposing
+                }
+            }
+        }
+    }
+
+    /// <summary>
     /// Releases the unmanaged resources used by the <see cref="MetricTrackerBase"/> and optionally releases the managed resources.
     /// </summary>
     /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
     protected virtual void Dispose(bool disposing)
     {
-        if (disposing)
+        if (!disposing)
         {
-            _meterBridge?.Dispose();
+            return;
+        }
+
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+        {
+            return;
+        }
+
+        ExecuteAutoFlushOnDispose();
+
+        _meterBridge?.Dispose();
+        if (DisposeSinks)
+        {
             foreach (var sink in _sinks.Values)
             {
                 if (sink is IDisposable disposable)
@@ -568,7 +686,6 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
                     }
                 }
             }
-
         }
     }
 

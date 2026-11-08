@@ -206,7 +206,7 @@ using DotnetKit.MetricFlow.Counters;
 using DotnetKit.MetricFlow.Exporters;
 using DotnetKit.MetricFlow.Sinks.Console;
 
-using var tracker = new MetricTracker("ImportJob", new()
+await using var tracker = new MetricTracker("ImportJob", new()
 {
     ["run_id"] = Guid.NewGuid().ToString("N")
 })
@@ -226,9 +226,8 @@ using var tracker = new MetricTracker("ImportJob", new()
     triggers.EmitEveryNExecutions = 25; // Stride
     triggers.EmitOnFailure = true;      // Tail error
 });
-
-// Optional: Enable background periodic flush for long-running CLI apps
-// using var flushHandle = tracker.EnablePeriodicFlush(TimeSpan.FromSeconds(5));
+// Note: Sinks are automatically flushed on Dispose/DisposeAsync by default.
+// Call .DisableAutoFlush() if you want to opt out.
 
 // Measure execution
 using (tracker.TrackItems("BatchProcess", 500))
@@ -236,8 +235,7 @@ using (tracker.TrackItems("BatchProcess", 500))
     await DoHeavyWorkAsync();
 }
 
-// Flush sinks or generate formatted reports
-tracker.FlushSinks();
+// Generate formatted reports (sinks are automatically flushed on disposal by default)
 Console.WriteLine(tracker.ToMarkdownTable());
 ```
 

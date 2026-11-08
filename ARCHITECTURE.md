@@ -387,6 +387,10 @@ flowchart TD
     - **Failure / Outlier Trigger (`EmitOnFailure`)**: Immediately dispatches snapshots when an operation reports logical or exception failure.
     - **Latency Threshold Trigger (`EmitOnSlowDurationThreshold`)**: Immediately emits snapshots when an operation exceeds a duration threshold.
     - **Probabilistic Sampling (`EmitSampleRate`)**: Samples a percentage of operations.
+- **Disposal & Auto-Flush on Dispose (`AutoFlushOnDispose`)**:
+  - **Enabled by default**: When a `MetricTracker` or DI provider (`IServiceProvider` / `MetricFlowRegistry`) is disposed, all active snapshots are automatically flushed to registered sinks, guaranteeing zero lost tail metrics on shutdown or scope exit.
+  - **Opt-out via `DisableAutoFlush()`**: High-throughput scoped trackers (e.g. per-HTTP request scopes) can opt out using `.DisableAutoFlush()`.
+  - **Single Shared Sink Ownership**: When sinks are shared across multiple topics in DI or `MetricFlowRegistry`, the registry coordinates the lifecycle by flushing all trackers before disposing shared sinks exactly once.
 - **Background Periodic Flush (`EnablePeriodicFlush`)**:
   - Provides an `IDisposable` token running a thread-safe periodic timer for long-running services and benchmarks.
   - Employs atomic re-entrancy protection so slow sinks never cause overlapping concurrent flush runs.

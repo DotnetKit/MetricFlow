@@ -193,12 +193,45 @@ public static class TrackerSinkExtensions
         => tracker.ConfigureSinkTriggers(configure);
 
     /// <summary>
+    /// Disables automatic sink flushing upon tracker disposal.
+    /// By default, trackers flush registered sinks automatically when disposed.
+    /// </summary>
+    /// <typeparam name="T">The metric tracker type.</typeparam>
+    /// <param name="tracker">The tracker instance.</param>
+    /// <returns>The same tracker instance for method chaining.</returns>
+    public static T DisableAutoFlush<T>(this T tracker)
+        where T : IMetricTracker
+    {
+        ArgumentNullException.ThrowIfNull(tracker);
+        tracker.AutoFlushOnDispose = false;
+        return tracker;
+    }
+
+    /// <summary>
+    /// Configures whether registered sinks should be disposed when the tracker is disposed.
+    /// </summary>
+    /// <typeparam name="T">The metric tracker type.</typeparam>
+    /// <param name="tracker">The tracker instance.</param>
+    /// <param name="enabled">True to dispose sinks on tracker disposal; otherwise false. Defaults to true.</param>
+    /// <returns>The same tracker instance for method chaining.</returns>
+    public static T WithDisposeSinks<T>(
+        this T tracker,
+        bool enabled = true)
+        where T : IMetricTracker
+    {
+        ArgumentNullException.ThrowIfNull(tracker);
+        tracker.DisposeSinks = enabled;
+        return tracker;
+    }
+
+    /// <summary>
     /// Starts a background timer that periodically flushes all active snapshots to registered sinks.
+    /// The returned handle implements both <see cref="IDisposable"/> and <see cref="IAsyncDisposable"/>.
     /// </summary>
     /// <param name="tracker">The metric tracker instance.</param>
     /// <param name="interval">The time interval between periodic flushes.</param>
     /// <param name="dueTime">Optional initial delay before the first periodic flush. Defaults to <paramref name="interval"/>.</param>
-    /// <returns>An <see cref="IDisposable"/> token that stops and cleans up the periodic flush timer when disposed.</returns>
+    /// <returns>An <see cref="IDisposable"/> (and <see cref="IAsyncDisposable"/>) token that stops and cleans up the periodic flush timer when disposed.</returns>
     public static IDisposable EnablePeriodicFlush(
         this IMetricTracker tracker,
         TimeSpan interval,
@@ -213,12 +246,12 @@ public static class TrackerSinkExtensions
         return new PeriodicFlushRegistration(tracker, interval, dueTime ?? interval);
     }
 
-    private sealed class PeriodicFlushRegistration : IDisposable
+    private sealed class PeriodicFlushRegistration : IDisposable, IAsyncDisposable
     {
         private readonly IMetricTracker _tracker;
         private readonly Timer _timer;
         private int _isFlushing;
-        private bool _disposed;
+        private int _disposed;
 
         public PeriodicFlushRegistration(IMetricTracker tracker, TimeSpan interval, TimeSpan dueTime)
         {
@@ -226,14 +259,14 @@ public static class TrackerSinkExtensions
             _timer = new Timer(OnTick, null, dueTime, interval);
         }
 
-        private void OnTick(object? state)
+        private async void OnTick(object? state)
         {
-            if (_disposed) return;
+            if (Volatile.Read(ref _disposed) != 0) return;
             if (Interlocked.CompareExchange(ref _isFlushing, 1, 0) != 0) return;
 
             try
             {
-                _tracker.FlushSinks();
+                await _tracker.FlushSinksAsync().ConfigureAwait(false);
             }
             catch
             {
@@ -247,14 +280,29 @@ public static class TrackerSinkExtensions
 
         public void Dispose()
         {
-            if (_disposed) return;
-            _disposed = true;
+            if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
 
             _timer.Dispose();
 
             try
             {
                 _tracker.FlushSinks();
+            }
+            catch
+            {
+                // Sinks must not throw during final flush on dispose
+            }
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+
+            await _timer.DisposeAsync().ConfigureAwait(false);
+
+            try
+            {
+                await _tracker.FlushSinksAsync().ConfigureAwait(false);
             }
             catch
             {

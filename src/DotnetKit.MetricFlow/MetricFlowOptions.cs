@@ -87,6 +87,39 @@ public class MetricFlowOptions
     public MetricSinkTriggerOptions SinkTriggers { get; set; } = new();
 
     /// <summary>
+    /// Whether to automatically flush registered sinks when the tracker is disposed. Defaults to true.
+    /// </summary>
+    public bool AutoFlushOnDispose { get; set; } = true;
+
+    /// <summary>
+    /// Whether registered sinks should be disposed when the tracker is disposed. Defaults to true.
+    /// In shared sink environments (such as DI or multi-topic registries), set to false so the registry/provider owns sink disposal.
+    /// </summary>
+    public bool DisposeSinks { get; set; } = true;
+
+    /// <summary>
+    /// Disables automatic sink flushing upon tracker disposal.
+    /// By default, trackers flush registered sinks automatically when disposed.
+    /// </summary>
+    /// <returns>This options instance for fluent chaining.</returns>
+    public MetricFlowOptions DisableAutoFlush()
+    {
+        AutoFlushOnDispose = false;
+        return this;
+    }
+
+    /// <summary>
+    /// Configures whether registered sinks should be disposed when the tracker is disposed.
+    /// </summary>
+    /// <param name="enabled">True to dispose sinks on disposal; otherwise false. Defaults to true.</param>
+    /// <returns>This options instance for fluent chaining.</returns>
+    public MetricFlowOptions WithDisposeSinks(bool enabled = true)
+    {
+        DisposeSinks = enabled;
+        return this;
+    }
+
+    /// <summary>
     /// Registers a custom metric sink to receive snapshot emissions.
     /// </summary>
     /// <param name="sink">The metric sink instance.</param>
