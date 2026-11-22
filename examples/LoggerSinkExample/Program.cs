@@ -40,6 +40,7 @@ internal class Program
                 ["environment"] = "Production",
                 ["gateway"] = "Stripe"
             })
+            .AddTelemetry()
             .AddThroughputCounter()
             .AddFailureCounter()
             .AddLoggerSink(loggerFactory, opt =>
@@ -72,6 +73,7 @@ internal class Program
             var standaloneLogger = loggerFactory.CreateLogger("PayoutService.Telemetry");
 
             using var payoutTracker = new MetricTracker("PayoutService")
+                .AddDurationCounter()
                 .AddThroughputCounter()
                 .AddFailureCounter()
                 .AddLoggerSink(standaloneLogger, opt =>

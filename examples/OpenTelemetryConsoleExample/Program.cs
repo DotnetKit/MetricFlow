@@ -25,8 +25,9 @@ internal class Program
                 tags["datacenter"] = "eu-central-1";
             });
 
-            // Add built-in throughput counter for local snapshots
-            options.AddThroughputCounter();
+            // Add telemetry preset (duration + exceptions) and throughput counter for local snapshots
+            options.AddTelemetry()
+                   .AddThroughputCounter();
 
             // Configure meter cardinality protection to protect Prometheus / OTLP collectors
             options.ConfigureMeters(m =>
