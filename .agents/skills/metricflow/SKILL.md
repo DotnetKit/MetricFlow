@@ -246,8 +246,8 @@ Console.WriteLine(tracker.ToMarkdownTable());
 
 ## 4. Code Instrumentation Patterns & Best Practices
 
-### 0. Choosing Telemetry vs. Pure Functional Metrics (v2.0)
-Starting in v2.0, `MetricTracker` starts with **zero default telemetry counters** — you explicitly opt in to the counters you need:
+### 0. Choosing Telemetry vs. Pure Functional Metrics (v1.1)
+Starting in v1.1, `MetricTracker` starts with **zero default telemetry counters** — you explicitly opt in to the counters you need:
 
 - **Telemetry preset (`.AddTelemetryCounters(...)`)**: Registers `DurationCounter` + `ExceptionCounter` (plus optional `MemoryCounter` and `HierarchyCounter`) for scoped operation profiling via `Track(...)` / `In()` / `Out()`.
 - **Functional metrics preset (`.AddFunctionalMetrics(...)`)**: Registers a lightweight `CountCounter` + optional `DimensionCounter` breakdowns with zero `Stopwatch`/scope overhead. Record business events directly with `Record(...)` / `Increment(...)`:

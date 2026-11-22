@@ -124,7 +124,7 @@ public interface ICounter
 
 ## 4. Built-in Counters (Telemetry vs. Functional)
 
-Starting in v2.0, `MetricTracker` starts with **zero default counters**. Counters fall into two conceptual groups that share the same registry, sinks, and `MeterBridge`:
+Starting in v1.1, `MetricTracker` starts with **zero default counters**. Counters fall into two conceptual groups that share the same registry, sinks, and `MeterBridge`:
 
 - **Telemetry Counters** (opt-in via `.AddTelemetryCounters(...)` or individually): respond to scoped `Track()` / `In()` / `Out()` lifecycles and ignore point-in-time `Record()` / `Increment()` calls.
 - **Functional Counters** (opt-in via `.AddFunctionalMetrics(...)` or individually): respond to both point-in-time `Record()` / `Increment()` events and scoped `Track()` completions.

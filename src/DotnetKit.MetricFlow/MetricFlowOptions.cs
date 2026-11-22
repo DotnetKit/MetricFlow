@@ -220,7 +220,7 @@ public class MetricFlowOptions
 
     /// <summary>
     /// Whether to register a <see cref="DurationCounter"/> on the tracker.
-    /// Defaults to false in v2.0; opt in via <see cref="AddDurationCounter"/>, <see cref="ConfigureDuration"/>, or <see cref="AddTelemetryCounters"/>.
+    /// Defaults to false in v1.1; opt in via <see cref="AddDurationCounter"/>, <see cref="ConfigureDuration"/>, or <see cref="AddTelemetryCounters"/>.
     /// </summary>
     public bool IncludeDurationCounter { get; set; }
 
@@ -254,7 +254,7 @@ public class MetricFlowOptions
 
     /// <summary>
     /// Whether to automatically register an exception counter on the tracker.
-    /// Defaults to false in v2.0; opt in via <see cref="AddExceptionCounter"/> or <see cref="AddTelemetryCounters"/>.
+    /// Defaults to false in v1.1; opt in via <see cref="AddExceptionCounter"/> or <see cref="AddTelemetryCounters"/>.
     /// </summary>
     public bool AutoAddExceptionCounter { get; set; }
 

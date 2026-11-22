@@ -1,5 +1,6 @@
 <Project>
     <PropertyGroup>
+        <MinVerMinimumMajorMinor>1.1</MinVerMinimumMajorMinor>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <TreatWarningsAsErrors Condition="'$(CI)' == 'true'">true</TreatWarningsAsErrors>
         <!-- Enable built-in .NET analyzers and enforce code style during build -->
