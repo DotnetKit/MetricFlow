@@ -97,17 +97,15 @@ public class CustomCountersTests
 
         try
         {
-            using (var scope = tracker.TrackItems("QuadMetricOp", 25))
+            using var scope = tracker.TrackItems("QuadMetricOp", 25);
+            try
             {
-                try
-                {
-                    throw new InvalidOperationException("Simulated error in throughput pipeline");
-                }
-                catch (Exception ex)
-                {
-                    scope.SetException(ex);
-                    throw;
-                }
+                throw new InvalidOperationException("Simulated error in throughput pipeline");
+            }
+            catch (Exception ex)
+            {
+                scope.SetException(ex);
+                throw;
             }
         }
         catch (InvalidOperationException)

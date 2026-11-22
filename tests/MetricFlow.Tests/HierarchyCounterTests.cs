@@ -137,22 +137,30 @@ public class HierarchyCounterTests
     public void HierarchyTreeSnapshot_ToFormattedString_RendersTreeStructure()
     {
         // Arrange
-        var root = new HierarchyNode("Parent");
-        root.Duration = TimeSpan.FromMilliseconds(100);
-        root.SelfDuration = TimeSpan.FromMilliseconds(20);
+        var root = new HierarchyNode("Parent")
+        {
+            Duration = TimeSpan.FromMilliseconds(100),
+            SelfDuration = TimeSpan.FromMilliseconds(20)
+        };
 
-        var child1 = new HierarchyNode("Child1", root);
-        child1.Duration = TimeSpan.FromMilliseconds(30);
-        child1.ItemCount = 10;
+        var child1 = new HierarchyNode("Child1", root)
+        {
+            Duration = TimeSpan.FromMilliseconds(30),
+            ItemCount = 10
+        };
         root.AddChild(child1);
 
-        var child2 = new HierarchyNode("Child2", root);
-        child2.Duration = TimeSpan.FromMilliseconds(50);
-        child2.SelfDuration = TimeSpan.FromMilliseconds(10);
+        var child2 = new HierarchyNode("Child2", root)
+        {
+            Duration = TimeSpan.FromMilliseconds(50),
+            SelfDuration = TimeSpan.FromMilliseconds(10)
+        };
         root.AddChild(child2);
 
-        var grandChild = new HierarchyNode("SubChild", child2);
-        grandChild.Duration = TimeSpan.FromMilliseconds(40);
+        var grandChild = new HierarchyNode("SubChild", child2)
+        {
+            Duration = TimeSpan.FromMilliseconds(40)
+        };
         child2.AddChild(grandChild);
 
         var snapshot = new HierarchyTreeSnapshot("Parent", "Hierarchy", root, DateTime.UtcNow);
@@ -181,10 +189,14 @@ public class HierarchyCounterTests
             Prefix = ""
         });
 
-        var root = new HierarchyNode("RootProcess");
-        root.Duration = TimeSpan.FromMilliseconds(250);
-        var child = new HierarchyNode("StepA", root);
-        child.Duration = TimeSpan.FromMilliseconds(100);
+        var root = new HierarchyNode("RootProcess")
+        {
+            Duration = TimeSpan.FromMilliseconds(250)
+        };
+        var child = new HierarchyNode("StepA", root)
+        {
+            Duration = TimeSpan.FromMilliseconds(100)
+        };
         root.AddChild(child);
 
         var snapshot = new HierarchyTreeSnapshot("RootProcess", "Hierarchy", root, DateTime.UtcNow);
@@ -208,7 +220,7 @@ public class HierarchyCounterTests
         {
             ShouldListenTo = s => s.Name == "DotnetKit.MetricFlow",
             Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
-            ActivityStarted = a => startedActivities.Add(a)
+            ActivityStarted = startedActivities.Add
         };
         ActivitySource.AddActivityListener(listener);
 

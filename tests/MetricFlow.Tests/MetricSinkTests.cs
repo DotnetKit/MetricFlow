@@ -140,15 +140,14 @@ public class MetricSinkTests
         var options = new ConsoleMetricSinkOptions
         {
             Colorize = true,
-            IncludeTimestamp = false
-        };
-
-        options.ColorSelector = snapshot => snapshot switch
-        {
-            DurationSnapshot { AverageDuration.TotalMilliseconds: > 2000 } => ConsoleColor.Red,
-            DurationSnapshot { AverageDuration.TotalMilliseconds: > 700 } => ConsoleColor.DarkYellow,
-            ExceptionSnapshot { TotalExceptions: > 0 } => ConsoleColor.Red,
-            _ => ConsoleColor.Green
+            IncludeTimestamp = false,
+            ColorSelector = snapshot => snapshot switch
+            {
+                DurationSnapshot { AverageDuration.TotalMilliseconds: > 2000 } => ConsoleColor.Red,
+                DurationSnapshot { AverageDuration.TotalMilliseconds: > 700 } => ConsoleColor.DarkYellow,
+                ExceptionSnapshot { TotalExceptions: > 0 } => ConsoleColor.Red,
+                _ => ConsoleColor.Green
+            }
         };
 
         var sink = new ConsoleMetricSink(options);
@@ -240,10 +239,7 @@ public class MetricSinkTests
         using var observableSink = new ObservableMetricSink("RxSink");
         var received = new List<IReadOnlyList<IMetricSnapshot>>();
 
-        using var subscription = observableSink.Subscribe(snapshots =>
-        {
-            received.Add(snapshots);
-        });
+        using var subscription = observableSink.Subscribe(received.Add);
 
         var snapshot1 = new ThroughputSnapshot("MetricA", "Throughput", 10, 1, TimeSpan.FromSeconds(1), 10, 10, DateTime.UtcNow);
         var snapshot2 = new ThroughputSnapshot("MetricB", "Throughput", 20, 2, TimeSpan.FromSeconds(1), 20, 10, DateTime.UtcNow);

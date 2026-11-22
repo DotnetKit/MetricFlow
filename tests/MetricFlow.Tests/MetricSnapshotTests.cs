@@ -431,7 +431,7 @@ public class MetricSnapshotTests
         IEnumerable<IMetricSnapshot> snapshots = null!;
 
         // Act
-        var act = () => snapshots.ToFormattedString();
+        var act = snapshots.ToFormattedString;
 
         // Assert
         act.Should().Throw<ArgumentNullException>();
@@ -483,7 +483,7 @@ public class MetricSnapshotTests
         IMetricSnapshotsSource source = null!;
 
         // Act
-        var act = () => source.ToFormattedString();
+        var act = source.ToFormattedString;
 
         // Assert
         act.Should().Throw<ArgumentNullException>();

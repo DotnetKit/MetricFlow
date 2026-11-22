@@ -202,17 +202,15 @@ public class ThroughputCounterTests
 
         try
         {
-            using (var scope = tracker.TrackItems("FailTest", 25))
+            using var scope = tracker.TrackItems("FailTest", 25);
+            try
             {
-                try
-                {
-                    throw new ApplicationException("Simulated error");
-                }
-                catch (Exception ex)
-                {
-                    scope.SetException(ex);
-                    throw;
-                }
+                throw new ApplicationException("Simulated error");
+            }
+            catch (Exception ex)
+            {
+                scope.SetException(ex);
+                throw;
             }
         }
         catch (ApplicationException)
