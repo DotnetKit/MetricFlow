@@ -193,16 +193,16 @@ public static class TableMetricFormatter
             // Separator line
             if (color)
                 sb.Append(AnsiGray);
-            sb.Append(new string('-', maxOpLen));
-            sb.Append("-+-").Append(new string('-', maxOpsLen));
+            sb.Append('-', maxOpLen);
+            sb.Append("-+-").Append('-', maxOpsLen);
             if (hasDuration)
-                sb.Append("-+-").Append(new string('-', maxDurLen));
+                sb.Append("-+-").Append('-', maxDurLen);
             if (hasThroughput)
-                sb.Append("-+-").Append(new string('-', maxTpLen));
+                sb.Append("-+-").Append('-', maxTpLen);
             if (hasMemory)
-                sb.Append("-+-").Append(new string('-', maxMemLen));
+                sb.Append("-+-").Append('-', maxMemLen);
             if (hasFailures)
-                sb.Append("-+-").Append(new string('-', maxFailLen));
+                sb.Append("-+-").Append('-', maxFailLen);
             if (color)
                 sb.Append(AnsiReset);
             sb.AppendLine();
