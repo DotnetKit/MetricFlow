@@ -18,7 +18,7 @@ public class TrackerStreamExtensionsTests
 
         static async IAsyncEnumerable<int> GenerateNumbersAsync()
         {
-            for (int i = 1; i <= 5; i++)
+            for (var i = 1; i <= 5; i++)
             {
                 await Task.Delay(5);
                 yield return i;
@@ -109,7 +109,7 @@ public class TrackerStreamExtensionsTests
 
         static async IAsyncEnumerable<int> StreamWithManyItemsAsync()
         {
-            int i = 0;
+            var i = 0;
             while (i < 100)
             {
                 yield return ++i;

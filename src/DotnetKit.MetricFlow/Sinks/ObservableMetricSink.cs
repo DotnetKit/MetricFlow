@@ -116,40 +116,26 @@ public class ObservableMetricSink : IMetricSink, IObservable<IReadOnlyList<IMetr
         _observers.TryRemove(id, out _);
     }
 
-    private sealed class Subscription : IDisposable
+    private sealed class Subscription(ObservableMetricSink sink, Guid id) : IDisposable
     {
-        private readonly ObservableMetricSink _sink;
-        private readonly Guid _id;
         private bool _disposed;
-
-        public Subscription(ObservableMetricSink sink, Guid id)
-        {
-            _sink = sink;
-            _id = id;
-        }
 
         public void Dispose()
         {
             if (!_disposed)
             {
                 _disposed = true;
-                _sink.Unsubscribe(_id);
+                sink.Unsubscribe(id);
             }
         }
     }
 
-    private sealed class DelegateObserver : IObserver<IReadOnlyList<IMetricSnapshot>>
+    private sealed class DelegateObserver(Action<IReadOnlyList<IMetricSnapshot>> onNext)
+        : IObserver<IReadOnlyList<IMetricSnapshot>>
     {
-        private readonly Action<IReadOnlyList<IMetricSnapshot>> _onNext;
-
-        public DelegateObserver(Action<IReadOnlyList<IMetricSnapshot>> onNext)
-        {
-            _onNext = onNext;
-        }
-
         public void OnCompleted() { }
         public void OnError(Exception error) { }
-        public void OnNext(IReadOnlyList<IMetricSnapshot> value) => _onNext(value);
+        public void OnNext(IReadOnlyList<IMetricSnapshot> value) => onNext(value);
     }
 
     private sealed class EmptyDisposable : IDisposable

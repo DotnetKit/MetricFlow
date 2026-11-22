@@ -83,7 +83,7 @@ internal class Program
                 });
 
             Console.WriteLine("Tracking payout operations in standalone tracker...");
-            for (int i = 1; i <= 3; i++)
+            for (var i = 1; i <= 3; i++)
             {
                 using (payoutTracker.TrackItems("ExecutePayout", itemCount: i * 10))
                 {
@@ -104,34 +104,27 @@ internal class Program
     }
 }
 
-internal class PaymentProcessingService
+internal class PaymentProcessingService(IMetricTracker tracker)
 {
-    private readonly IMetricTracker _tracker;
-
-    public PaymentProcessingService(IMetricTracker tracker)
-    {
-        _tracker = tracker;
-    }
-
     public async Task ProcessPaymentsAsync()
     {
         Console.WriteLine("Step 1: Processing 10 successful payments (triggers every 5 executions via EmitEveryNExecutions)...");
-        for (int i = 1; i <= 10; i++)
+        for (var i = 1; i <= 10; i++)
         {
-            using (_tracker.TrackItems("AuthorizePayment", itemCount: i * 5, additionalTags: new() { ["card_type"] = "Visa" }))
+            using (tracker.TrackItems("AuthorizePayment", itemCount: i * 5, additionalTags: new() { ["card_type"] = "Visa" }))
             {
                 await Task.Delay(10);
             }
         }
 
         Console.WriteLine("\nStep 2: Processing slow payment (triggers immediately via EmitOnSlowDurationThreshold > 100ms)...");
-        using (_tracker.Track("AuthorizePayment", tags: new() { ["card_type"] = "Mastercard", ["route"] = "3DSecure" }))
+        using (tracker.Track("AuthorizePayment", tags: new() { ["card_type"] = "Mastercard", ["route"] = "3DSecure" }))
         {
             await Task.Delay(120); // Exceeds the 100ms latency threshold
         }
 
         Console.WriteLine("\nStep 3: Processing payment with logical decline (triggers immediately at Warning level via EmitOnFailure)...");
-        using (var scope = _tracker.Track("AuthorizePayment", tags: new() { ["card_type"] = "Amex", ["reason"] = "InsufficientFunds" }))
+        using (var scope = tracker.Track("AuthorizePayment", tags: new() { ["card_type"] = "Amex", ["reason"] = "InsufficientFunds" }))
         {
             await Task.Delay(10);
             scope.SetFailed(true); // Flag business/logical failure
@@ -140,7 +133,7 @@ internal class PaymentProcessingService
         Console.WriteLine("\nStep 4: Processing payment encountering a network exception (triggers immediately via EmitOnFailure)...");
         try
         {
-            await _tracker.TrackActionAsync("AuthorizePayment", async () =>
+            await tracker.TrackActionAsync("AuthorizePayment", async () =>
             {
                 await Task.Delay(10);
                 throw new TimeoutException("Gateway timeout communicating with acquiring bank");

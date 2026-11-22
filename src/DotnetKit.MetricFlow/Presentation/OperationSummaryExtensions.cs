@@ -47,9 +47,8 @@ public static class OperationSummaryExtensions
 
         var summaries = new List<OperationSummary>(order.Count);
 
-        for (int i = 0; i < order.Count; i++)
+        foreach (var opName in order)
         {
-            var opName = order[i];
             var items = groups[opName];
 
             ThroughputSnapshot? throughput = null;
@@ -62,9 +61,8 @@ public static class OperationSummaryExtensions
             List<DimensionSnapshot>? dimensions = null;
             List<IMetricSnapshot>? additional = null;
 
-            for (var j = 0; j < items.Count; j++)
+            foreach (var item in items)
             {
-                var item = items[j];
                 switch (item)
                 {
                     case ThroughputSnapshot tp when throughput == null:

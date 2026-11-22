@@ -5,15 +5,15 @@ using DotnetKit.MetricFlow.Abstractions;
 
 namespace DotnetKit.MetricFlow.Counters;
 
-public class DurationCounter : ICounter
+public class DurationCounter(string name, DurationCounterOptions options) : ICounter
 {
     public const string DefaultCounterName = "Duration";
 
     private readonly ConcurrentDictionary<string, MetricDurationState> _states = new();
-    private readonly DurationCounterOptions _options;
+    private readonly DurationCounterOptions _options = options ?? throw new ArgumentNullException(nameof(options));
     private long _sequenceCounter;
 
-    public string Name { get; }
+    public string Name { get; } = name;
     public bool IsEnabled { get; set; } = true;
     public DurationCounterOptions Options => _options;
 
@@ -25,12 +25,6 @@ public class DurationCounter : ICounter
     public DurationCounter(DurationCounterOptions options)
         : this(DefaultCounterName, options)
     {
-    }
-
-    public DurationCounter(string name, DurationCounterOptions options)
-    {
-        Name = name;
-        _options = options ?? throw new ArgumentNullException(nameof(options));
     }
 
     public object? OnIn(in InContext context)
@@ -59,7 +53,7 @@ public class DurationCounter : ICounter
         {
             elapsed = context.Duration.Value;
         }
-        else if (state is long startTimestamp && startTimestamp > 0)
+        else if (state is long and > 0 and var startTimestamp)
         {
             elapsed = Stopwatch.GetElapsedTime(startTimestamp);
         }

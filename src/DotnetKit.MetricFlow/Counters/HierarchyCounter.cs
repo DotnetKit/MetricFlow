@@ -68,7 +68,7 @@ public class HierarchyCounter : ICounter
         parent?.AddChild(node);
         _currentScope.Value = node;
 
-        long startAllocatedBytes = GC.GetAllocatedBytesForCurrentThread();
+        var startAllocatedBytes = GC.GetAllocatedBytesForCurrentThread();
 
         Activity? activity = null;
         if (ActivitySourceInstance.HasListeners())
@@ -97,7 +97,7 @@ public class HierarchyCounter : ICounter
         var node = token.Node;
         node.Duration = context.Duration ?? TimeSpan.Zero;
 
-        long endAllocatedBytes = GC.GetAllocatedBytesForCurrentThread();
+        var endAllocatedBytes = GC.GetAllocatedBytesForCurrentThread();
         node.AllocatedBytes = endAllocatedBytes >= token.StartAllocatedBytes ? endAllocatedBytes - token.StartAllocatedBytes : 0;
 
         node.ItemCount = ItemCountExtractor.TryExtractItemCount(context.Tags, context.Metadata, out var items) ? items : 0;
@@ -107,13 +107,12 @@ public class HierarchyCounter : ICounter
         node.Metadata = context.Metadata;
 
         // Calculate self duration and self allocated bytes
-        long childrenTicks = 0;
-        long childrenAllocated = 0;
-        var children = node.Children;
-        for (int i = 0; i < children.Count; i++)
+        var childrenTicks = 0L;
+        var childrenAllocated = 0L;
+        foreach (var child in node.Children)
         {
-            childrenTicks += children[i].Duration.Ticks;
-            childrenAllocated += children[i].AllocatedBytes;
+            childrenTicks += child.Duration.Ticks;
+            childrenAllocated += child.AllocatedBytes;
         }
 
         var childrenDuration = TimeSpan.FromTicks(childrenTicks);

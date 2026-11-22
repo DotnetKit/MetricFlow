@@ -65,9 +65,8 @@ public class LiveConsoleMetricSink : IMetricSink, IDisposable, IAsyncDisposable
             return;
         }
 
-        for (int i = 0; i < snapshots.Count; i++)
+        foreach (var s in snapshots)
         {
-            var s = snapshots[i];
             if (!string.IsNullOrWhiteSpace(s.MetricName) && !_operationSequences.ContainsKey(s.MetricName))
             {
                 _operationSequences.GetOrAdd(s.MetricName, _ => Interlocked.Increment(ref _sequenceCounter));
@@ -114,8 +113,8 @@ public class LiveConsoleMetricSink : IMetricSink, IDisposable, IAsyncDisposable
             }
 
             var writer = _options.OutputWriter ?? System.Console.Out;
-            bool isRedirected = _options.OutputWriter != null || System.Console.IsOutputRedirected;
-            bool color = _options.Colorize;
+            var isRedirected = _options.OutputWriter != null || System.Console.IsOutputRedirected;
+            var color = _options.Colorize;
 
             var sb = new StringBuilder();
 
@@ -155,12 +154,7 @@ public class LiveConsoleMetricSink : IMetricSink, IDisposable, IAsyncDisposable
             var fullText = sb.ToString();
 
             // Count lines rendered
-            int lineCount = 0;
-            for (int i = 0; i < fullText.Length; i++)
-            {
-                if (fullText[i] == '\n') lineCount++;
-            }
-            _lastRenderedLineCount = lineCount;
+            _lastRenderedLineCount = fullText.AsSpan().Count('\n');
 
             writer.Write(fullText);
             writer.Flush();

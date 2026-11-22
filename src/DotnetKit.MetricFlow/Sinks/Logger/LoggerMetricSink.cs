@@ -100,9 +100,9 @@ public class LoggerMetricSink : IMetricSink
             return;
         }
 
-        for (int i = 0; i < snapshots.Count; i++)
+        foreach (var snapshot in snapshots)
         {
-            EmitSnapshot(logger, snapshots[i]);
+            EmitSnapshot(logger, snapshot);
         }
     }
 
@@ -114,10 +114,10 @@ public class LoggerMetricSink : IMetricSink
             return;
         }
 
-        bool hasPrefix = !string.IsNullOrEmpty(_options.Prefix);
-        bool hasTimestamp = _options.IncludeTimestamp;
+        var hasPrefix = !string.IsNullOrEmpty(_options.Prefix);
+        var hasTimestamp = _options.IncludeTimestamp;
 
-        string prefixText = BuildPrefixText(snapshot, hasTimestamp, hasPrefix);
+        var prefixText = BuildPrefixText(snapshot, hasTimestamp, hasPrefix);
 
         switch (snapshot)
         {

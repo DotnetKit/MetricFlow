@@ -177,13 +177,13 @@ internal class Program
                 {
                     ExceptionSnapshot { TotalExceptions: > 0 } => ConsoleColor.Red,
                     FailureSnapshot { TotalFailures: > 0 } => ConsoleColor.Red,
-                    DurationSnapshot d when d.AverageDuration.TotalMilliseconds > 100 =>
+                    DurationSnapshot { AverageDuration.TotalMilliseconds: > 100 } =>
                         ConsoleColor.Red,
-                    DurationSnapshot d when d.AverageDuration.TotalMilliseconds > 50 =>
+                    DurationSnapshot { AverageDuration.TotalMilliseconds: > 50 } =>
                         ConsoleColor.DarkYellow,
-                    MemorySnapshot m when m.AverageAllocatedBytes > 50 * 1024 * 1024 =>
+                    MemorySnapshot { AverageAllocatedBytes: > 50 * 1024 * 1024 } =>
                         ConsoleColor.Red,
-                    MemorySnapshot m when m.AverageAllocatedBytes > 10 * 1024 * 1024 =>
+                    MemorySnapshot { AverageAllocatedBytes: > 10 * 1024 * 1024 } =>
                         ConsoleColor.DarkYellow,
                     _ => ConsoleColor.Green,
                 };

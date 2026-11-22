@@ -118,7 +118,7 @@ public class MetricMeterBridgeTests
         var tracker = new MetricTracker(options);
 
         // Act: Generate 1,000 distinct tag values
-        for (int i = 0; i < 1000; i++)
+        for (var i = 0; i < 1000; i++)
         {
             using (tracker.Track("ProcessUserAction", new() { ["user_id"] = $"user_{i}" }))
             {

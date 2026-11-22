@@ -145,8 +145,8 @@ public class MetricSinkTests
 
         options.ColorSelector = snapshot => snapshot switch
         {
-            DurationSnapshot d when d.AverageDuration.TotalMilliseconds > 2000 => ConsoleColor.Red,
-            DurationSnapshot d when d.AverageDuration.TotalMilliseconds > 700 => ConsoleColor.DarkYellow,
+            DurationSnapshot { AverageDuration.TotalMilliseconds: > 2000 } => ConsoleColor.Red,
+            DurationSnapshot { AverageDuration.TotalMilliseconds: > 700 } => ConsoleColor.DarkYellow,
             ExceptionSnapshot { TotalExceptions: > 0 } => ConsoleColor.Red,
             _ => ConsoleColor.Green
         };
@@ -547,15 +547,10 @@ public class MetricSinkTests
         }
     }
 
-    private sealed class RecordingMetricSink : IMetricSink
+    private sealed class RecordingMetricSink(string name = "RecordingSink") : IMetricSink
     {
-        public string Name { get; }
+        public string Name { get; } = name;
         public List<IReadOnlyList<IMetricSnapshot>> EmittedBatches { get; } = new();
-
-        public RecordingMetricSink(string name = "RecordingSink")
-        {
-            Name = name;
-        }
 
         public void Emit(IReadOnlyList<IMetricSnapshot> snapshots)
         {

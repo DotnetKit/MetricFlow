@@ -422,9 +422,9 @@ public class ConsoleMetricSinkOptions
             }
         }
 
-        for (int i = 0; i < _thresholdRules.Count; i++)
+        foreach (var rule in _thresholdRules)
         {
-            var color = _thresholdRules[i](snapshot);
+            var color = rule(snapshot);
             if (color.HasValue)
             {
                 return color.Value;

@@ -83,10 +83,8 @@ public static class TableMetricFormatter
         var maxMemLen = hasMemory ? "Memory (Avg / Total)".Length : 0;
         var maxFailLen = hasFailures ? "Failures".Length : 0;
 
-        for (var i = 0; i < operations.Count; i++)
+        foreach (var op in operations)
         {
-            var op = operations[i];
-
             // 1. Operation column
             var opText = op.OperationName;
             if (opText.Length > maxOpLen)
@@ -209,10 +207,8 @@ public static class TableMetricFormatter
         }
 
         // Render Rows
-        for (var i = 0; i < rows.Count; i++)
+        foreach (var row in rows)
         {
-            var row = rows[i];
-
             // Operation (left-aligned)
             if (color)
                 sb.Append(AnsiCyan);

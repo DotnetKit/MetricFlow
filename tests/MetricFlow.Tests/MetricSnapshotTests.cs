@@ -163,7 +163,7 @@ public class MetricSnapshotTests
             Timestamp: DateTime.UtcNow
         );
 
-        string expectedAllocated = allocatedBytes < 1024
+        var expectedAllocated = allocatedBytes < 1024
             ? $"{allocatedBytes} B"
             : allocatedBytes < 1024 * 1024
                 ? $"{allocatedBytes / 1024.0:F2} KB"

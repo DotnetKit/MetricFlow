@@ -58,7 +58,7 @@ internal class Program
 
         // Simulate operations with item batching and tags
         string[] regions = ["EU", "US", "APAC"];
-        for (int i = 0; i < 6; i++)
+        for (var i = 0; i < 6; i++)
         {
             var region = regions[i % regions.Length];
             using (var scope = tracker.Track("ProcessOrderBatch", new() { ["region"] = region }))
@@ -71,7 +71,7 @@ internal class Program
         Console.WriteLine("2. Executing operations with high-cardinality tags (testing cardinality guard)...\n");
 
         // Simulate 8 distinct customer IDs with MaxUniqueTagValues = 3
-        for (int i = 1; i <= 8; i++)
+        for (var i = 1; i <= 8; i++)
         {
             using (tracker.Track("CustomerLookup", new() { ["customer_id"] = $"cust_{i:000}" }))
             {

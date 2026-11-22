@@ -406,11 +406,11 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
         if (active.Length > 0)
         {
             var recordContext = new RecordContext(metricName, value, tags, metadata);
-            for (var i = 0; i < active.Length; i++)
+            foreach (var counter in active)
             {
-                if (active[i].IsEnabled)
+                if (counter.IsEnabled)
                 {
-                    active[i].OnRecord(in recordContext);
+                    counter.OnRecord(in recordContext);
                 }
             }
         }

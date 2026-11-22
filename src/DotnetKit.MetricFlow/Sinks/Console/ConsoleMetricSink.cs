@@ -85,9 +85,9 @@ public class ConsoleMetricSink : IMetricSink
                 break;
 
             default:
-                for (int i = 0; i < snapshots.Count; i++)
+                foreach (var snapshot in snapshots)
                 {
-                    var line = FormatSnapshot(snapshots[i]);
+                    var line = FormatSnapshot(snapshot);
                     writer.WriteLine(line);
                 }
                 break;
@@ -130,7 +130,7 @@ public class ConsoleMetricSink : IMetricSink
         ArgumentNullException.ThrowIfNull(snapshot);
 
         var sb = new StringBuilder(128);
-        bool color = _options.Colorize;
+        var color = _options.Colorize;
         ConsoleColor? resolvedColor = color ? _options.ResolveColor(snapshot) : null;
 
         // Timestamp
@@ -372,11 +372,10 @@ public class ConsoleMetricSink : IMetricSink
 
     private static int CountNodes(HierarchyNode node)
     {
-        int count = 1;
-        var children = node.Children;
-        for (int i = 0; i < children.Count; i++)
+        var count = 1;
+        foreach (var child in node.Children)
         {
-            count += CountNodes(children[i]);
+            count += CountNodes(child);
         }
         return count;
     }

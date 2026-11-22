@@ -68,7 +68,7 @@ public static class MetricFlowServiceCollectionExtensions
                     {
                         foreach (var sink in allSinks)
                         {
-                            if (sink is LoggerMetricSink loggerSink && loggerSink.NeedsLogger)
+                            if (sink is LoggerMetricSink { NeedsLogger: true } loggerSink)
                             {
                                 loggerSink.SetLogger(loggerFactory.CreateLogger(loggerSink.Options.CategoryName));
                             }
@@ -99,7 +99,7 @@ public static class MetricFlowServiceCollectionExtensions
 
             // Register all statically configured topic trackers into the registry
             var registrations = sp.GetServices<MetricTrackerRegistration>();
-            bool isFirst = true;
+            var isFirst = true;
             foreach (var reg in registrations)
             {
                 var tracker = sp.GetKeyedService<IMetricTracker>(reg.Topic);
@@ -209,7 +209,7 @@ public static class MetricFlowServiceCollectionExtensions
             {
                 foreach (var sink in allSinks)
                 {
-                    if (sink is LoggerMetricSink loggerSink && loggerSink.NeedsLogger)
+                    if (sink is LoggerMetricSink { NeedsLogger: true } loggerSink)
                     {
                         loggerSink.SetLogger(loggerFactory.CreateLogger(loggerSink.Options.CategoryName));
                     }

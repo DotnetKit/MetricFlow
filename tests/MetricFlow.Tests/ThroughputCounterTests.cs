@@ -263,7 +263,7 @@ public class ThroughputCounterTests
         // Act
         Parallel.For(0, threads, _ =>
         {
-            for (int i = 0; i < opsPerThread; i++)
+            for (var i = 0; i < opsPerThread; i++)
             {
                 using (tracker.TrackItems("ConcurrentMetric", itemsPerOp))
                 {
