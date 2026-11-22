@@ -98,7 +98,7 @@ public class LiveConsoleMetricSink : IMetricSink, IDisposable, IAsyncDisposable
 
             var snapshots = _latestSnapshots
                 .Values.OrderBy(s =>
-                    _operationSequences.TryGetValue(s.MetricName, out var seq) ? seq : long.MaxValue
+                    _operationSequences.GetValueOrDefault(s.MetricName, long.MaxValue)
                 )
                 .ToList();
             if (snapshots.Count == 0)

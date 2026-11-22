@@ -550,7 +550,7 @@ public class DimensionCounterTests
         state.TotalOperations.Should().Be(3);
 
         // Empty keys in composite selector should return null
-        var emptyCompositeCounter = new DimensionCounter("EmptyKeys", Array.Empty<string>());
+        var emptyCompositeCounter = new DimensionCounter("EmptyKeys", []);
         emptyCompositeCounter.OnOut(inState, in outCtx1);
         var emptySnap = emptyCompositeCounter.GetSnapshot("ProcessPayment");
         emptySnap.Should().NotBeNull();

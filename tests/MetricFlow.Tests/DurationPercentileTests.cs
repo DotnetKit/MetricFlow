@@ -126,7 +126,7 @@ public class DurationPercentileTests
 
         // Assert
         snapshot.Should().NotBeNull();
-        snapshot!.P50Duration.Should().BeNull();
+        snapshot.P50Duration.Should().BeNull();
         snapshot.P95Duration.Should().BeNull();
         snapshot.Percentiles.Should().BeNull();
     }
@@ -236,7 +236,7 @@ public class DurationPercentileTests
 
         // Assert
         snapshot.Should().NotBeNull();
-        snapshot!.P50Duration.Should().NotBeNull();
+        snapshot.P50Duration.Should().NotBeNull();
         snapshot.P99Duration.Should().NotBeNull();
         tracker.DurationCounter.Should().NotBeNull();
         tracker.DurationCounter!.Options.ReservoirSize.Should().Be(512);
@@ -244,7 +244,7 @@ public class DurationPercentileTests
 
     private sealed class TestLogger : ILogger
     {
-        public List<(LogLevel Level, EventId EventId, string Message, Exception? Exception)> Logs { get; } = new();
+        public List<(LogLevel Level, EventId EventId, string Message, Exception? Exception)> Logs { get; } = [];
 
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
 

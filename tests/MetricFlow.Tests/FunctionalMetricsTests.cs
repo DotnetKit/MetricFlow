@@ -47,19 +47,19 @@ public class FunctionalMetricsTests
         // Assert - CountCounter accumulated total count and event count
         var count = tracker.GetCountSnapshot("OrderPlaced");
         count.Should().NotBeNull();
-        count!.TotalCount.Should().Be(5);
+        count.TotalCount.Should().Be(5);
         count.EventCount.Should().Be(3);
 
         // Assert - DimensionCounters sliced by count
         var byCountry = tracker.GetDimensionSnapshot("OrderPlaced", "country");
         byCountry.Should().NotBeNull();
-        byCountry!.TotalOperations.Should().Be(5);
+        byCountry.TotalOperations.Should().Be(5);
         byCountry.Breakdown["FR"].Should().Be(4);
         byCountry.Breakdown["US"].Should().Be(1);
 
         var byPlan = tracker.GetDimensionSnapshot("OrderPlaced", "plan");
         byPlan.Should().NotBeNull();
-        byPlan!.Breakdown["Pro"].Should().Be(4);
+        byPlan.Breakdown["Pro"].Should().Be(4);
         byPlan.Breakdown["Free"].Should().Be(1);
     }
 
@@ -83,12 +83,12 @@ public class FunctionalMetricsTests
 
         var invoiceCount = tracker.GetCountSnapshot("InvoiceIssued");
         invoiceCount.Should().NotBeNull();
-        invoiceCount!.TotalCount.Should().Be(5);
+        invoiceCount.TotalCount.Should().Be(5);
         invoiceCount.EventCount.Should().Be(2);
 
         var currencyDim = tracker.GetDimensionSnapshot("InvoiceIssued", "currency");
         currencyDim.Should().NotBeNull();
-        currencyDim!.Breakdown["EUR"].Should().Be(1);
+        currencyDim.Breakdown["EUR"].Should().Be(1);
         currencyDim.Breakdown["USD"].Should().Be(4);
 
         // Act 2 - Scoped operation tracking feeds both telemetry and functional counters
@@ -164,7 +164,7 @@ public class FunctionalMetricsTests
 
         // Assert
         summary.Should().NotBeNull();
-        summary!.OperationName.Should().Be("Signup");
+        summary.OperationName.Should().Be("Signup");
         summary.TotalOperations.Should().Be(12);
         summary.Count.Should().NotBeNull();
         summary.Count!.TotalCount.Should().Be(12);

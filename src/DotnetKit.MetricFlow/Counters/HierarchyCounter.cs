@@ -159,14 +159,14 @@ public class HierarchyCounter : ICounter
     /// <inheritdoc />
     public IMetricSnapshot? GetSnapshot(string metricName)
     {
-        return _trees.TryGetValue(metricName, out var snapshot) ? snapshot : null;
+        return _trees.GetValueOrDefault(metricName);
     }
 
     /// <inheritdoc />
     public IEnumerable<IMetricSnapshot> GetAllSnapshots()
     {
         return _trees.Values.OrderBy(s =>
-            _sequences.TryGetValue(s.MetricName, out var seq) ? seq : long.MaxValue
+            _sequences.GetValueOrDefault(s.MetricName, long.MaxValue)
         );
     }
 

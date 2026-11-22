@@ -75,7 +75,7 @@ public class LiveConsoleMetricSinkTests
         // Find sink and manually render
         var liveSink = tracker.GetSinks().OfType<LiveConsoleMetricSink>().FirstOrDefault();
         liveSink.Should().NotBeNull();
-        liveSink!.RenderDashboard();
+        liveSink.RenderDashboard();
 
         var output = writer.ToString();
         output.Should().Contain("IngestBatch");

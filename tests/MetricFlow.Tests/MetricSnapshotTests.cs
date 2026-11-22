@@ -554,20 +554,20 @@ public class MetricSnapshotTests
 
         // Assert
         duration.Should().NotBeNull();
-        duration!.MetricName.Should().Be("ProcessPayment");
+        duration.MetricName.Should().Be("ProcessPayment");
         duration.InCount.Should().Be(1);
 
         throughput.Should().NotBeNull();
-        throughput!.MetricName.Should().Be("ProcessPayment");
+        throughput.MetricName.Should().Be("ProcessPayment");
         throughput.TotalOperations.Should().Be(1);
         throughput.FailedOperations.Should().Be(1);
 
         exception.Should().NotBeNull();
-        exception!.MetricName.Should().Be("ProcessPayment");
+        exception.MetricName.Should().Be("ProcessPayment");
         exception.TotalFailures.Should().Be(1);
 
         memory.Should().NotBeNull();
-        memory!.MetricName.Should().Be("ProcessPayment");
+        memory.MetricName.Should().Be("ProcessPayment");
     }
 
     [Fact]
@@ -588,10 +588,10 @@ public class MetricSnapshotTests
 
         // Assert
         throughput.Should().NotBeNull();
-        throughput!.CounterName.Should().Be("CustomThroughput");
+        throughput.CounterName.Should().Be("CustomThroughput");
 
         dimension.Should().NotBeNull();
-        dimension!.DimensionName.Should().Be("region");
+        dimension.DimensionName.Should().Be("region");
 
         wrongName.Should().BeNull();
     }
@@ -681,24 +681,24 @@ public class MetricSnapshotTests
 
         // Assert
         duration.Should().NotBeNull();
-        duration!.MetricName.Should().Be("Checkout");
+        duration.MetricName.Should().Be("Checkout");
 
         throughput.Should().NotBeNull();
-        throughput!.MetricName.Should().Be("Checkout");
+        throughput.MetricName.Should().Be("Checkout");
 
         exception.Should().NotBeNull();
-        exception!.MetricName.Should().Be("Checkout");
+        exception.MetricName.Should().Be("Checkout");
 
         failure.Should().NotBeNull();
-        failure!.MetricName.Should().Be("Checkout");
+        failure.MetricName.Should().Be("Checkout");
         failure.TotalFailures.Should().Be(1);
         failure.ExceptionFailures.Should().Be(1);
 
         memory.Should().NotBeNull();
-        memory!.MetricName.Should().Be("Checkout");
+        memory.MetricName.Should().Be("Checkout");
 
         dimension.Should().NotBeNull();
-        dimension!.DimensionName.Should().Be("tenant");
+        dimension.DimensionName.Should().Be("tenant");
     }
 
     [Fact]
@@ -714,7 +714,7 @@ public class MetricSnapshotTests
 
         // Assert
         snapshot.Should().NotBeNull();
-        snapshot!.MetricName.Should().Be("Action");
+        snapshot.MetricName.Should().Be("Action");
         snapshot.InCount.Should().Be(1);
     }
 

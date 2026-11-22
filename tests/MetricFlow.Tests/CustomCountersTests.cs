@@ -172,20 +172,20 @@ public class CustomCountersTests
 
         var throughput = tracker.GetThroughputSnapshot("PentaMetricOp");
         throughput.Should().NotBeNull();
-        throughput!.TotalItems.Should().Be(150);
+        throughput.TotalItems.Should().Be(150);
 
         var memory = tracker.GetSnapshot("PentaMetricOp", MemoryCounter.DefaultCounterName) as MemorySnapshot;
         memory.Should().NotBeNull();
-        memory!.OperationCount.Should().Be(2);
+        memory.OperationCount.Should().Be(2);
 
         var exceptions = tracker.GetSnapshot("PentaMetricOp", ExceptionCounter.DefaultCounterName) as ExceptionSnapshot;
         exceptions.Should().NotBeNull();
-        exceptions!.TotalOperations.Should().Be(2);
+        exceptions.TotalOperations.Should().Be(2);
         exceptions.TotalFailures.Should().Be(0);
 
         var dimensionSnapshot = tracker.GetDimensionSnapshot("PentaMetricOp", "country");
         dimensionSnapshot.Should().NotBeNull();
-        dimensionSnapshot!.TotalOperations.Should().Be(2);
+        dimensionSnapshot.TotalOperations.Should().Be(2);
         dimensionSnapshot.TrackedOperations.Should().Be(2);
         dimensionSnapshot.Breakdown["US"].Should().Be(1);
         dimensionSnapshot.Breakdown["DE"].Should().Be(1);

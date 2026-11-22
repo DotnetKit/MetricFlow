@@ -182,14 +182,14 @@ public class MetricTrackerTests
         // Assert ExceptionCounter does NOT record an exception because no Exception was thrown
         var exceptionSnapshot = tracker.GetExceptionSnapshot("LogicalFailureOp");
         exceptionSnapshot.Should().NotBeNull();
-        exceptionSnapshot!.TotalOperations.Should().Be(1);
+        exceptionSnapshot.TotalOperations.Should().Be(1);
         exceptionSnapshot.TotalExceptions.Should().Be(0);
         exceptionSnapshot.ExceptionsByType.Should().BeEmpty();
 
         // Assert FailureCounter records the logical failure
         var failureSnapshot = tracker.GetFailureShapshot("LogicalFailureOp");
         failureSnapshot.Should().NotBeNull();
-        failureSnapshot!.TotalOperations.Should().Be(1);
+        failureSnapshot.TotalOperations.Should().Be(1);
         failureSnapshot.TotalFailures.Should().Be(1);
         failureSnapshot.LogicalFailures.Should().Be(1);
         failureSnapshot.ExceptionFailures.Should().Be(0);

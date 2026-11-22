@@ -42,7 +42,7 @@ public class HierarchyCounterTests
         // Assert
         var tree = tracker.GetHierarchySnapshot("GetChannelProgramsUseCase");
         tree.Should().NotBeNull();
-        tree!.MetricName.Should().Be("GetChannelProgramsUseCase");
+        tree.MetricName.Should().Be("GetChannelProgramsUseCase");
         tree.Root.MetricName.Should().Be("GetChannelProgramsUseCase");
         tree.Root.Duration.Should().BeGreaterThan(TimeSpan.FromMilliseconds(20));
 
@@ -90,7 +90,7 @@ public class HierarchyCounterTests
         // Assert
         var tree = tracker.GetHierarchySnapshot("RootOp");
         tree.Should().NotBeNull();
-        tree!.Root.Children.Should().HaveCount(1);
+        tree.Root.Children.Should().HaveCount(1);
 
         var child = tree.Root.Children[0];
         child.ItemCount.Should().Be(500);
@@ -124,7 +124,7 @@ public class HierarchyCounterTests
         // Assert
         var tree = tracker.GetHierarchySnapshot("OrderCheckoutUseCase");
         tree.Should().NotBeNull();
-        tree!.Root.Failed.Should().BeFalse(); // Root itself completed successfully
+        tree.Root.Failed.Should().BeFalse(); // Root itself completed successfully
 
         var child = tree.Root.Children[0];
         child.MetricName.Should().Be("PaymentService.ChargeCard");

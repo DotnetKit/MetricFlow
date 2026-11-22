@@ -117,7 +117,7 @@ public class ConsoleMetricSinkOptions
     /// </summary>
     public Func<long, string>? MemoryFormatter { get; set; }
 
-    private readonly List<Func<IMetricSnapshot, ConsoleColor?>> _thresholdRules = new();
+    private readonly List<Func<IMetricSnapshot, ConsoleColor?>> _thresholdRules = [];
     private readonly Dictionary<Type, Func<IMetricSnapshot, string>> _typedFormatters = new();
     private readonly Dictionary<string, Func<IMetricSnapshot, string>> _namedFormatters = new(StringComparer.OrdinalIgnoreCase);
 

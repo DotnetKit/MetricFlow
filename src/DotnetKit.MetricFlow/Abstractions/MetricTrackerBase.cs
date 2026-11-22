@@ -171,7 +171,7 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
     public IEnumerable<ICounter> GetCounters() =>
         _counters
             .Values.OrderBy(c =>
-                _counterRegistrationSequences.TryGetValue(c.Name, out var seq) ? seq : long.MaxValue
+                _counterRegistrationSequences.GetValueOrDefault(c.Name, long.MaxValue)
             );
 
     /// <summary>
@@ -472,10 +472,10 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
 
         return snapshots
             .OrderBy(s =>
-                _operationSequences.TryGetValue(s.MetricName, out var seq) ? seq : long.MaxValue
+                _operationSequences.GetValueOrDefault(s.MetricName, long.MaxValue)
             )
             .ThenBy(s =>
-                counterOrder.TryGetValue(s.CounterName, out var cIdx) ? cIdx : int.MaxValue
+                counterOrder.GetValueOrDefault(s.CounterName, int.MaxValue)
             );
     }
 
