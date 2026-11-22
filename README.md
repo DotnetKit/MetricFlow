@@ -33,12 +33,10 @@ It can be used in both ASP.NET Core and non-ASP.NET Core applications.
 
 ### Core Metrics & Measurement
 
-- **Timers & Duration**: High-precision operation timing via lock-free stopwatch ticks.
-- **Counters**: Track execution counts and occurrences of events.
+- **Zero-Overhead Functional Metrics (`CountCounter`, `Record` / `Increment`)**: Track pure business events and custom dimensional breakdowns without `Stopwatch` or `In`/`Out` scope overhead using `.AddFunctionalMetrics(...)`, `tracker.Record(...)`, and `tracker.Increment(...)`.
+- **Opt-In Telemetry Preset (`.AddTelemetry(...)`)**: High-precision operation timing (`DurationCounter`), heap allocation (`MemoryCounter`), exception tracking (`ExceptionCounter`), failure rates (`FailureCounter`), and nested call trees (`HierarchyCounter`) — opt in only to what you need.
 - **Throughput & Item Tracking**: Measure batch sizes, entity counts, and processing rates (items/sec) with `ThroughputCounter`.
-- **Memory Tracking**: Measure per-operation heap allocations with `MemoryCounter`.
-- **Exception & Failure Tracking**: Capture runtime exceptions with `ExceptionCounter` and track logical versus exception failure distributions with `FailureCounter`.
-- **Dimensional Breakdown & Slicing**: Slice and compute operation distributions by business dimensions, tags, or computed rules with `DimensionCounter` and built-in cardinality safeguards.
+- **Dimensional Breakdown & Slicing**: Slice and compute operation or event distributions by business dimensions, tags, or computed rules with `DimensionCounter` and built-in cardinality safeguards.
 
 ### Flow & Execution Context
 
@@ -102,33 +100,41 @@ dotnet build
 
 #### 1. Initialize Tracker
 
-Initialize a tracker and optionally chain throughput, memory, exception, and dimension counters:
+`MetricTracker` starts with zero telemetry counters by default — opt in to telemetry (`.AddTelemetry()`), pure functional metrics (`.AddFunctionalMetrics(...)`), or individual counters:
 
 ```csharp
 using DotnetKit.MetricFlow;
 
+// Telemetry + functional breakdown tracker
 var tracker = new MetricTracker("OrderService", new()
     {
         ["environment"] = "production"
     })
+    .AddTelemetry(includeMemory: true)
     .AddThroughputCounter()
-    .AddMemoryCounter()
-    .AddExceptionCounter()
     .AddDimensionCounter("country");
+
+// Pure functional metrics tracker (no duration/memory/exception telemetry)
+var businessTracker = new MetricTracker("BusinessEvents")
+    .AddFunctionalMetrics("country", "plan");
+
+businessTracker.Record("OrderPlaced", new() { ["country"] = "FR", ["plan"] = "Pro" });
+businessTracker.Increment("OrderPlaced", 5, new() { ["country"] = "US", ["plan"] = "Enterprise" });
 ```
 
-#### 2. Basic Example (Minimal Setup)
+#### 2. Basic Example (Minimal Telemetry Setup)
 
-The simplest usage requires zero additional counters or complex configuration—by default, `MetricTracker` records high-precision execution duration:
+Opt in to duration tracking with `.AddDurationCounter()` (or `.AddTelemetry()` for duration + exceptions):
 
 ```csharp
 using DotnetKit.MetricFlow;
 
-// Initialize tracker (DurationCounter is included by default)
+// Initialize tracker with duration telemetry
 var tracker = new MetricTracker("BasicConsoleTopic", new()
 {
     ["environment"] = "Development"
-});
+})
+.AddDurationCounter();
 
 // 1. Scoped tracking with using statement
 using (tracker.Track("ProcessOrder"))

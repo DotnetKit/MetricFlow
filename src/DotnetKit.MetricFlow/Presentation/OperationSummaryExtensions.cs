@@ -58,10 +58,11 @@ public static class OperationSummaryExtensions
             FailureSnapshot? failure = null;
             ExceptionSnapshot? exception = null;
             HierarchyTreeSnapshot? hierarchy = null;
+            CountSnapshot? count = null;
             List<DimensionSnapshot>? dimensions = null;
             List<IMetricSnapshot>? additional = null;
 
-            for (int j = 0; j < items.Count; j++)
+            for (var j = 0; j < items.Count; j++)
             {
                 var item = items[j];
                 switch (item)
@@ -84,6 +85,9 @@ public static class OperationSummaryExtensions
                     case HierarchyTreeSnapshot h when hierarchy == null:
                         hierarchy = h;
                         break;
+                    case CountSnapshot c when count == null:
+                        count = c;
+                        break;
                     case DimensionSnapshot dim:
                         dimensions ??= [];
                         dimensions.Add(dim);
@@ -105,7 +109,8 @@ public static class OperationSummaryExtensions
                     Exception: exception,
                     Dimensions: dimensions,
                     Hierarchy: hierarchy,
-                    AdditionalSnapshots: additional
+                    AdditionalSnapshots: additional,
+                    Count: count
                 )
             );
         }

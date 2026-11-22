@@ -238,7 +238,8 @@ public class DurationPercentileTests
         snapshot.Should().NotBeNull();
         snapshot!.P50Duration.Should().NotBeNull();
         snapshot.P99Duration.Should().NotBeNull();
-        tracker.DurationCounter.Options.ReservoirSize.Should().Be(512);
+        tracker.DurationCounter.Should().NotBeNull();
+        tracker.DurationCounter!.Options.ReservoirSize.Should().Be(512);
     }
 
     private sealed class TestLogger : ILogger

@@ -369,6 +369,61 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
     }
 
     /// <summary>
+    /// Records a point-in-time functional metric event (increment of 1) without an operation start/end scope.
+    /// </summary>
+    /// <param name="metricName">The name of the functional metric or business event.</param>
+    /// <param name="tags">Optional key-value string tags (business dimensions) associated with this event.</param>
+    /// <param name="metadata">Optional numeric metadata associated with this event.</param>
+    public void Record(
+        string metricName,
+        Dictionary<string, string>? tags = null,
+        Dictionary<string, long>? metadata = null)
+        => Increment(metricName, 1, tags, metadata);
+
+    /// <summary>
+    /// Increments a point-in-time functional metric by the specified value without an operation start/end scope.
+    /// </summary>
+    /// <param name="metricName">The name of the functional metric or business event.</param>
+    /// <param name="value">The incremental value to add. Defaults to 1.</param>
+    /// <param name="tags">Optional key-value string tags (business dimensions) associated with this event.</param>
+    /// <param name="metadata">Optional numeric metadata associated with this event.</param>
+    public void Increment(
+        string metricName,
+        long value = 1,
+        Dictionary<string, string>? tags = null,
+        Dictionary<string, long>? metadata = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(metricName);
+
+        if (ShouldDrop(_samplingRate))
+        {
+            return;
+        }
+
+        EnsureOperationSequence(metricName);
+
+        var active = _activeCounters;
+        if (active.Length > 0)
+        {
+            var recordContext = new RecordContext(metricName, value, tags, metadata);
+            for (var i = 0; i < active.Length; i++)
+            {
+                if (active[i].IsEnabled)
+                {
+                    active[i].OnRecord(in recordContext);
+                }
+            }
+        }
+
+        if (_meterBridge is { IsEnabled: true })
+        {
+            _meterBridge.RecordMetric(metricName, value, tags, metadata);
+        }
+
+        HandleOperationCompleted(metricName, TimeSpan.Zero, failed: false, exception: null);
+    }
+
+    /// <summary>
     /// Gets a specific counter snapshot for the given metric and counter name.
     /// </summary>
     /// <param name="metricName">The name of the metric.</param>

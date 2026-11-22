@@ -14,7 +14,7 @@ public class TrackerStreamExtensionsTests
         var tracker = new MetricTracker(new MetricFlowOptions
         {
             Topic = "Orders"
-        }.AddThroughputCounter());
+        }.AddDurationCounter().AddThroughputCounter());
 
         static async IAsyncEnumerable<int> GenerateNumbersAsync()
         {
@@ -56,7 +56,7 @@ public class TrackerStreamExtensionsTests
         var tracker = new MetricTracker(new MetricFlowOptions
         {
             Topic = "Orders"
-        }.AddThroughputCounter().AddFailureCounter());
+        }.AddTelemetry().AddThroughputCounter().AddFailureCounter());
 
         static async IAsyncEnumerable<string> FailingStreamAsync()
         {
@@ -105,7 +105,7 @@ public class TrackerStreamExtensionsTests
         var tracker = new MetricTracker(new MetricFlowOptions
         {
             Topic = "Orders"
-        }.AddThroughputCounter());
+        }.AddDurationCounter().AddThroughputCounter());
 
         static async IAsyncEnumerable<int> StreamWithManyItemsAsync()
         {
@@ -143,7 +143,7 @@ public class TrackerStreamExtensionsTests
         var tracker = new MetricTracker(new MetricFlowOptions
         {
             Topic = "Orders"
-        }.AddThroughputCounter());
+        }.AddDurationCounter().AddThroughputCounter());
 
         // Act
         await ExecuteStreamWithCallerMemberNameAsync(tracker);
@@ -179,7 +179,7 @@ public class TrackerStreamExtensionsTests
         var tracker = new MetricTracker(new MetricFlowOptions
         {
             Topic = "Orders"
-        }.AddThroughputCounter());
+        }.AddDurationCounter().AddThroughputCounter());
 
         var items = new[] { "apple", "banana", "cherry", "date" };
 
@@ -206,7 +206,7 @@ public class TrackerStreamExtensionsTests
         var tracker = new MetricTracker(new MetricFlowOptions
         {
             Topic = "Orders"
-        }.AddThroughputCounter());
+        }.AddDurationCounter().AddThroughputCounter());
 
         static IEnumerable<int> FailingSequence()
         {

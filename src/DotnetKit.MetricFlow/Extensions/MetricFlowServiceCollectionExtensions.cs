@@ -84,9 +84,11 @@ public static class MetricFlowServiceCollectionExtensions
                         meterBridge: meterBridge,
                         sinks: allSinks,
                         sinkTriggers: defaultOptions.SinkTriggers,
-                        durationCounter: new DurationCounter(DurationCounter.DefaultCounterName, defaultOptions.DurationOptions));
+                        durationCounter: defaultOptions.IncludeDurationCounter && !defaultOptions.Counters.Any(static c => c is DurationCounter)
+                            ? new DurationCounter(DurationCounter.DefaultCounterName, defaultOptions.DurationOptions)
+                            : null);
 
-                    if (defaultOptions.AutoAddExceptionCounter)
+                    if (defaultOptions.AutoAddExceptionCounter && !defaultOptions.Counters.Any(static c => c is ExceptionCounter))
                     {
                         tracker.AddExceptionCounter();
                     }
@@ -177,6 +179,7 @@ public static class MetricFlowServiceCollectionExtensions
             opt.SamplingRate = trackerOptions.SamplingRate;
             opt.ConfigObservable = trackerOptions.ConfigObservable;
             opt.AutoAddExceptionCounter = trackerOptions.AutoAddExceptionCounter;
+            opt.IncludeDurationCounter = trackerOptions.IncludeDurationCounter;
             opt.MeterOptions = trackerOptions.MeterOptions;
             opt.SinkTriggers = trackerOptions.SinkTriggers;
             opt.DurationOptions = trackerOptions.DurationOptions;
@@ -222,9 +225,11 @@ public static class MetricFlowServiceCollectionExtensions
                 meterBridge: meterBridge,
                 sinks: allSinks,
                 sinkTriggers: trackerOptions.SinkTriggers,
-                durationCounter: new DurationCounter(DurationCounter.DefaultCounterName, trackerOptions.DurationOptions));
+                durationCounter: trackerOptions.IncludeDurationCounter && !trackerOptions.Counters.Any(static c => c is DurationCounter)
+                    ? new DurationCounter(DurationCounter.DefaultCounterName, trackerOptions.DurationOptions)
+                    : null);
 
-            if (trackerOptions.AutoAddExceptionCounter)
+            if (trackerOptions.AutoAddExceptionCounter && !trackerOptions.Counters.Any(static c => c is ExceptionCounter))
             {
                 tracker.AddExceptionCounter();
             }

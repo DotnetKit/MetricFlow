@@ -25,11 +25,13 @@ public class MetricFlowServiceCollectionExtensionsTests
         options.Topic.Should().Be("Application");
         options.SamplingRate.Should().Be(1.0);
         options.TopicTags.Should().BeNull();
-        options.AutoAddExceptionCounter.Should().BeTrue();
+        options.AutoAddExceptionCounter.Should().BeFalse();
+        options.IncludeDurationCounter.Should().BeFalse();
 
         var tracker = provider.GetService<MetricTracker>();
         tracker.Should().NotBeNull();
         tracker.Topic.Should().Be("Application");
+        tracker.GetCounters().Should().BeEmpty();
 
         var interfaceTracker = provider.GetService<IMetricTracker>();
         interfaceTracker.Should().NotBeNull();
@@ -39,10 +41,10 @@ public class MetricFlowServiceCollectionExtensionsTests
         snapshotSource.Should().NotBeNull();
         snapshotSource.Should().BeSameAs(tracker);
 
-        // Exception counter should be automatically registered by default
+        // Bare default tracker has no telemetry counters until opted in
         tracker.TrackAction("test_op", () => { });
-        var snapshot = tracker.GetSnapshot("test_op", ExceptionCounter.DefaultCounterName);
-        snapshot.Should().NotBeNull();
+        tracker.GetSnapshot("test_op", ExceptionCounter.DefaultCounterName).Should().BeNull();
+        tracker.GetDurationSnapshot("test_op").Should().BeNull();
     }
 
     [Fact]

@@ -277,7 +277,7 @@ public class MetricSinkTests
             {
                 EmitEveryNExecutions = 3
             }
-        });
+        }.AddDurationCounter());
 
         // Act
         tracker.Track("Process").Dispose(); // 1
@@ -311,7 +311,7 @@ public class MetricSinkTests
             {
                 EmitOnFailure = true
             }
-        });
+        }.AddTelemetry());
 
         // Act - Success
         tracker.In("Charge");
@@ -340,7 +340,7 @@ public class MetricSinkTests
             {
                 EmitOnSlowDurationThreshold = TimeSpan.FromMilliseconds(50)
             }
-        });
+        }.AddDurationCounter());
 
         // Act - Fast query (10ms)
         tracker.In("Select");
@@ -361,7 +361,8 @@ public class MetricSinkTests
     {
         // Arrange
         var testSink = new RecordingMetricSink();
-        var tracker = new MetricTracker("Inventory");
+        var tracker = new MetricTracker("Inventory")
+            .AddDurationCounter();
         tracker.RegisterSink(testSink);
 
         using (tracker.Track("AddItem")) { }

@@ -16,7 +16,8 @@ public record OperationSummary(
     ExceptionSnapshot? Exception = null,
     IReadOnlyList<DimensionSnapshot>? Dimensions = null,
     HierarchyTreeSnapshot? Hierarchy = null,
-    IReadOnlyList<IMetricSnapshot>? AdditionalSnapshots = null
+    IReadOnlyList<IMetricSnapshot>? AdditionalSnapshots = null,
+    CountSnapshot? Count = null
 )
 {
     /// <summary>
@@ -31,14 +32,16 @@ public record OperationSummary(
         AdditionalSnapshots ?? [];
 
     /// <summary>
-    /// Gets the total operation count recorded across the primary counters.
+    /// Gets the total operation or event count recorded across the primary counters.
     /// </summary>
     public long TotalOperations =>
         Throughput?.TotalOperations
         ?? Duration?.OutCount
+        ?? Count?.TotalCount
         ?? Memory?.OperationCount
         ?? Failure?.TotalOperations
         ?? Exception?.TotalOperations
+        ?? (Dimensions.Count > 0 ? Dimensions[0].TotalOperations : (long?)null)
         ?? 0;
 
     /// <summary>

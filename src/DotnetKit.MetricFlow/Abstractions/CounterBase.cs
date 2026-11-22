@@ -20,6 +20,11 @@ public abstract class CounterBase<TState>(string name) : ICounter<TState>
     public abstract void OnOut(TState state, in OutContext context);
 
     /// <inheritdoc />
+    public virtual void OnRecord(in RecordContext context)
+    {
+    }
+
+    /// <inheritdoc />
     public abstract IMetricSnapshot? GetSnapshot(string metricName);
 
     /// <inheritdoc />

@@ -12,9 +12,11 @@ namespace DotnetKit.MetricFlow;
 public class MetricTracker : MetricTrackerBase
 {
     /// <summary>
-    /// Gets the default <see cref="Counters.DurationCounter"/> registered on this tracker.
+    /// Gets the registered <see cref="Counters.DurationCounter"/> on this tracker, or <c>null</c> if none has been registered.
     /// </summary>
-    public DurationCounter DurationCounter { get; }
+    public DurationCounter? DurationCounter =>
+        GetCounter(Counters.DurationCounter.DefaultCounterName) as DurationCounter
+        ?? GetCounters().OfType<DurationCounter>().FirstOrDefault();
 
     /// <summary>
     /// Initializes a new instance of <see cref="MetricTracker"/>.
@@ -58,8 +60,10 @@ public class MetricTracker : MetricTrackerBase
         DurationCounter? durationCounter = null)
         : base(topic, topicTags, samplingRate, configObservable, meterBridge, sinks, sinkTriggers)
     {
-        DurationCounter = durationCounter ?? new DurationCounter();
-        RegisterCounter(DurationCounter);
+        if (durationCounter != null)
+        {
+            RegisterCounter(durationCounter);
+        }
 
         if (additionalCounters != null)
         {
@@ -83,9 +87,11 @@ public class MetricTracker : MetricTrackerBase
             meterBridge: meterBridge ?? new MetricFlowMeterBridge(options.Topic, options.TopicTags, options.MeterOptions),
             sinks: options.Sinks,
             sinkTriggers: options.SinkTriggers,
-            durationCounter: new DurationCounter(DurationCounter.DefaultCounterName, options.DurationOptions))
+            durationCounter: options.IncludeDurationCounter && !options.Counters.Any(static c => c is DurationCounter)
+                ? new DurationCounter(Counters.DurationCounter.DefaultCounterName, options.DurationOptions)
+                : null)
     {
-        if (options.AutoAddExceptionCounter)
+        if (options.AutoAddExceptionCounter && !options.Counters.Any(static c => c is ExceptionCounter))
         {
             this.AddExceptionCounter();
         }
@@ -98,6 +104,9 @@ public class MetricTracker : MetricTrackerBase
     /// <returns>The duration snapshot, or null if no durations have been recorded.</returns>
     public DurationSnapshot? GetDurationSnapshot(string metricName)
     {
-        return this.GetSnapshot<DurationSnapshot>(metricName, DurationCounter.Name);
+        var durationCounter = DurationCounter;
+        return durationCounter != null
+            ? this.GetSnapshot<DurationSnapshot>(metricName, durationCounter.Name)
+            : null;
     }
 }

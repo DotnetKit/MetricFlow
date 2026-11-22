@@ -37,6 +37,8 @@ public static class MetricFlowServiceCollectionExtensions
             opt.SamplingRate = options.SamplingRate;
             opt.ConfigObservable = options.ConfigObservable;
             opt.AutoAddExceptionCounter = options.AutoAddExceptionCounter;
+            opt.IncludeDurationCounter = options.IncludeDurationCounter;
+            opt.DurationOptions = options.DurationOptions;
             foreach (var counter in options.Counters)
             {
                 opt.Counters.Add(counter);

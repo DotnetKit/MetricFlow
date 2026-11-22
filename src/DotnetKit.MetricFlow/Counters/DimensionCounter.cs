@@ -164,6 +164,37 @@ public class DimensionCounter : CounterBase<object?>
         breakdownState.Record(dimensionValue, context.Failed);
     }
 
+    public override void OnRecord(in RecordContext context)
+    {
+        if (!IsEnabled)
+            return;
+
+        var breakdownState = _states.GetOrAdd(
+            context.MetricName,
+            name =>
+                new MetricDimensionState(
+                    name,
+                    DimensionName,
+                    MaxUniqueValues,
+                    OverflowBucket,
+                    Interlocked.Increment(ref _sequenceCounter)
+                )
+        );
+
+        string? dimensionValue;
+        try
+        {
+            dimensionValue = _dimensionSelector(context.Tags, context.Metadata);
+        }
+        catch
+        {
+            // Protect against unexpected exceptions in custom user selector lambdas
+            dimensionValue = null;
+        }
+
+        breakdownState.Record(dimensionValue, failed: false, count: context.Value);
+    }
+
     public override IMetricSnapshot? GetSnapshot(string metricName)
     {
         return _states.TryGetValue(metricName, out var state) ? state.ToSnapshot(Name) : null;
@@ -290,37 +321,37 @@ public class DimensionCounter : CounterBase<object?>
         public IReadOnlyDictionary<string, long> GetBreakdown() =>
             new Dictionary<string, long>(_breakdown, StringComparer.OrdinalIgnoreCase);
 
-        public void Record(string? tagValue, bool failed = false)
+        public void Record(string? tagValue, bool failed = false, long count = 1)
         {
-            Interlocked.Increment(ref _totalOperations);
+            Interlocked.Add(ref _totalOperations, count);
             if (failed)
             {
-                Interlocked.Increment(ref _failedOperations);
+                Interlocked.Add(ref _failedOperations, count);
             }
 
             if (string.IsNullOrWhiteSpace(tagValue))
             {
-                Interlocked.Increment(ref _untaggedOperations);
+                Interlocked.Add(ref _untaggedOperations, count);
                 return;
             }
 
-            Interlocked.Increment(ref _taggedOperations);
+            Interlocked.Add(ref _taggedOperations, count);
 
             // Fast path: value is already known
             if (_breakdown.ContainsKey(tagValue))
             {
-                _breakdown.AddOrUpdate(tagValue, 1, static (_, count) => count + 1);
+                _breakdown.AddOrUpdate(tagValue, count, (_, current) => current + count);
                 return;
             }
 
             // Cardinality check before inserting a new distinct key
             if (_breakdown.Count >= maxUniqueValues)
             {
-                _breakdown.AddOrUpdate(overflowBucket, 1, static (_, count) => count + 1);
+                _breakdown.AddOrUpdate(overflowBucket, count, (_, current) => current + count);
             }
             else
             {
-                _breakdown.AddOrUpdate(tagValue, 1, static (_, count) => count + 1);
+                _breakdown.AddOrUpdate(tagValue, count, (_, current) => current + count);
             }
         }
 

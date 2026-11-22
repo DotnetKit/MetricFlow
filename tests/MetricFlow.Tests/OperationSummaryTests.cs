@@ -140,6 +140,7 @@ public class OperationSummaryTests
     public void GetOperationSummary_WithTracker_ReturnsCorrelatedOperation()
     {
         using var tracker = new MetricTracker("TestTopic")
+            .AddDurationCounter()
             .AddThroughputCounter()
             .AddMemoryCounter();
 

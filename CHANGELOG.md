@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.0.0] - Unreleased
+
+### Breaking Changes
+
+- **Zero Default Telemetry Counters on `MetricTracker` & `MetricFlowOptions`**:
+  - `MetricTracker` no longer auto-registers `DurationCounter` by default (`MetricTracker.DurationCounter` is now nullable and resolves dynamically when registered).
+  - `MetricFlowOptions.AutoAddExceptionCounter` and `MetricFlowOptions.IncludeDurationCounter` now default to `false`.
+  - Opt in explicitly via `.AddTelemetry(...)`, `.AddDurationCounter(...)`, `.AddExceptionCounter()`, or `.AddFunctionalMetrics(...)`.
+  - `MetricFlowAspNetCoreOptions` continues to enable `IncludeDurationCounter` and `AutoAddExceptionCounter` by default for HTTP middleware profiling.
+
+### Added
+
+- **Point-in-Time Functional Metrics (`Record`, `Increment`, `RecordContext`, `ICounter.OnRecord`)**:
+  - Added `tracker.Record(metricName, tags, metadata)` and `tracker.Increment(metricName, value, tags, metadata)` on `IMetricTracker` and `MetricTrackerBase`.
+  - Added `OnRecord(in RecordContext context)` on `ICounter` / `CounterBase`: functional counters (`CountCounter`, `DimensionCounter`, `ThroughputCounter`) react to point-in-time recordings while telemetry counters (`DurationCounter`, `MemoryCounter`, `HierarchyCounter`, `ExceptionCounter`, `FailureCounter`) ignore them.
+  - Added `IMetricMeterBridge.RecordMetric(...)` emitting native `System.Diagnostics.Metrics` `Counter<long>` instruments for functional metrics.
+- **Lightweight `CountCounter` & `CountSnapshot`**:
+  - Pure functional event counter with zero stopwatch/memory overhead, integrated into `OperationSummary.Count` and `OperationSummary.TotalOperations`.
+- **Fluent Telemetry & Functional Presets**:
+  - `.AddTelemetry(includeMemory, includeHierarchy, configureDuration)` and `.AddFunctionalMetrics(params string[] dimensionKeys)` on both `IMetricTracker` (`TrackerCounterExtensions`) and `MetricFlowOptions`.
+  - `.AddDurationCounter(...)`, `.AddCountCounter(...)`, and `.GetCountSnapshot(...)` helpers.
+
+---
+
 ## [1.0.55] - preview release - 2026-10-18
 
 ### Added

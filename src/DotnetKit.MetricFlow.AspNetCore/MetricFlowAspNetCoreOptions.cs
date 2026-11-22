@@ -13,6 +13,8 @@ public class MetricFlowAspNetCoreOptions : MetricFlowOptions
     public MetricFlowAspNetCoreOptions()
     {
         Topic = "AspNetCore";
+        IncludeDurationCounter = true;
+        AutoAddExceptionCounter = true;
     }
 
     /// <summary>

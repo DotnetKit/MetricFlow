@@ -3,9 +3,10 @@ name: metricflow
 description: >-
   Guides developers and AI agents on integrating DotnetKit.MetricFlow into .NET projects (ASP.NET Core,
   Worker Services, Console applications, and OpenTelemetry). Use this skill when installing MetricFlow,
-  configuring dependency injection, instrumenting code with counters (duration, throughput, memory,
-  dimension, hierarchy, exception), configuring sinks (Console, Table, Live Dashboard, ILogger/Serilog),
-  querying operation summaries, or exporting metrics (Markdown, CSV, JSON).
+  configuring dependency injection, choosing between telemetry presets (duration, memory, hierarchy, exception)
+  and pure functional metrics (CountCounter, DimensionCounter, Record/Increment), configuring sinks
+  (Console, Table, Live Dashboard, ILogger/Serilog), querying operation summaries, or exporting metrics
+  (Markdown, CSV, JSON).
 ---
 
 # MetricFlow Integration Skill
@@ -128,8 +129,8 @@ var host = Host.CreateDefaultBuilder(args)
                 tags["environment"] = context.HostingEnvironment.EnvironmentName;
                 tags["machine"] = Environment.MachineName;
             })
+            .AddTelemetry(includeMemory: true)
             .AddThroughputCounter()
-            .AddMemoryCounter()
             .AddFailureCounter();
         });
 
@@ -210,8 +211,8 @@ using var tracker = new MetricTracker("ImportJob", new()
 {
     ["run_id"] = Guid.NewGuid().ToString("N")
 })
+.AddTelemetry(includeMemory: true)
 .AddThroughputCounter()
-.AddMemoryCounter()
 .AddFailureCounter()
 // 1. Fluent sink configuration directly on tracker instance
 .AddConsoleSink(opt =>
@@ -244,6 +245,30 @@ Console.WriteLine(tracker.ToMarkdownTable());
 ---
 
 ## 4. Code Instrumentation Patterns & Best Practices
+
+### 0. Choosing Telemetry vs. Pure Functional Metrics (v2.0)
+Starting in v2.0, `MetricTracker` starts with **zero default telemetry counters** — you explicitly opt in to the counters you need:
+
+- **Telemetry preset (`.AddTelemetry(...)`)**: Registers `DurationCounter` + `ExceptionCounter` (plus optional `MemoryCounter` and `HierarchyCounter`) for scoped operation profiling via `Track(...)` / `In()` / `Out()`.
+- **Functional metrics preset (`.AddFunctionalMetrics(...)`)**: Registers a lightweight `CountCounter` + optional `DimensionCounter` breakdowns with zero `Stopwatch`/scope overhead. Record business events directly with `Record(...)` / `Increment(...)`:
+
+```csharp
+// Pure functional tracker — zero duration/memory/exception telemetry overhead
+using var businessTracker = new MetricTracker("Orders")
+    .AddFunctionalMetrics("country", "plan");
+
+businessTracker.Record("OrderPlaced", new() { ["country"] = "FR", ["plan"] = "Pro" });
+businessTracker.Increment("OrderPlaced", 3, new() { ["country"] = "US", ["plan"] = "Free" });
+
+var count = businessTracker.GetCountSnapshot("OrderPlaced");         // TotalCount: 4, EventCount: 2
+var byCountry = businessTracker.GetDimensionSnapshot("OrderPlaced", "country");
+```
+
+When a tracker combines **both** `.AddTelemetry()` and `.AddFunctionalMetrics(...)`:
+- `Record()` / `Increment()` invokes functional counters (`CountCounter`, `DimensionCounter`, `ThroughputCounter`) and emits `Counter<long>` to `MeterBridge`, while telemetry counters (`DurationCounter`, `MemoryCounter`, `HierarchyCounter`, `ExceptionCounter`) ignore it.
+- `Track()` / `In()` / `Out()` feeds both telemetry and functional counters so correlated `OperationSummary` reports work seamlessly.
+
+---
 
 ### 1. Scoped Tracking (`tracker.Track`)
 Supports automatic operation naming via C# `[CallerMemberName]`:

@@ -515,6 +515,7 @@ public class MetricSnapshotTests
     {
         // Arrange
         var tracker = new MetricTracker("SnapshotTopic")
+            .AddDurationCounter()
             .AddMemoryCounter();
 
         tracker.In("OrderProcess");
@@ -537,6 +538,7 @@ public class MetricSnapshotTests
     {
         // Arrange
         var tracker = new MetricTracker("GenericSnapshotTopic")
+            .AddDurationCounter()
             .AddThroughputCounter()
             .AddExceptionCounter()
             .AddMemoryCounter();
@@ -617,6 +619,7 @@ public class MetricSnapshotTests
     {
         // Arrange
         var tracker = new MetricTracker("FilterTopic")
+            .AddDurationCounter()
             .AddDimensionCounter("region")
             .AddDimensionCounter("env");
 
@@ -658,6 +661,7 @@ public class MetricSnapshotTests
     {
         // Arrange
         var tracker = new MetricTracker("HelpersTopic")
+            .AddDurationCounter()
             .AddThroughputCounter()
             .AddExceptionCounter()
             .AddFailureCounter()
@@ -701,7 +705,7 @@ public class MetricSnapshotTests
     public void GetDurationSnapshot_OnIMetricTracker_ShouldResolveDurationSnapshot()
     {
         // Arrange
-        IMetricTracker tracker = new MetricTracker("InterfaceTopic");
+        IMetricTracker tracker = new MetricTracker("InterfaceTopic").AddDurationCounter();
         tracker.In("Action");
         tracker.Out("Action");
 

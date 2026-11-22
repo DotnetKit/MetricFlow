@@ -14,6 +14,7 @@ public class CustomCountersTests
     {
         // Arrange
         var tracker = new MetricTracker("CompositeTest")
+            .AddDurationCounter()
             .AddMemoryCounter()
             .AddExceptionCounter();
 
@@ -76,6 +77,7 @@ public class CustomCountersTests
     {
         // Arrange
         var tracker = new MetricTracker("QuadCompositeTest")
+            .AddDurationCounter()
             .AddMemoryCounter()
             .AddExceptionCounter()
             .AddThroughputCounter();
@@ -144,6 +146,7 @@ public class CustomCountersTests
     {
         // Arrange - Register Duration (default), Memory, Exception, Throughput, and Dimension
         var tracker = new MetricTracker("PentaCompositeTest")
+            .AddDurationCounter()
             .AddMemoryCounter()
             .AddExceptionCounter()
             .AddThroughputCounter()
@@ -194,6 +197,7 @@ public class CustomCountersTests
         // Arrange
         var configNotifier = new CounterConfigNotifier();
         var tracker = new MetricTracker("DynamicConfigTopic", configObservable: configNotifier)
+            .AddDurationCounter()
             .AddExceptionCounter();
 
         // Act 1: Initial state (both enabled)
@@ -235,6 +239,7 @@ public class CustomCountersTests
     {
         // Arrange
         var tracker = new MetricTracker("ConcurrentTopic")
+            .AddDurationCounter()
             .AddMemoryCounter()
             .AddExceptionCounter();
 
@@ -279,6 +284,7 @@ public class CustomCountersTests
     {
         // Arrange
         var tracker = new MetricTracker("DiagnosticsTopic")
+            .AddDurationCounter()
             .AddMemoryCounter()
             .AddExceptionCounter();
 

@@ -124,6 +124,30 @@ public interface IMetricTracker : IMetricSnapshotsSource
         [CallerMemberName] string metricName = "");
 
     /// <summary>
+    /// Records a point-in-time functional metric event (increment of 1) without starting an operation scope.
+    /// Invokes functional/point counters (e.g. Count, Dimension, Throughput) and emits to the meter bridge,
+    /// while ignoring lifecycle telemetry counters (e.g. Duration, Memory, Hierarchy).
+    /// </summary>
+    /// <param name="metricName">The name of the functional metric or business event.</param>
+    /// <param name="tags">Optional key-value string tags (business dimensions) associated with this event.</param>
+    /// <param name="metadata">Optional numeric metadata associated with this event.</param>
+    void Record(string metricName, Dictionary<string, string>? tags = null, Dictionary<string, long>? metadata = null)
+        => Increment(metricName, 1, tags, metadata);
+
+    /// <summary>
+    /// Increments a point-in-time functional metric by the specified value without starting an operation scope.
+    /// Invokes functional/point counters (e.g. Count, Dimension, Throughput) and emits to the meter bridge,
+    /// while ignoring lifecycle telemetry counters (e.g. Duration, Memory, Hierarchy).
+    /// </summary>
+    /// <param name="metricName">The name of the functional metric or business event.</param>
+    /// <param name="value">The incremental value to add. Defaults to 1.</param>
+    /// <param name="tags">Optional key-value string tags (business dimensions) associated with this event.</param>
+    /// <param name="metadata">Optional numeric metadata associated with this event.</param>
+    void Increment(string metricName, long value = 1, Dictionary<string, string>? tags = null, Dictionary<string, long>? metadata = null)
+    {
+    }
+
+    /// <summary>
     /// Gets the latest metric snapshot for a specific metric name and counter name.
     /// </summary>
     /// <param name="metricName">The metric name.</param>
