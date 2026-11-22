@@ -110,6 +110,22 @@ public class MetricFlowMeterBridge : IMetricMeterBridge
         }
     }
 
+    public void RecordMetric(
+        string metricName,
+        long value,
+        IReadOnlyDictionary<string, string>? tags,
+        IReadOnlyDictionary<string, long>? metadata)
+    {
+        if (!IsEnabled)
+        {
+            return;
+        }
+
+        var instruments = GetOrAddInstruments(metricName);
+        var metricTags = CreateMeasurementTagList(metricName, status: null, exceptionType: null, tags);
+        instruments.Total.Add(value, in metricTags);
+    }
+
     public TagList CreateActiveTagList(string metricName, IReadOnlyDictionary<string, string>? tags)
     {
         var tagList = new TagList { { "operation", metricName } };

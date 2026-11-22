@@ -17,7 +17,7 @@ public class DurationPercentileTests
     {
         // Arrange: 100 samples from 1ms to 100ms
         var reservoir = new QuantileReservoir(capacity: 200);
-        for (int i = 1; i <= 100; i++)
+        for (var i = 1; i <= 100; i++)
         {
             reservoir.Record(TimeSpan.FromMilliseconds(i).Ticks);
         }
@@ -37,7 +37,7 @@ public class DurationPercentileTests
     {
         // Arrange: capacity 10, write 20 items (11..20 overwrite 1..10)
         var reservoir = new QuantileReservoir(capacity: 10);
-        for (int i = 1; i <= 20; i++)
+        for (var i = 1; i <= 20; i++)
         {
             reservoir.Record(TimeSpan.FromMilliseconds(i).Ticks);
         }
@@ -76,7 +76,7 @@ public class DurationPercentileTests
     {
         // Arrange
         var counter = new DurationCounter();
-        for (int i = 1; i <= 100; i++)
+        for (var i = 1; i <= 100; i++)
         {
             var ctx = new OutContext(
                 metricName: "SearchQuery",
@@ -126,7 +126,7 @@ public class DurationPercentileTests
 
         // Assert
         snapshot.Should().NotBeNull();
-        snapshot!.P50Duration.Should().BeNull();
+        snapshot.P50Duration.Should().BeNull();
         snapshot.P95Duration.Should().BeNull();
         snapshot.Percentiles.Should().BeNull();
     }
@@ -236,14 +236,15 @@ public class DurationPercentileTests
 
         // Assert
         snapshot.Should().NotBeNull();
-        snapshot!.P50Duration.Should().NotBeNull();
+        snapshot.P50Duration.Should().NotBeNull();
         snapshot.P99Duration.Should().NotBeNull();
-        tracker.DurationCounter.Options.ReservoirSize.Should().Be(512);
+        tracker.DurationCounter.Should().NotBeNull();
+        tracker.DurationCounter!.Options.ReservoirSize.Should().Be(512);
     }
 
     private sealed class TestLogger : ILogger
     {
-        public List<(LogLevel Level, EventId EventId, string Message, Exception? Exception)> Logs { get; } = new();
+        public List<(LogLevel Level, EventId EventId, string Message, Exception? Exception)> Logs { get; } = [];
 
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
 

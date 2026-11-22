@@ -20,10 +20,11 @@ public class ConsoleSinkFormattingTests
     [Fact]
     public void FormatDuration_WithDifferentUnits_FormatsCorrectly()
     {
-        var opt = new ConsoleMetricSinkOptions();
-
-        // Milliseconds
-        opt.DurationUnit = DurationUnit.Milliseconds;
+        var opt = new ConsoleMetricSinkOptions
+        {
+            // Milliseconds
+            DurationUnit = DurationUnit.Milliseconds
+        };
         opt.FormatDuration(TimeSpan.FromMilliseconds(1234)).Should().Be("1234.00 ms");
 
         // Seconds
@@ -60,10 +61,11 @@ public class ConsoleSinkFormattingTests
     [Fact]
     public void FormatMemory_WithDifferentUnits_FormatsCorrectly()
     {
-        var opt = new ConsoleMetricSinkOptions();
-
-        // Bytes
-        opt.MemoryUnit = MemoryUnit.Bytes;
+        var opt = new ConsoleMetricSinkOptions
+        {
+            // Bytes
+            MemoryUnit = MemoryUnit.Bytes
+        };
         opt.FormatMemory(1048576).Should().Be("1048576 B");
 
         // Kilobytes

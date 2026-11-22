@@ -26,7 +26,7 @@ public class MetricTrackerTests
     public void MetricTracker_ShouldTrackInAndOut()
     {
         // Arrange
-        var tracker = new MetricTracker("TestTopic");
+        var tracker = new MetricTracker("TestTopic").AddDurationCounter();
 
         // Act
         tracker.In("TestMetric");
@@ -59,7 +59,7 @@ public class MetricTrackerTests
     public async Task MetricTracker_ShouldTrackUsingDisposablePattern()
     {
         // Arrange
-        var tracker = new MetricTracker("TestTopic");
+        var tracker = new MetricTracker("TestTopic").AddDurationCounter();
 
         // Act
         using (var _ = tracker.Track("TestMetric"))
@@ -77,7 +77,7 @@ public class MetricTrackerTests
     public void MetricTracker_ShouldTrackFailedMetrics()
     {
         // Arrange
-        var tracker = new MetricTracker("TestTopic");
+        var tracker = new MetricTracker("TestTopic").AddDurationCounter();
 
         // Act
         tracker.In("TestMetric");
@@ -98,7 +98,7 @@ public class MetricTrackerTests
     public async Task MetricTracker_ShouldRecordAccurateDuration()
     {
         // Arrange
-        var tracker = new MetricTracker("TestTopic");
+        var tracker = new MetricTracker("TestTopic").AddDurationCounter();
 
         // Act
         using (tracker.Track("DelayedMetric"))
@@ -117,7 +117,7 @@ public class MetricTrackerTests
     public async Task MetricTracker_ShouldHandleConcurrentTracking()
     {
         // Arrange
-        var tracker = new MetricTracker("TestTopic");
+        var tracker = new MetricTracker("TestTopic").AddDurationCounter();
         const int concurrency = 20;
 
         // Act
@@ -143,7 +143,7 @@ public class MetricTrackerTests
     public void MetricTracker_SamplingRateNull_ShouldTrackAll()
     {
         // Arrange
-        var tracker = new MetricTracker("TestTopic", samplingRate: null);
+        var tracker = new MetricTracker("TestTopic", samplingRate: null).AddDurationCounter();
 
         // Act
         tracker.In("TestMetric");
@@ -161,6 +161,7 @@ public class MetricTrackerTests
     {
         // Arrange
         var tracker = new MetricTracker("TestTopic")
+            .AddDurationCounter()
             .AddExceptionCounter()
             .AddFailureCounter();
 
@@ -181,14 +182,14 @@ public class MetricTrackerTests
         // Assert ExceptionCounter does NOT record an exception because no Exception was thrown
         var exceptionSnapshot = tracker.GetExceptionSnapshot("LogicalFailureOp");
         exceptionSnapshot.Should().NotBeNull();
-        exceptionSnapshot!.TotalOperations.Should().Be(1);
+        exceptionSnapshot.TotalOperations.Should().Be(1);
         exceptionSnapshot.TotalExceptions.Should().Be(0);
         exceptionSnapshot.ExceptionsByType.Should().BeEmpty();
 
         // Assert FailureCounter records the logical failure
         var failureSnapshot = tracker.GetFailureShapshot("LogicalFailureOp");
         failureSnapshot.Should().NotBeNull();
-        failureSnapshot!.TotalOperations.Should().Be(1);
+        failureSnapshot.TotalOperations.Should().Be(1);
         failureSnapshot.TotalFailures.Should().Be(1);
         failureSnapshot.LogicalFailures.Should().Be(1);
         failureSnapshot.ExceptionFailures.Should().Be(0);
@@ -199,7 +200,7 @@ public class MetricTrackerTests
     public void Track_WithSetFailedFalse_ShouldNotRecordFailure()
     {
         // Arrange
-        var tracker = new MetricTracker("TestTopic");
+        var tracker = new MetricTracker("TestTopic").AddDurationCounter();
 
         // Act
         using (var scope = tracker.Track("SuccessfulOp"))
@@ -235,7 +236,7 @@ public class MetricTrackerTests
     public void Tracker_ShouldImplementIMetricSnapshotsSource()
     {
         // Arrange
-        var tracker = new MetricTracker("SourceTopic");
+        var tracker = new MetricTracker("SourceTopic").AddDurationCounter();
         tracker.In("SourceOp");
         tracker.Out("SourceOp");
 
@@ -254,7 +255,7 @@ public class MetricTrackerTests
     public void Track_WithNoMetricName_ShouldResolveCallingMethodName()
     {
         // Arrange
-        var tracker = new MetricTracker("CallerMemberTopic");
+        var tracker = new MetricTracker("CallerMemberTopic").AddDurationCounter();
 
         // Act
         HelperCallingMethodForTrack(tracker);
@@ -277,7 +278,7 @@ public class MetricTrackerTests
     public void Track_WithTagsOnly_ShouldResolveCallingMethodName()
     {
         // Arrange
-        var tracker = new MetricTracker("CallerMemberTopic");
+        var tracker = new MetricTracker("CallerMemberTopic").AddDurationCounter();
         var tags = new Dictionary<string, string> { ["env"] = "test" };
 
         // Act
@@ -301,7 +302,7 @@ public class MetricTrackerTests
     public void InAndOut_WithNoMetricName_ShouldResolveCallingMethodName()
     {
         // Arrange
-        var tracker = new MetricTracker("CallerMemberTopic");
+        var tracker = new MetricTracker("CallerMemberTopic").AddDurationCounter();
 
         // Act
         HelperCallingMethodForInOut(tracker);

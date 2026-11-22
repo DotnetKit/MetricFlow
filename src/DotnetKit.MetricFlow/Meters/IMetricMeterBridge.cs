@@ -50,6 +50,17 @@ public interface IMetricMeterBridge : IDisposable
         IReadOnlyDictionary<string, long>? metadata);
 
     /// <summary>
+    /// Records a point-in-time functional metric increment to System.Diagnostics.Metrics Counter&lt;long&gt; instruments.
+    /// </summary>
+    void RecordMetric(
+        string metricName,
+        long value,
+        IReadOnlyDictionary<string, string>? tags,
+        IReadOnlyDictionary<string, long>? metadata)
+    {
+    }
+
+    /// <summary>
     /// Resets cardinality caches and internal state.
     /// </summary>
     void Reset();

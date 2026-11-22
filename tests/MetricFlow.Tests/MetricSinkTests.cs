@@ -38,7 +38,7 @@ public class MetricSinkTests
             FailedOperations: 1);
 
         // Act
-        sink.Emit(new[] { tpSnapshot });
+        sink.Emit([tpSnapshot]);
         var output = stringWriter.ToString().Trim();
 
         // Assert
@@ -74,7 +74,7 @@ public class MetricSinkTests
             Timestamp: DateTime.UtcNow);
 
         // Act
-        sink.Emit(new[] { failureSnapshot });
+        sink.Emit([failureSnapshot]);
         var output = stringWriter.ToString();
 
         // Assert
@@ -140,15 +140,14 @@ public class MetricSinkTests
         var options = new ConsoleMetricSinkOptions
         {
             Colorize = true,
-            IncludeTimestamp = false
-        };
-
-        options.ColorSelector = snapshot => snapshot switch
-        {
-            DurationSnapshot d when d.AverageDuration.TotalMilliseconds > 2000 => ConsoleColor.Red,
-            DurationSnapshot d when d.AverageDuration.TotalMilliseconds > 700 => ConsoleColor.DarkYellow,
-            ExceptionSnapshot { TotalExceptions: > 0 } => ConsoleColor.Red,
-            _ => ConsoleColor.Green
+            IncludeTimestamp = false,
+            ColorSelector = snapshot => snapshot switch
+            {
+                DurationSnapshot { AverageDuration.TotalMilliseconds: > 2000 } => ConsoleColor.Red,
+                DurationSnapshot { AverageDuration.TotalMilliseconds: > 700 } => ConsoleColor.DarkYellow,
+                ExceptionSnapshot { TotalExceptions: > 0 } => ConsoleColor.Red,
+                _ => ConsoleColor.Green
+            }
         };
 
         var sink = new ConsoleMetricSink(options);
@@ -240,17 +239,14 @@ public class MetricSinkTests
         using var observableSink = new ObservableMetricSink("RxSink");
         var received = new List<IReadOnlyList<IMetricSnapshot>>();
 
-        using var subscription = observableSink.Subscribe(snapshots =>
-        {
-            received.Add(snapshots);
-        });
+        using var subscription = observableSink.Subscribe(received.Add);
 
         var snapshot1 = new ThroughputSnapshot("MetricA", "Throughput", 10, 1, TimeSpan.FromSeconds(1), 10, 10, DateTime.UtcNow);
         var snapshot2 = new ThroughputSnapshot("MetricB", "Throughput", 20, 2, TimeSpan.FromSeconds(1), 20, 10, DateTime.UtcNow);
 
         // Act
-        observableSink.Emit(new[] { snapshot1 });
-        observableSink.Emit(new[] { snapshot2 });
+        observableSink.Emit([snapshot1]);
+        observableSink.Emit([snapshot2]);
 
         // Assert
         received.Should().HaveCount(2);
@@ -259,7 +255,7 @@ public class MetricSinkTests
 
         // Unsubscribe
         subscription.Dispose();
-        observableSink.Emit(new[] { snapshot1 });
+        observableSink.Emit([snapshot1]);
 
         received.Should().HaveCount(2); // No new events after unregistering
     }
@@ -277,7 +273,7 @@ public class MetricSinkTests
             {
                 EmitEveryNExecutions = 3
             }
-        });
+        }.AddDurationCounter());
 
         // Act
         tracker.Track("Process").Dispose(); // 1
@@ -311,7 +307,7 @@ public class MetricSinkTests
             {
                 EmitOnFailure = true
             }
-        });
+        }.AddTelemetryCounters());
 
         // Act - Success
         tracker.In("Charge");
@@ -340,7 +336,7 @@ public class MetricSinkTests
             {
                 EmitOnSlowDurationThreshold = TimeSpan.FromMilliseconds(50)
             }
-        });
+        }.AddDurationCounter());
 
         // Act - Fast query (10ms)
         tracker.In("Select");
@@ -361,7 +357,8 @@ public class MetricSinkTests
     {
         // Arrange
         var testSink = new RecordingMetricSink();
-        var tracker = new MetricTracker("Inventory");
+        var tracker = new MetricTracker("Inventory")
+            .AddDurationCounter();
         tracker.RegisterSink(testSink);
 
         using (tracker.Track("AddItem")) { }
@@ -372,7 +369,7 @@ public class MetricSinkTests
         // Act - Sync flush
         tracker.FlushSinks();
         testSink.EmittedBatches.Should().HaveCount(1);
-        testSink.EmittedBatches[0].Select(s => s.MetricName).Distinct().Should().Contain(new[] { "AddItem", "RemoveItem" });
+        testSink.EmittedBatches[0].Select(s => s.MetricName).Distinct().Should().Contain(["AddItem", "RemoveItem"]);
 
         // Act - Async flush
         await tracker.FlushSinksAsync();
@@ -458,7 +455,7 @@ public class MetricSinkTests
             FailedOperations: 0);
 
         // Act
-        sink.Emit(new[] { snapshot });
+        sink.Emit([snapshot]);
 
         // Assert
         testLogger.Logs.Should().HaveCount(1);
@@ -490,7 +487,7 @@ public class MetricSinkTests
             Timestamp: DateTime.UtcNow);
 
         // Act
-        sink.Emit(new[] { failureSnapshot });
+        sink.Emit([failureSnapshot]);
 
         // Assert
         testLogger.Logs.Should().HaveCount(1);
@@ -528,7 +525,7 @@ public class MetricSinkTests
 
     private sealed class TestLogger : ILogger
     {
-        public List<(LogLevel Level, EventId EventId, string Message, Exception? Exception)> Logs { get; } = new();
+        public List<(LogLevel Level, EventId EventId, string Message, Exception? Exception)> Logs { get; } = [];
 
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
 
@@ -546,15 +543,10 @@ public class MetricSinkTests
         }
     }
 
-    private sealed class RecordingMetricSink : IMetricSink
+    private sealed class RecordingMetricSink(string name = "RecordingSink") : IMetricSink
     {
-        public string Name { get; }
-        public List<IReadOnlyList<IMetricSnapshot>> EmittedBatches { get; } = new();
-
-        public RecordingMetricSink(string name = "RecordingSink")
-        {
-            Name = name;
-        }
+        public string Name { get; } = name;
+        public List<IReadOnlyList<IMetricSnapshot>> EmittedBatches { get; } = [];
 
         public void Emit(IReadOnlyList<IMetricSnapshot> snapshots)
         {

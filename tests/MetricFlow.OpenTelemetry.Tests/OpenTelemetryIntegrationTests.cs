@@ -39,11 +39,11 @@ public class OpenTelemetryIntegrationTests
 
         var durationMetric = exportedMetrics.FirstOrDefault(m => m.Name == "ProcessPayment.duration");
         durationMetric.Should().NotBeNull();
-        durationMetric!.Unit.Should().Be("ms");
+        durationMetric.Unit.Should().Be("ms");
 
         var totalMetric = exportedMetrics.FirstOrDefault(m => m.Name == "ProcessPayment.total");
         totalMetric.Should().NotBeNull();
-        totalMetric!.Unit.Should().Be("{operations}");
+        totalMetric.Unit.Should().Be("{operations}");
 
         // Inspect metric points
         var totalPoints = new List<MetricPoint>();
@@ -112,7 +112,7 @@ public class OpenTelemetryIntegrationTests
         itemsMetric.Should().NotBeNull();
 
         var points = new List<MetricPoint>();
-        foreach (ref readonly var point in itemsMetric!.GetMetricPoints())
+        foreach (ref readonly var point in itemsMetric.GetMetricPoints())
         {
             points.Add(point);
         }
@@ -144,8 +144,8 @@ public class OpenTelemetryIntegrationTests
         // Assert
         tags.Should().ContainKey("trace_id");
         tags.Should().ContainKey("span_id");
-        tags["trace_id"].Should().Be(activity!.TraceId.ToString());
-        tags["span_id"].Should().Be(activity!.SpanId.ToString());
+        tags["trace_id"].Should().Be(activity.TraceId.ToString());
+        tags["span_id"].Should().Be(activity.SpanId.ToString());
         tags["client"].Should().Be("web");
     }
 

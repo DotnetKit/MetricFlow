@@ -164,9 +164,9 @@ public record HierarchyTreeSnapshot(
         }
 
         var children = node.Children;
-        for (int i = 0; i < children.Count; i++)
+        for (var i = 0; i < children.Count; i++)
         {
-            bool isLastChild = i == children.Count - 1;
+            var isLastChild = i == children.Count - 1;
             FormatNode(sb, children[i], childIndent, isLastChild, isRoot: false, colorize: colorize, colorSelector: colorSelector, durationFormatter: durationFormatter, memoryFormatter: memoryFormatter);
         }
     }

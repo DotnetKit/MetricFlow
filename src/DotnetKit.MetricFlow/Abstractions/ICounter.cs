@@ -30,6 +30,15 @@ public interface ICounter : IMetricSnapshotsSource
     void OnOut(object? state, in OutContext context);
 
     /// <summary>
+    /// Invoked when a point-in-time functional metric event is recorded via <see cref="IMetricTracker.Record"/> or <see cref="IMetricTracker.Increment"/>.
+    /// Telemetry counters that require an operation lifecycle (<see cref="OnIn"/>/<see cref="OnOut"/>) ignore this by default.
+    /// </summary>
+    /// <param name="context">The point-in-time record context including metric name, value, tags, and metadata.</param>
+    void OnRecord(in RecordContext context)
+    {
+    }
+
+    /// <summary>
     /// Gets the latest metric snapshot for the specified metric name.
     /// </summary>
     /// <param name="metricName">The name of the metric.</param>

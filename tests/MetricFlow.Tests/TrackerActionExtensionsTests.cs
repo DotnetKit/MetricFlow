@@ -11,7 +11,7 @@ public class TrackerActionExtensionsTests
     public void TrackAction_ShouldExecuteAndRecordSuccess()
     {
         // Arrange
-        var tracker = new MetricTracker("ActionTopic").AddExceptionCounter();
+        var tracker = new MetricTracker("ActionTopic").AddTelemetryCounters();
         var executed = false;
 
         // Act
@@ -30,7 +30,7 @@ public class TrackerActionExtensionsTests
     public void TrackAction_WhenExceptionThrown_ShouldRecordExceptionAndRethrow()
     {
         // Arrange
-        var tracker = new MetricTracker("ActionTopic").AddExceptionCounter();
+        var tracker = new MetricTracker("ActionTopic").AddTelemetryCounters();
 
         // Act
         var act = () => tracker.TrackAction("FailingOp", () =>
@@ -53,7 +53,7 @@ public class TrackerActionExtensionsTests
     public void TrackAction_WithReturnValue_ShouldReturnResult()
     {
         // Arrange
-        var tracker = new MetricTracker("ActionTopic");
+        var tracker = new MetricTracker("ActionTopic").AddDurationCounter();
 
         // Act
         var result = tracker.TrackAction("ReturnOp", () => 42);
@@ -69,7 +69,7 @@ public class TrackerActionExtensionsTests
     public async Task TrackActionAsync_ShouldExecuteAndRecordSuccess()
     {
         // Arrange
-        var tracker = new MetricTracker("ActionTopic").AddExceptionCounter();
+        var tracker = new MetricTracker("ActionTopic").AddTelemetryCounters();
         var executed = false;
 
         // Act
@@ -92,7 +92,7 @@ public class TrackerActionExtensionsTests
     public async Task TrackActionAsync_WhenExceptionThrown_ShouldRecordExceptionAndRethrow()
     {
         // Arrange
-        var tracker = new MetricTracker("ActionTopic").AddExceptionCounter();
+        var tracker = new MetricTracker("ActionTopic").AddTelemetryCounters();
 
         // Act
         var act = async () => await tracker.TrackActionAsync("FailingAsyncOp", async () =>
@@ -116,7 +116,7 @@ public class TrackerActionExtensionsTests
     public async Task TrackActionAsync_WithReturnValue_ShouldReturnResult()
     {
         // Arrange
-        var tracker = new MetricTracker("ActionTopic");
+        var tracker = new MetricTracker("ActionTopic").AddDurationCounter();
 
         // Act
         var result = await tracker.TrackActionAsync("AsyncReturnOp", async () =>
@@ -136,7 +136,7 @@ public class TrackerActionExtensionsTests
     public async Task TrackAction_WithCallerMemberName_ShouldInferMethodName()
     {
         // Arrange
-        var tracker = new MetricTracker("ActionTopic");
+        var tracker = new MetricTracker("ActionTopic").AddDurationCounter();
 
         // Act
         HelperCallingTrackAction(tracker);

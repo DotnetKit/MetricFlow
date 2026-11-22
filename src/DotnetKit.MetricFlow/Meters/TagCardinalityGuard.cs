@@ -6,15 +6,10 @@ namespace DotnetKit.MetricFlow.Meters;
 /// Thread-safe cardinality protector that tracks unique values per tag key
 /// and clamps excess distinct values to an overflow bucket before emission to System.Diagnostics.Metrics.
 /// </summary>
-public class TagCardinalityGuard
+public class TagCardinalityGuard(MetricFlowMeterOptions options)
 {
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, byte>> _seenTagValues = new(StringComparer.OrdinalIgnoreCase);
-    private readonly MetricFlowMeterOptions _options;
-
-    public TagCardinalityGuard(MetricFlowMeterOptions options)
-    {
-        _options = options ?? throw new ArgumentNullException(nameof(options));
-    }
+    private readonly MetricFlowMeterOptions _options = options ?? throw new ArgumentNullException(nameof(options));
 
     /// <summary>
     /// Sanitizes the tag value according to configured cardinality limits.
@@ -33,7 +28,7 @@ public class TagCardinalityGuard
             return _options.OverflowBucket;
         }
 
-        int maxLimit = _options.TagCardinalityLimits.TryGetValue(key, out var customLimit)
+        var maxLimit = _options.TagCardinalityLimits.TryGetValue(key, out var customLimit)
             ? customLimit
             : _options.MaxUniqueTagValues;
 

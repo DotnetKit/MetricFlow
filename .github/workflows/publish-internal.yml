@@ -6,7 +6,7 @@ on:
 env:
   GITHUB_ARTIFACTS_FEED_URL: https://nuget.pkg.github.com/DotnetKit/index.json
   BUILD_CONFIGURATION: "Release"
-  MinVerMinimumMajorMinor: "1.0"
+  MinVerMinimumMajorMinor: "1.1"
   MinVerTagPrefix: "v"
   MinVerDefaultPreReleaseIdentifiers: "alpha.${{ github.run_number }}.0"
 

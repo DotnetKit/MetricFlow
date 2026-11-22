@@ -6,12 +6,11 @@ internal class Program
 {
     private static async Task Main(string[] _)
     {
-        // 1. Initialize tracker with topic name and optional topic tags
-        // By default, MetricTracker registers DurationCounter with zero additional counters.
-        var tracker = new MetricTracker("BasicConsoleTopic", new()
-        {
-            ["environment"] = "Development"
-        });
+        // 1. Initialize tracker with topic name, optional topic tags, and opt-in duration telemetry
+        var tracker = new MetricTracker(
+            "BasicConsoleTopic",
+            new() { ["environment"] = "Development" }
+        ).AddTelemetryCounters();
 
         Console.WriteLine("Executing operations with MetricTracker...\n");
 
@@ -32,5 +31,15 @@ internal class Program
 
         // 4. Print formatted telemetry snapshots
         Console.WriteLine(tracker.ToString());
+
+        // 5. Pure functional metrics (zero duration/memory/exception telemetry overhead)
+        using var businessTracker = new MetricTracker("BusinessEvents").AddFunctionalMetrics(
+            "country"
+        );
+
+        businessTracker.Record("OrderPlaced", new() { ["country"] = "FR" });
+        businessTracker.Increment("OrderPlaced", 3, new() { ["country"] = "US" });
+
+        Console.WriteLine(businessTracker.ToString());
     }
 }

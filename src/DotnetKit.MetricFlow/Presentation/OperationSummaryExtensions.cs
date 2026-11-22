@@ -47,9 +47,8 @@ public static class OperationSummaryExtensions
 
         var summaries = new List<OperationSummary>(order.Count);
 
-        for (int i = 0; i < order.Count; i++)
+        foreach (var opName in order)
         {
-            var opName = order[i];
             var items = groups[opName];
 
             ThroughputSnapshot? throughput = null;
@@ -58,12 +57,12 @@ public static class OperationSummaryExtensions
             FailureSnapshot? failure = null;
             ExceptionSnapshot? exception = null;
             HierarchyTreeSnapshot? hierarchy = null;
+            CountSnapshot? count = null;
             List<DimensionSnapshot>? dimensions = null;
             List<IMetricSnapshot>? additional = null;
 
-            for (int j = 0; j < items.Count; j++)
+            foreach (var item in items)
             {
-                var item = items[j];
                 switch (item)
                 {
                     case ThroughputSnapshot tp when throughput == null:
@@ -83,6 +82,9 @@ public static class OperationSummaryExtensions
                         break;
                     case HierarchyTreeSnapshot h when hierarchy == null:
                         hierarchy = h;
+                        break;
+                    case CountSnapshot c when count == null:
+                        count = c;
                         break;
                     case DimensionSnapshot dim:
                         dimensions ??= [];
@@ -105,7 +107,8 @@ public static class OperationSummaryExtensions
                     Exception: exception,
                     Dimensions: dimensions,
                     Hierarchy: hierarchy,
-                    AdditionalSnapshots: additional
+                    AdditionalSnapshots: additional,
+                    Count: count
                 )
             );
         }

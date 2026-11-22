@@ -219,18 +219,25 @@ public class MetricFlowOptions
         => ConfigureSinkSampling(configure);
 
     /// <summary>
+    /// Whether to register a <see cref="DurationCounter"/> on the tracker.
+    /// Defaults to false in v1.1; opt in via <see cref="AddDurationCounter"/>, <see cref="ConfigureDuration"/>, or <see cref="AddTelemetryCounters"/>.
+    /// </summary>
+    public bool IncludeDurationCounter { get; set; }
+
+    /// <summary>
     /// Configuration options for duration measurement and percentile calculation.
     /// </summary>
     public DurationCounterOptions DurationOptions { get; set; } = new();
 
     /// <summary>
-    /// Configures the default duration counter options (e.g. enabling percentiles, reservoir size).
+    /// Configures the duration counter options (e.g. enabling percentiles, reservoir size) and enables duration tracking.
     /// </summary>
     /// <param name="configure">The configuration delegate.</param>
     /// <returns>This options instance for fluent chaining.</returns>
     public MetricFlowOptions ConfigureDuration(Action<DurationCounterOptions> configure)
     {
         ArgumentNullException.ThrowIfNull(configure);
+        IncludeDurationCounter = true;
         configure(DurationOptions);
         return this;
     }
@@ -247,9 +254,9 @@ public class MetricFlowOptions
 
     /// <summary>
     /// Whether to automatically register an exception counter on the tracker.
-    /// Defaults to true.
+    /// Defaults to false in v1.1; opt in via <see cref="AddExceptionCounter"/> or <see cref="AddTelemetryCounters"/>.
     /// </summary>
-    public bool AutoAddExceptionCounter { get; set; } = true;
+    public bool AutoAddExceptionCounter { get; set; }
 
     /// <summary>
     /// Configures whether to automatically register an exception counter on the tracker.
@@ -267,6 +274,87 @@ public class MetricFlowOptions
     /// Additional counters to register with the tracker.
     /// </summary>
     public IList<ICounter> Counters { get; } = new List<ICounter>();
+
+    /// <summary>
+    /// Adds a <see cref="DurationCounter"/> to track operation execution latency.
+    /// </summary>
+    /// <param name="configure">Optional duration counter options (e.g. percentiles).</param>
+    /// <param name="name">Optional custom counter name. Defaults to <see cref="DurationCounter.DefaultCounterName"/>.</param>
+    /// <returns>The options instance for chaining.</returns>
+    public MetricFlowOptions AddDurationCounter(
+        Action<DurationCounterOptions>? configure = null,
+        string name = DurationCounter.DefaultCounterName)
+    {
+        var durationOptions = new DurationCounterOptions
+        {
+            EnablePercentiles = DurationOptions.EnablePercentiles,
+            ReservoirSize = DurationOptions.ReservoirSize
+        };
+        configure?.Invoke(durationOptions);
+        Counters.Add(new DurationCounter(name, durationOptions));
+        return this;
+    }
+
+    /// <summary>
+    /// Adds a lightweight <see cref="CountCounter"/> to track pure functional event counts without telemetry overhead.
+    /// </summary>
+    /// <param name="name">Optional custom counter name. Defaults to <see cref="CountCounter.DefaultCounterName"/>.</param>
+    /// <returns>The options instance for chaining.</returns>
+    public MetricFlowOptions AddCountCounter(string name = CountCounter.DefaultCounterName)
+    {
+        Counters.Add(new CountCounter(name));
+        return this;
+    }
+
+    /// <summary>
+    /// Registers the standard telemetry counter preset (<see cref="DurationCounter"/> and <see cref="ExceptionCounter"/>,
+    /// plus optional <see cref="MemoryCounter"/> and <see cref="HierarchyCounter"/>).
+    /// </summary>
+    /// <param name="includeMemory">Whether to also register a <see cref="MemoryCounter"/>.</param>
+    /// <param name="includeHierarchy">Whether to also register a <see cref="HierarchyCounter"/>.</param>
+    /// <param name="configureDuration">Optional configuration delegate for <see cref="DurationCounterOptions"/>.</param>
+    /// <returns>The options instance for chaining.</returns>
+    public MetricFlowOptions AddTelemetryCounters(
+        bool includeMemory = false,
+        bool includeHierarchy = false,
+        Action<DurationCounterOptions>? configureDuration = null)
+    {
+        AddDurationCounter(configureDuration);
+        AddExceptionCounter(true);
+
+        if (includeMemory)
+        {
+            AddMemoryCounter();
+        }
+
+        if (includeHierarchy)
+        {
+            AddHierarchyCounter();
+        }
+
+        return this;
+    }
+
+    /// <summary>
+    /// Registers the pure functional metrics preset (<see cref="CountCounter"/> plus optional <see cref="DimensionCounter"/>s
+    /// for each specified business dimension key) without any duration, memory, or exception telemetry counters.
+    /// </summary>
+    /// <param name="dimensionKeys">Optional tag/dimension keys to register <see cref="DimensionCounter"/> breakdowns for.</param>
+    /// <returns>The options instance for chaining.</returns>
+    public MetricFlowOptions AddFunctionalMetrics(params string[] dimensionKeys)
+    {
+        AddCountCounter();
+
+        if (dimensionKeys != null)
+        {
+            foreach (var key in dimensionKeys.Where(static k => !string.IsNullOrWhiteSpace(k)))
+            {
+                AddDimensionCounter(key);
+            }
+        }
+
+        return this;
+    }
 
     /// <summary>
     /// Adds a <see cref="ThroughputCounter"/> to the configured counters.

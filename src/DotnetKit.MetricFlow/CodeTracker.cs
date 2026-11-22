@@ -90,7 +90,7 @@ public class CodeTracker : IDisposable
 
 
         var inContext = new InContext(metricName, _tags, _metadata);
-        for (int i = 0; i < counters.Length; i++)
+        for (var i = 0; i < counters.Length; i++)
         {
             if (counters[i].IsEnabled)
             {
@@ -98,7 +98,7 @@ public class CodeTracker : IDisposable
             }
         }
 
-        if (_meterBridge != null && _meterBridge.IsEnabled)
+        if (_meterBridge is { IsEnabled: true })
         {
             _inFlightTagList = _meterBridge.RecordOperationIn(_metricName, _tags, _metadata);
         }
@@ -193,7 +193,7 @@ public class CodeTracker : IDisposable
             var duration = Stopwatch.GetElapsedTime(_startTimestamp);
             var outContext = new OutContext(_metricName, _failed, _exception, duration, _tags, _metadata);
 
-            for (int i = 0; i < _counters.Length; i++)
+            for (var i = 0; i < _counters.Length; i++)
             {
                 if (_counters[i].IsEnabled)
                 {

@@ -77,7 +77,7 @@ public class HierarchyNode
         {
             lock (_syncRoot)
             {
-                return _children.ToArray();
+                return [.. _children];
             }
         }
     }

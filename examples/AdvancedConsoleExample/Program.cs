@@ -9,15 +9,14 @@ internal class Program
     private static async Task Main(string[] _)
     {
         // Initialize tracker with full multi-counter telemetry pipeline:
-        // DurationCounter (default) + ThroughputCounter + ExceptionCounter + MemoryCounter + TagBreakdownCounter
+        // Telemetry preset (Duration + Exception + Memory) + ThroughputCounter + DimensionCounter
         var tracker = new MetricTracker("AdvancedConsoleTopic", new()
         {
             ["tenant_id"] = "TenantId1",
             ["session_id"] = Guid.NewGuid().ToString()
         })
+            .AddTelemetryCounters(includeMemory: true)
             .AddThroughputCounter()
-            .AddExceptionCounter()
-            .AddMemoryCounter()
             .AddDimensionCounter("region");
 
         Console.WriteLine("Executing advanced operations with MetricFlow...\n");

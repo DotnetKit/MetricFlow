@@ -171,7 +171,7 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
     public IEnumerable<ICounter> GetCounters() =>
         _counters
             .Values.OrderBy(c =>
-                _counterRegistrationSequences.TryGetValue(c.Name, out var seq) ? seq : long.MaxValue
+                _counterRegistrationSequences.GetValueOrDefault(c.Name, long.MaxValue)
             );
 
     /// <summary>
@@ -369,6 +369,61 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
     }
 
     /// <summary>
+    /// Records a point-in-time functional metric event (increment of 1) without an operation start/end scope.
+    /// </summary>
+    /// <param name="metricName">The name of the functional metric or business event.</param>
+    /// <param name="tags">Optional key-value string tags (business dimensions) associated with this event.</param>
+    /// <param name="metadata">Optional numeric metadata associated with this event.</param>
+    public void Record(
+        string metricName,
+        Dictionary<string, string>? tags = null,
+        Dictionary<string, long>? metadata = null)
+        => Increment(metricName, 1, tags, metadata);
+
+    /// <summary>
+    /// Increments a point-in-time functional metric by the specified value without an operation start/end scope.
+    /// </summary>
+    /// <param name="metricName">The name of the functional metric or business event.</param>
+    /// <param name="value">The incremental value to add. Defaults to 1.</param>
+    /// <param name="tags">Optional key-value string tags (business dimensions) associated with this event.</param>
+    /// <param name="metadata">Optional numeric metadata associated with this event.</param>
+    public void Increment(
+        string metricName,
+        long value = 1,
+        Dictionary<string, string>? tags = null,
+        Dictionary<string, long>? metadata = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(metricName);
+
+        if (ShouldDrop(_samplingRate))
+        {
+            return;
+        }
+
+        EnsureOperationSequence(metricName);
+
+        var active = _activeCounters;
+        if (active.Length > 0)
+        {
+            var recordContext = new RecordContext(metricName, value, tags, metadata);
+            foreach (var counter in active)
+            {
+                if (counter.IsEnabled)
+                {
+                    counter.OnRecord(in recordContext);
+                }
+            }
+        }
+
+        if (_meterBridge is { IsEnabled: true })
+        {
+            _meterBridge.RecordMetric(metricName, value, tags, metadata);
+        }
+
+        HandleOperationCompleted(metricName, TimeSpan.Zero, failed: false, exception: null);
+    }
+
+    /// <summary>
     /// Gets a specific counter snapshot for the given metric and counter name.
     /// </summary>
     /// <param name="metricName">The name of the metric.</param>
@@ -417,10 +472,10 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
 
         return snapshots
             .OrderBy(s =>
-                _operationSequences.TryGetValue(s.MetricName, out var seq) ? seq : long.MaxValue
+                _operationSequences.GetValueOrDefault(s.MetricName, long.MaxValue)
             )
             .ThenBy(s =>
-                counterOrder.TryGetValue(s.CounterName, out var cIdx) ? cIdx : int.MaxValue
+                counterOrder.GetValueOrDefault(s.CounterName, int.MaxValue)
             );
     }
 

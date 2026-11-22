@@ -42,8 +42,26 @@ public class ThroughputCounter(string name = ThroughputCounter.DefaultCounterNam
             items = parsedItems;
         }
 
-        TimeSpan duration = context.Duration ?? (state > 0 ? Stopwatch.GetElapsedTime(state) : TimeSpan.Zero);
+        var duration = context.Duration ?? (state > 0 ? Stopwatch.GetElapsedTime(state) : TimeSpan.Zero);
         throughputState.Record(items, duration, context.Failed);
+    }
+
+    public override void OnRecord(in RecordContext context)
+    {
+        if (!IsEnabled) return;
+
+        var throughputState = _states.GetOrAdd(
+            context.MetricName,
+            name => new MetricThroughputState(name, Interlocked.Increment(ref _sequenceCounter))
+        );
+
+        var items = context.Value;
+        if (items == 1 && ItemCountExtractor.TryExtractItemCount(context.Tags, context.Metadata, out var parsedItems))
+        {
+            items = parsedItems;
+        }
+
+        throughputState.Record(items, TimeSpan.Zero, failed: false);
     }
 
     public override IMetricSnapshot? GetSnapshot(string metricName)

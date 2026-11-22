@@ -53,13 +53,13 @@ public class MetricSinkTriggerOptions
             return true;
         }
 
-        if (EmitEveryNExecutions.HasValue && EmitEveryNExecutions.Value > 0 && executionCount % EmitEveryNExecutions.Value == 0)
+        if (EmitEveryNExecutions is > 0 and var stride && executionCount % stride == 0)
         {
             return true;
         }
 
-        if (EmitSampleRate.HasValue && EmitSampleRate.Value > 0 &&
-            (EmitSampleRate.Value >= 1.0 || Random.Shared.NextDouble() < EmitSampleRate.Value))
+        if (EmitSampleRate is > 0 and var sampleRate &&
+            (sampleRate >= 1.0 || Random.Shared.NextDouble() < sampleRate))
         {
             return true;
         }

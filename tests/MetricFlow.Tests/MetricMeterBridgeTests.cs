@@ -118,7 +118,7 @@ public class MetricMeterBridgeTests
         var tracker = new MetricTracker(options);
 
         // Act: Generate 1,000 distinct tag values
-        for (int i = 0; i < 1000; i++)
+        for (var i = 0; i < 1000; i++)
         {
             using (tracker.Track("ProcessUserAction", new() { ["user_id"] = $"user_{i}" }))
             {
@@ -261,10 +261,8 @@ public class MetricMeterBridgeTests
         // Act
         try
         {
-            using (var scope = tracker.Track("FailingOperation"))
-            {
-                throw new InvalidOperationException("Something blew up");
-            }
+            using var scope = tracker.Track("FailingOperation");
+            throw new InvalidOperationException("Something blew up");
         }
         catch (InvalidOperationException ex)
         {
@@ -467,9 +465,12 @@ public class MetricMeterBridgeTests
         {
             EnforceCardinalityLimitsOnMeters = true,
             MaxUniqueTagValues = 3,
-            OverflowBucket = "[CustomOverflow]"
+            OverflowBucket = "[CustomOverflow]",
+            TagCardinalityLimits =
+            {
+                ["special"] = 2
+            }
         };
-        options.TagCardinalityLimits["special"] = 2;
 
         var guard = new TagCardinalityGuard(options);
 

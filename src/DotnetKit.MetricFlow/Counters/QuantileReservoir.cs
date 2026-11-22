@@ -103,10 +103,10 @@ public sealed class QuantileReservoir
         if (quantile <= 0.0) return sortedSamples[0];
         if (quantile >= 1.0) return sortedSamples[^1];
 
-        double pos = quantile * (sortedSamples.Length - 1);
-        int lowerIndex = (int)pos;
-        int upperIndex = lowerIndex + 1;
-        double fraction = pos - lowerIndex;
+        var pos = quantile * (sortedSamples.Length - 1);
+        var lowerIndex = (int)pos;
+        var upperIndex = lowerIndex + 1;
+        var fraction = pos - lowerIndex;
 
         if (upperIndex >= sortedSamples.Length)
         {

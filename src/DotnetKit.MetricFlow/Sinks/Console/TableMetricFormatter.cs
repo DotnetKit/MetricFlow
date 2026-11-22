@@ -83,10 +83,8 @@ public static class TableMetricFormatter
         var maxMemLen = hasMemory ? "Memory (Avg / Total)".Length : 0;
         var maxFailLen = hasFailures ? "Failures".Length : 0;
 
-        for (var i = 0; i < operations.Count; i++)
+        foreach (var op in operations)
         {
-            var op = operations[i];
-
             // 1. Operation column
             var opText = op.OperationName;
             if (opText.Length > maxOpLen)
@@ -193,26 +191,24 @@ public static class TableMetricFormatter
             // Separator line
             if (color)
                 sb.Append(AnsiGray);
-            sb.Append(new string('-', maxOpLen));
-            sb.Append("-+-").Append(new string('-', maxOpsLen));
+            sb.Append('-', maxOpLen);
+            sb.Append("-+-").Append('-', maxOpsLen);
             if (hasDuration)
-                sb.Append("-+-").Append(new string('-', maxDurLen));
+                sb.Append("-+-").Append('-', maxDurLen);
             if (hasThroughput)
-                sb.Append("-+-").Append(new string('-', maxTpLen));
+                sb.Append("-+-").Append('-', maxTpLen);
             if (hasMemory)
-                sb.Append("-+-").Append(new string('-', maxMemLen));
+                sb.Append("-+-").Append('-', maxMemLen);
             if (hasFailures)
-                sb.Append("-+-").Append(new string('-', maxFailLen));
+                sb.Append("-+-").Append('-', maxFailLen);
             if (color)
                 sb.Append(AnsiReset);
             sb.AppendLine();
         }
 
         // Render Rows
-        for (var i = 0; i < rows.Count; i++)
+        foreach (var row in rows)
         {
-            var row = rows[i];
-
             // Operation (left-aligned)
             if (color)
                 sb.Append(AnsiCyan);

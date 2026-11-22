@@ -200,7 +200,7 @@ public static class MetricExportExtensions
     )
     {
         ArgumentNullException.ThrowIfNull(operations);
-        var opList = operations as IReadOnlyList<OperationSummary> ?? operations.ToList();
+        var opList = operations as IReadOnlyList<OperationSummary> ?? [.. operations];
         var opt = options ?? new CsvExportOptions();
         var d = opt.Delimiter;
         var culture = CultureInfo.InvariantCulture;
@@ -363,7 +363,7 @@ public static class MetricExportExtensions
     )
     {
         ArgumentNullException.ThrowIfNull(operations);
-        var opList = operations as IReadOnlyList<OperationSummary> ?? operations.ToList();
+        var opList = operations as IReadOnlyList<OperationSummary> ?? [.. operations];
         var opt = options ?? new JsonExportOptions();
 
         var jsonOptions = GetJsonSerializerOptions(opt);
@@ -371,7 +371,7 @@ public static class MetricExportExtensions
         var exportDocument = new MetricExportDocument(
             ExportedAtUtc: DateTime.UtcNow,
             TotalOperations: opList.Count,
-            Operations: opList
+            Operations: [.. opList
                 .Select(s => new OperationExportDto(
                     OperationName: s.OperationName,
                     TotalOperations: s.TotalOperations,
@@ -390,8 +390,7 @@ public static class MetricExportExtensions
                     Dimensions: s.Dimensions.Count > 0
                         ? s.Dimensions.ToDictionary(d => d.DimensionName, d => d.Breakdown)
                         : null
-                ))
-                .ToList()
+                ))]
         );
 
         return JsonSerializer.Serialize(exportDocument, jsonOptions);

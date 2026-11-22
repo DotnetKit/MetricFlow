@@ -105,12 +105,9 @@ public class MetricFlowMiddleware(
             return true;
         }
 
-        for (var i = 0; i < _options.ExcludePathPrefixes.Count; i++)
+        if (_options.ExcludePathPrefixes.Any(prefix => path.StartsWithSegments(prefix, StringComparison.OrdinalIgnoreCase)))
         {
-            if (path.StartsWithSegments(_options.ExcludePathPrefixes[i], StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
+            return true;
         }
 
         if (_options.ExcludePredicate != null && _options.ExcludePredicate(context))

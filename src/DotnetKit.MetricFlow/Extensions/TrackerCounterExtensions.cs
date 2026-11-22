@@ -11,6 +11,115 @@ namespace DotnetKit.MetricFlow;
 public static class TrackerCounterExtensions
 {
     /// <summary>
+    /// Registers a <see cref="DurationCounter"/> on the metric tracker to measure execution latency.
+    /// </summary>
+    /// <typeparam name="T">The metric tracker type.</typeparam>
+    /// <param name="tracker">The tracker instance.</param>
+    /// <param name="configure">Optional configuration delegate for <see cref="DurationCounterOptions"/>.</param>
+    /// <param name="name">Optional custom counter name. Defaults to <see cref="DurationCounter.DefaultCounterName"/>.</param>
+    /// <returns>The same tracker instance for method chaining.</returns>
+    public static T AddDurationCounter<T>(
+        this T tracker,
+        Action<DurationCounterOptions>? configure = null,
+        string name = DurationCounter.DefaultCounterName)
+        where T : IMetricTracker
+    {
+        ArgumentNullException.ThrowIfNull(tracker);
+        var options = new DurationCounterOptions();
+        configure?.Invoke(options);
+        tracker.RegisterCounter(new DurationCounter(name, options));
+        return tracker;
+    }
+
+    /// <summary>
+    /// Registers a lightweight <see cref="CountCounter"/> on the metric tracker for pure functional event counting.
+    /// </summary>
+    /// <typeparam name="T">The metric tracker type.</typeparam>
+    /// <param name="tracker">The tracker instance.</param>
+    /// <param name="name">Optional custom counter name. Defaults to <see cref="CountCounter.DefaultCounterName"/>.</param>
+    /// <returns>The same tracker instance for method chaining.</returns>
+    public static T AddCountCounter<T>(this T tracker, string name = CountCounter.DefaultCounterName)
+        where T : IMetricTracker
+    {
+        ArgumentNullException.ThrowIfNull(tracker);
+        tracker.RegisterCounter(new CountCounter(name));
+        return tracker;
+    }
+
+    /// <summary>
+    /// Registers the standard telemetry counter preset (<see cref="DurationCounter"/> and <see cref="ExceptionCounter"/>,
+    /// plus optional <see cref="MemoryCounter"/> and <see cref="HierarchyCounter"/>).
+    /// </summary>
+    /// <typeparam name="T">The metric tracker type.</typeparam>
+    /// <param name="tracker">The tracker instance.</param>
+    /// <param name="includeMemory">Whether to also register a <see cref="MemoryCounter"/>.</param>
+    /// <param name="includeHierarchy">Whether to also register a <see cref="HierarchyCounter"/>.</param>
+    /// <param name="configureDuration">Optional configuration delegate for <see cref="DurationCounterOptions"/>.</param>
+    /// <returns>The same tracker instance for method chaining.</returns>
+    public static T AddTelemetryCounters<T>(
+        this T tracker,
+        bool includeMemory = false,
+        bool includeHierarchy = false,
+        Action<DurationCounterOptions>? configureDuration = null)
+        where T : IMetricTracker
+    {
+        ArgumentNullException.ThrowIfNull(tracker);
+        tracker.AddDurationCounter(configureDuration);
+        tracker.AddExceptionCounter();
+
+        if (includeMemory)
+        {
+            tracker.AddMemoryCounter();
+        }
+
+        if (includeHierarchy)
+        {
+            tracker.AddHierarchyCounter();
+        }
+
+        return tracker;
+    }
+
+    /// <summary>
+    /// Registers the pure functional metrics preset (<see cref="CountCounter"/> plus optional <see cref="DimensionCounter"/>s
+    /// for each specified business dimension key) without any duration, memory, or exception telemetry counters.
+    /// </summary>
+    /// <typeparam name="T">The metric tracker type.</typeparam>
+    /// <param name="tracker">The tracker instance.</param>
+    /// <param name="dimensionKeys">Optional tag/dimension keys to register <see cref="DimensionCounter"/> breakdowns for.</param>
+    /// <returns>The same tracker instance for method chaining.</returns>
+    public static T AddFunctionalMetrics<T>(this T tracker, params string[] dimensionKeys)
+        where T : IMetricTracker
+    {
+        ArgumentNullException.ThrowIfNull(tracker);
+        tracker.AddCountCounter();
+
+        if (dimensionKeys != null)
+        {
+            foreach (var key in dimensionKeys.Where(static k => !string.IsNullOrWhiteSpace(k)))
+            {
+                tracker.AddDimensionCounter(key);
+            }
+        }
+
+        return tracker;
+    }
+
+    /// <summary>
+    /// Retrieves the <see cref="CountSnapshot"/> for a specific metric name.
+    /// </summary>
+    /// <param name="tracker">The tracker instance.</param>
+    /// <param name="metricName">The name of the metric.</param>
+    /// <param name="counterName">Optional counter name. Defaults to <see cref="CountCounter.DefaultCounterName"/>.</param>
+    /// <returns>The count snapshot, or <c>null</c> if not found.</returns>
+    public static CountSnapshot? GetCountSnapshot(
+        this IMetricTracker tracker,
+        string metricName,
+        string? counterName = null)
+    {
+        return tracker.GetSnapshot<CountSnapshot>(metricName, counterName);
+    }
+    /// <summary>
     /// Registers a <see cref="ThroughputCounter"/> on the metric tracker.
     /// </summary>
     /// <typeparam name="T">The metric tracker type.</typeparam>

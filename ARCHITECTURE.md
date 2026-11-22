@@ -91,6 +91,7 @@ sequenceDiagram
 ### Universal Context Contracts
 - **`InContext`**: Represents operation entry with `MetricName`, `Tags` (`string -> string` business dimensions), `Metadata` (`string -> long` technical metrics), and `UtcTimestamp`.
 - **`OutContext`**: Represents operation exit with `MetricName`, `Failed`, `Exception?`, `Duration?`, `Tags`, `Metadata`, and `UtcTimestamp`.
+- **`RecordContext`**: Represents a point-in-time functional metric event (`Record` / `Increment`) with `MetricName`, `Value`, `Tags`, `Metadata`, and `UtcTimestamp`, without an operation start/end lifecycle.
 
 ### The Counter Interface (`ICounter` and `ICounter<TState>`)
 ```csharp
@@ -105,6 +106,9 @@ public interface ICounter
     /// <summary>Invoked when an operation ends, receiving the state produced during OnIn.</summary>
     void OnOut(object? state, in OutContext context);
 
+    /// <summary>Invoked on point-in-time Record()/Increment() calls. Telemetry counters ignore this by default.</summary>
+    void OnRecord(in RecordContext context) { }
+
     /// <summary>Provides the counter's current metric snapshot.</summary>
     IMetricSnapshot? GetSnapshot(string metricName);
 
@@ -114,27 +118,27 @@ public interface ICounter
     /// <summary>Resets accumulated state.</summary>
     void Reset();
 }
-
-public interface ICounter<TState> : ICounter
-{
-    new TState OnIn(in InContext context);
-    void OnOut(TState state, in OutContext context);
-}
 ```
 
 ---
 
-## 4. Built-in Counters
+## 4. Built-in Counters (Telemetry vs. Functional)
 
-MetricFlow provides five built-in counters covering standard telemetry dimensions:
+Starting in v1.1, `MetricTracker` starts with **zero default counters**. Counters fall into two conceptual groups that share the same registry, sinks, and `MeterBridge`:
 
-| Counter | Metric Dimension | `OnIn` State Token | `OnOut` Behavior | Snapshot Output |
+- **Telemetry Counters** (opt-in via `.AddTelemetryCounters(...)` or individually): respond to scoped `Track()` / `In()` / `Out()` lifecycles and ignore point-in-time `Record()` / `Increment()` calls.
+- **Functional Counters** (opt-in via `.AddFunctionalMetrics(...)` or individually): respond to both point-in-time `Record()` / `Increment()` events and scoped `Track()` completions.
+
+| Counter | Category | `OnIn` State Token | `OnOut` / `OnRecord` Behavior | Snapshot Output |
 | :--- | :--- | :--- | :--- | :--- |
-| **`DurationCounter`** | Execution latency | `long` (Stopwatch ticks) | Calculates elapsed time; updates total, min, max, avg durations and in/out/failed counts atomically. | `DurationSnapshot` |
-| **`ThroughputCounter`** | Processing throughput & items | `long` (Stopwatch ticks) | Extracts processed items from technical metadata (`items`, `count`, `batch_size`) with tag fallback; updates total items, operations, duration, items/sec, and avg items/op atomically. | `ThroughputSnapshot` |
-| **`DimensionCounter`** | Dimension & tag distribution | `null` (0 cost on entry) | Extracts targeted business dimension, composite multi-tags, or computed lambda; aggregates counts per value; enforces cardinality ceiling via overflow bucket (`[Other]`). | `DimensionSnapshot` |
-| **`ExceptionCounter`** | Failures & errors | `null` (0 cost on entry) | Checks `Failed` and `Exception`. Categorizes by exception type in thread-safe dictionary. | `ExceptionSnapshot` |
-| **`MemoryCounter`** | Heap allocation | `MemoryTrackingToken` | Computes allocated byte delta. Automatically handles both thread-bound code and cross-thread async hops. | `MemorySnapshot` |
+| **`CountCounter`** | Functional | `null` (0 cost) | Accumulates total count and event count via `OnRecord` and `OnOut` with zero stopwatch/telemetry overhead. | `CountSnapshot` |
+| **`DimensionCounter`** | Functional | `null` (0 cost) | Extracts targeted business dimension, composite multi-tags, or computed lambda on `OnOut` and `OnRecord`; enforces cardinality ceiling via overflow bucket (`[Other]`). | `DimensionSnapshot` |
+| **`ThroughputCounter`** | Functional / Telemetry | `long` (Stopwatch ticks) | Extracts processed items and computes velocity (`items/sec`) on `OnOut`; records item counts on `OnRecord`. | `ThroughputSnapshot` |
+| **`DurationCounter`** | Telemetry | `long` (Stopwatch ticks) | Calculates elapsed time; updates total, min, max, avg durations and percentiles on `OnOut`. Ignores `OnRecord`. | `DurationSnapshot` |
+| **`MemoryCounter`** | Telemetry | `MemoryTrackingToken` | Computes allocated byte delta across sync and async hops on `OnOut`. Ignores `OnRecord`. | `MemorySnapshot` |
+| **`ExceptionCounter`** | Telemetry | `null` (0 cost) | Categorizes thrown exceptions by type on `OnOut`. Ignores `OnRecord`. | `ExceptionSnapshot` |
+| **`FailureCounter`** | Telemetry | `null` (0 cost) | Separates logical failures vs. exception failures on `OnOut`. Ignores `OnRecord`. | `FailureSnapshot` |
+| **`HierarchyCounter`** | Telemetry | `HierarchyScopeToken` | Correlates parent-child scopes via `AsyncLocal` and computes self-time/self-memory on `OnOut`. Ignores `OnRecord`. | `HierarchyTreeSnapshot` |
 
 ### High-Throughput Batch Tracking (`ThroughputCounter`)
 In high-volume streaming, ingestion, or batch jobs (e.g. database ETL, message queues, indexing pipelines), operations process variable-sized item payloads. `ThroughputCounter` (and its alias `ItemCounter`):

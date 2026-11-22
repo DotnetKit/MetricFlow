@@ -4,20 +4,15 @@ using DotnetKit.MetricFlow.Abstractions;
 
 namespace DotnetKit.MetricFlow.Counters;
 
-public class ExceptionCounter : ICounter
+public class ExceptionCounter(string name = ExceptionCounter.DefaultCounterName) : ICounter
 {
     public const string DefaultCounterName = "Exception";
 
     private readonly ConcurrentDictionary<string, MetricExceptionState> _states = new();
     private long _sequenceCounter;
 
-    public string Name { get; }
+    public string Name { get; } = name;
     public bool IsEnabled { get; set; } = true;
-
-    public ExceptionCounter(string name = DefaultCounterName)
-    {
-        Name = name;
-    }
 
     public object? OnIn(in InContext context)
     {

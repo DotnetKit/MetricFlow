@@ -14,6 +14,7 @@ public class CustomCountersTests
     {
         // Arrange
         var tracker = new MetricTracker("CompositeTest")
+            .AddDurationCounter()
             .AddMemoryCounter()
             .AddExceptionCounter();
 
@@ -76,6 +77,7 @@ public class CustomCountersTests
     {
         // Arrange
         var tracker = new MetricTracker("QuadCompositeTest")
+            .AddDurationCounter()
             .AddMemoryCounter()
             .AddExceptionCounter()
             .AddThroughputCounter();
@@ -95,17 +97,15 @@ public class CustomCountersTests
 
         try
         {
-            using (var scope = tracker.TrackItems("QuadMetricOp", 25))
+            using var scope = tracker.TrackItems("QuadMetricOp", 25);
+            try
             {
-                try
-                {
-                    throw new InvalidOperationException("Simulated error in throughput pipeline");
-                }
-                catch (Exception ex)
-                {
-                    scope.SetException(ex);
-                    throw;
-                }
+                throw new InvalidOperationException("Simulated error in throughput pipeline");
+            }
+            catch (Exception ex)
+            {
+                scope.SetException(ex);
+                throw;
             }
         }
         catch (InvalidOperationException)
@@ -144,6 +144,7 @@ public class CustomCountersTests
     {
         // Arrange - Register Duration (default), Memory, Exception, Throughput, and Dimension
         var tracker = new MetricTracker("PentaCompositeTest")
+            .AddDurationCounter()
             .AddMemoryCounter()
             .AddExceptionCounter()
             .AddThroughputCounter()
@@ -169,20 +170,20 @@ public class CustomCountersTests
 
         var throughput = tracker.GetThroughputSnapshot("PentaMetricOp");
         throughput.Should().NotBeNull();
-        throughput!.TotalItems.Should().Be(150);
+        throughput.TotalItems.Should().Be(150);
 
         var memory = tracker.GetSnapshot("PentaMetricOp", MemoryCounter.DefaultCounterName) as MemorySnapshot;
         memory.Should().NotBeNull();
-        memory!.OperationCount.Should().Be(2);
+        memory.OperationCount.Should().Be(2);
 
         var exceptions = tracker.GetSnapshot("PentaMetricOp", ExceptionCounter.DefaultCounterName) as ExceptionSnapshot;
         exceptions.Should().NotBeNull();
-        exceptions!.TotalOperations.Should().Be(2);
+        exceptions.TotalOperations.Should().Be(2);
         exceptions.TotalFailures.Should().Be(0);
 
         var dimensionSnapshot = tracker.GetDimensionSnapshot("PentaMetricOp", "country");
         dimensionSnapshot.Should().NotBeNull();
-        dimensionSnapshot!.TotalOperations.Should().Be(2);
+        dimensionSnapshot.TotalOperations.Should().Be(2);
         dimensionSnapshot.TrackedOperations.Should().Be(2);
         dimensionSnapshot.Breakdown["US"].Should().Be(1);
         dimensionSnapshot.Breakdown["DE"].Should().Be(1);
@@ -194,6 +195,7 @@ public class CustomCountersTests
         // Arrange
         var configNotifier = new CounterConfigNotifier();
         var tracker = new MetricTracker("DynamicConfigTopic", configObservable: configNotifier)
+            .AddDurationCounter()
             .AddExceptionCounter();
 
         // Act 1: Initial state (both enabled)
@@ -235,6 +237,7 @@ public class CustomCountersTests
     {
         // Arrange
         var tracker = new MetricTracker("ConcurrentTopic")
+            .AddDurationCounter()
             .AddMemoryCounter()
             .AddExceptionCounter();
 
@@ -279,6 +282,7 @@ public class CustomCountersTests
     {
         // Arrange
         var tracker = new MetricTracker("DiagnosticsTopic")
+            .AddDurationCounter()
             .AddMemoryCounter()
             .AddExceptionCounter();
 

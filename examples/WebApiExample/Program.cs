@@ -19,7 +19,7 @@ builder.Services.AddMetricFlow("WebApiExample", options =>
         }
     });
 })
-.AddMetricTracker("WeatherRadar");
+.AddMetricTracker("WeatherRadar", opt => opt.AddTelemetryCounters());
 
 var app = builder.Build();
 
