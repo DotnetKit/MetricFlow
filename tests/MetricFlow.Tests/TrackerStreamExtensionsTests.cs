@@ -56,7 +56,7 @@ public class TrackerStreamExtensionsTests
         var tracker = new MetricTracker(new MetricFlowOptions
         {
             Topic = "Orders"
-        }.AddTelemetry().AddThroughputCounter().AddFailureCounter());
+        }.AddTelemetryCounters().AddThroughputCounter().AddFailureCounter());
 
         static async IAsyncEnumerable<string> FailingStreamAsync()
         {

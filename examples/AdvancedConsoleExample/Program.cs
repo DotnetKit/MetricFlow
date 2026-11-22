@@ -15,7 +15,7 @@ internal class Program
             ["tenant_id"] = "TenantId1",
             ["session_id"] = Guid.NewGuid().ToString()
         })
-            .AddTelemetry(includeMemory: true)
+            .AddTelemetryCounters(includeMemory: true)
             .AddThroughputCounter()
             .AddDimensionCounter("region");
 

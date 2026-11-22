@@ -311,7 +311,7 @@ public class MetricSinkTests
             {
                 EmitOnFailure = true
             }
-        }.AddTelemetry());
+        }.AddTelemetryCounters());
 
         // Act - Success
         tracker.In("Charge");

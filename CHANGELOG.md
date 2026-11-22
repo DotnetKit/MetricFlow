@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Zero Default Telemetry Counters on `MetricTracker` & `MetricFlowOptions`**:
   - `MetricTracker` no longer auto-registers `DurationCounter` by default (`MetricTracker.DurationCounter` is now nullable and resolves dynamically when registered).
   - `MetricFlowOptions.AutoAddExceptionCounter` and `MetricFlowOptions.IncludeDurationCounter` now default to `false`.
-  - Opt in explicitly via `.AddTelemetry(...)`, `.AddDurationCounter(...)`, `.AddExceptionCounter()`, or `.AddFunctionalMetrics(...)`.
+  - Opt in explicitly via `.AddTelemetryCounters(...)`, `.AddDurationCounter(...)`, `.AddExceptionCounter()`, or `.AddFunctionalMetrics(...)`.
   - `MetricFlowAspNetCoreOptions` continues to enable `IncludeDurationCounter` and `AutoAddExceptionCounter` by default for HTTP middleware profiling.
 
 ### Added
@@ -26,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Lightweight `CountCounter` & `CountSnapshot`**:
   - Pure functional event counter with zero stopwatch/memory overhead, integrated into `OperationSummary.Count` and `OperationSummary.TotalOperations`.
 - **Fluent Telemetry & Functional Presets**:
-  - `.AddTelemetry(includeMemory, includeHierarchy, configureDuration)` and `.AddFunctionalMetrics(params string[] dimensionKeys)` on both `IMetricTracker` (`TrackerCounterExtensions`) and `MetricFlowOptions`.
+  - `.AddTelemetryCounters(includeMemory, includeHierarchy, configureDuration)` and `.AddFunctionalMetrics(params string[] dimensionKeys)` on both `IMetricTracker` (`TrackerCounterExtensions`) and `MetricFlowOptions`.
   - `.AddDurationCounter(...)`, `.AddCountCounter(...)`, and `.GetCountSnapshot(...)` helpers.
 
 ---

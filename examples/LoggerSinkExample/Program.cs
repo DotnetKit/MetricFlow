@@ -40,7 +40,7 @@ internal class Program
                 ["environment"] = "Production",
                 ["gateway"] = "Stripe"
             })
-            .AddTelemetry()
+            .AddTelemetryCounters()
             .AddThroughputCounter()
             .AddFailureCounter()
             .AddLoggerSink(loggerFactory, opt =>

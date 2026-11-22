@@ -129,7 +129,7 @@ var host = Host.CreateDefaultBuilder(args)
                 tags["environment"] = context.HostingEnvironment.EnvironmentName;
                 tags["machine"] = Environment.MachineName;
             })
-            .AddTelemetry(includeMemory: true)
+            .AddTelemetryCounters(includeMemory: true)
             .AddThroughputCounter()
             .AddFailureCounter();
         });
@@ -211,7 +211,7 @@ using var tracker = new MetricTracker("ImportJob", new()
 {
     ["run_id"] = Guid.NewGuid().ToString("N")
 })
-.AddTelemetry(includeMemory: true)
+.AddTelemetryCounters(includeMemory: true)
 .AddThroughputCounter()
 .AddFailureCounter()
 // 1. Fluent sink configuration directly on tracker instance
@@ -249,7 +249,7 @@ Console.WriteLine(tracker.ToMarkdownTable());
 ### 0. Choosing Telemetry vs. Pure Functional Metrics (v2.0)
 Starting in v2.0, `MetricTracker` starts with **zero default telemetry counters** — you explicitly opt in to the counters you need:
 
-- **Telemetry preset (`.AddTelemetry(...)`)**: Registers `DurationCounter` + `ExceptionCounter` (plus optional `MemoryCounter` and `HierarchyCounter`) for scoped operation profiling via `Track(...)` / `In()` / `Out()`.
+- **Telemetry preset (`.AddTelemetryCounters(...)`)**: Registers `DurationCounter` + `ExceptionCounter` (plus optional `MemoryCounter` and `HierarchyCounter`) for scoped operation profiling via `Track(...)` / `In()` / `Out()`.
 - **Functional metrics preset (`.AddFunctionalMetrics(...)`)**: Registers a lightweight `CountCounter` + optional `DimensionCounter` breakdowns with zero `Stopwatch`/scope overhead. Record business events directly with `Record(...)` / `Increment(...)`:
 
 ```csharp
@@ -264,7 +264,7 @@ var count = businessTracker.GetCountSnapshot("OrderPlaced");         // TotalCou
 var byCountry = businessTracker.GetDimensionSnapshot("OrderPlaced", "country");
 ```
 
-When a tracker combines **both** `.AddTelemetry()` and `.AddFunctionalMetrics(...)`:
+When a tracker combines **both** `.AddTelemetryCounters()` and `.AddFunctionalMetrics(...)`:
 - `Record()` / `Increment()` invokes functional counters (`CountCounter`, `DimensionCounter`, `ThroughputCounter`) and emits `Counter<long>` to `MeterBridge`, while telemetry counters (`DurationCounter`, `MemoryCounter`, `HierarchyCounter`, `ExceptionCounter`) ignore it.
 - `Track()` / `In()` / `Out()` feeds both telemetry and functional counters so correlated `OperationSummary` reports work seamlessly.
 

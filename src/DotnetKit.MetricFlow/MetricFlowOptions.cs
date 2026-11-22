@@ -220,7 +220,7 @@ public class MetricFlowOptions
 
     /// <summary>
     /// Whether to register a <see cref="DurationCounter"/> on the tracker.
-    /// Defaults to false in v2.0; opt in via <see cref="AddDurationCounter"/>, <see cref="ConfigureDuration"/>, or <see cref="AddTelemetry"/>.
+    /// Defaults to false in v2.0; opt in via <see cref="AddDurationCounter"/>, <see cref="ConfigureDuration"/>, or <see cref="AddTelemetryCounters"/>.
     /// </summary>
     public bool IncludeDurationCounter { get; set; }
 
@@ -254,7 +254,7 @@ public class MetricFlowOptions
 
     /// <summary>
     /// Whether to automatically register an exception counter on the tracker.
-    /// Defaults to false in v2.0; opt in via <see cref="AddExceptionCounter"/> or <see cref="AddTelemetry"/>.
+    /// Defaults to false in v2.0; opt in via <see cref="AddExceptionCounter"/> or <see cref="AddTelemetryCounters"/>.
     /// </summary>
     public bool AutoAddExceptionCounter { get; set; }
 
@@ -314,7 +314,7 @@ public class MetricFlowOptions
     /// <param name="includeHierarchy">Whether to also register a <see cref="HierarchyCounter"/>.</param>
     /// <param name="configureDuration">Optional configuration delegate for <see cref="DurationCounterOptions"/>.</param>
     /// <returns>The options instance for chaining.</returns>
-    public MetricFlowOptions AddTelemetry(
+    public MetricFlowOptions AddTelemetryCounters(
         bool includeMemory = false,
         bool includeHierarchy = false,
         Action<DurationCounterOptions>? configureDuration = null)

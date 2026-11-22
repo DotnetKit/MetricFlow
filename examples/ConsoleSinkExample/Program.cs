@@ -26,7 +26,7 @@ internal class Program
             "OrderService",
             new() { ["environment"] = "Production", ["region"] = "us-east-1" }
         )
-            .AddTelemetry()
+            .AddTelemetryCounters()
             .AddThroughputCounter()
             .AddFailureCounter()
             // 2. Register ConsoleMetricSink with custom formatting options directly on tracker
@@ -145,7 +145,7 @@ internal class Program
         );
 
         var hierarchyOptions = new MetricFlowOptions { Topic = "MediaCatalog" }
-            .AddTelemetry(includeMemory: true, includeHierarchy: true)
+            .AddTelemetryCounters(includeMemory: true, includeHierarchy: true)
             .AddThroughputCounter();
 
         hierarchyOptions.AddConsoleSink(opt =>

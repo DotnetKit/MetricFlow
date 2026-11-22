@@ -11,7 +11,7 @@ public class TrackerActionExtensionsTests
     public void TrackAction_ShouldExecuteAndRecordSuccess()
     {
         // Arrange
-        var tracker = new MetricTracker("ActionTopic").AddTelemetry();
+        var tracker = new MetricTracker("ActionTopic").AddTelemetryCounters();
         var executed = false;
 
         // Act
@@ -30,7 +30,7 @@ public class TrackerActionExtensionsTests
     public void TrackAction_WhenExceptionThrown_ShouldRecordExceptionAndRethrow()
     {
         // Arrange
-        var tracker = new MetricTracker("ActionTopic").AddTelemetry();
+        var tracker = new MetricTracker("ActionTopic").AddTelemetryCounters();
 
         // Act
         var act = () => tracker.TrackAction("FailingOp", () =>
@@ -69,7 +69,7 @@ public class TrackerActionExtensionsTests
     public async Task TrackActionAsync_ShouldExecuteAndRecordSuccess()
     {
         // Arrange
-        var tracker = new MetricTracker("ActionTopic").AddTelemetry();
+        var tracker = new MetricTracker("ActionTopic").AddTelemetryCounters();
         var executed = false;
 
         // Act
@@ -92,7 +92,7 @@ public class TrackerActionExtensionsTests
     public async Task TrackActionAsync_WhenExceptionThrown_ShouldRecordExceptionAndRethrow()
     {
         // Arrange
-        var tracker = new MetricTracker("ActionTopic").AddTelemetry();
+        var tracker = new MetricTracker("ActionTopic").AddTelemetryCounters();
 
         // Act
         var act = async () => await tracker.TrackActionAsync("FailingAsyncOp", async () =>

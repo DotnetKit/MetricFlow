@@ -34,7 +34,7 @@ It can be used in both ASP.NET Core and non-ASP.NET Core applications.
 ### Core Metrics & Measurement
 
 - **Zero-Overhead Functional Metrics (`CountCounter`, `Record` / `Increment`)**: Track pure business events and custom dimensional breakdowns without `Stopwatch` or `In`/`Out` scope overhead using `.AddFunctionalMetrics(...)`, `tracker.Record(...)`, and `tracker.Increment(...)`.
-- **Opt-In Telemetry Preset (`.AddTelemetry(...)`)**: High-precision operation timing (`DurationCounter`), heap allocation (`MemoryCounter`), exception tracking (`ExceptionCounter`), failure rates (`FailureCounter`), and nested call trees (`HierarchyCounter`) — opt in only to what you need.
+- **Opt-In Telemetry Preset (`.AddTelemetryCounters(...)`)**: High-precision operation timing (`DurationCounter`), heap allocation (`MemoryCounter`), exception tracking (`ExceptionCounter`), failure rates (`FailureCounter`), and nested call trees (`HierarchyCounter`) — opt in only to what you need.
 - **Throughput & Item Tracking**: Measure batch sizes, entity counts, and processing rates (items/sec) with `ThroughputCounter`.
 - **Dimensional Breakdown & Slicing**: Slice and compute operation or event distributions by business dimensions, tags, or computed rules with `DimensionCounter` and built-in cardinality safeguards.
 
@@ -100,7 +100,7 @@ dotnet build
 
 #### 1. Initialize Tracker
 
-`MetricTracker` starts with zero telemetry counters by default — opt in to telemetry (`.AddTelemetry()`), pure functional metrics (`.AddFunctionalMetrics(...)`), or individual counters:
+`MetricTracker` starts with zero telemetry counters by default — opt in to telemetry (`.AddTelemetryCounters()`), pure functional metrics (`.AddFunctionalMetrics(...)`), or individual counters:
 
 ```csharp
 using DotnetKit.MetricFlow;
@@ -110,7 +110,7 @@ var tracker = new MetricTracker("OrderService", new()
     {
         ["environment"] = "production"
     })
-    .AddTelemetry(includeMemory: true)
+    .AddTelemetryCounters(includeMemory: true)
     .AddThroughputCounter()
     .AddDimensionCounter("country");
 
@@ -124,7 +124,7 @@ businessTracker.Increment("OrderPlaced", 5, new() { ["country"] = "US", ["plan"]
 
 #### 2. Basic Example (Minimal Telemetry Setup)
 
-Opt in to duration tracking with `.AddDurationCounter()` (or `.AddTelemetry()` for duration + exceptions):
+Opt in to duration tracking with `.AddDurationCounter()` (or `.AddTelemetryCounters()` for duration + exceptions):
 
 ```csharp
 using DotnetKit.MetricFlow;

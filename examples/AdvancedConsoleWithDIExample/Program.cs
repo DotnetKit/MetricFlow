@@ -23,7 +23,7 @@ internal class Program
                 tags["session_id"] = Guid.NewGuid().ToString();
                 tags["environment"] = "Production";
             })
-            .AddTelemetry(includeMemory: true)
+            .AddTelemetryCounters(includeMemory: true)
             .AddThroughputCounter()
             .AddDimensionCounter("region");
         })
@@ -35,7 +35,7 @@ internal class Program
                 tags["role"] = "security-auditor";
                 tags["tier"] = "internal";
             })
-            .AddTelemetry();
+            .AddTelemetryCounters();
         });
 
         // 3. Register application worker services into DI

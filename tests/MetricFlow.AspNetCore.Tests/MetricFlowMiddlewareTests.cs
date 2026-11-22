@@ -27,7 +27,7 @@ public class MetricFlowMiddlewareTests
                     .ConfigureServices(services =>
                     {
                         services.AddRouting();
-                        services.AddMetricFlow("TestApi", opt => opt.AddTelemetry());
+                        services.AddMetricFlow("TestApi", opt => opt.AddTelemetryCounters());
                     })
                     .Configure(app =>
                     {
@@ -120,7 +120,7 @@ public class MetricFlowMiddlewareTests
                     .ConfigureServices(services =>
                     {
                         services.AddRouting();
-                        services.AddMetricFlow("TestApi", opt => opt.AddTelemetry());
+                        services.AddMetricFlow("TestApi", opt => opt.AddTelemetryCounters());
                     })
                     .Configure(app =>
                     {
@@ -167,7 +167,7 @@ public class MetricFlowMiddlewareTests
                     .ConfigureServices(services =>
                     {
                         services.AddRouting();
-                        services.AddMetricFlow("TestApi", opt => opt.AddTelemetry());
+                        services.AddMetricFlow("TestApi", opt => opt.AddTelemetryCounters());
                     })
                     .Configure(app =>
                     {
@@ -307,7 +307,7 @@ public class MetricFlowMiddlewareTests
                     .ConfigureServices(services =>
                     {
                         services.AddRouting();
-                        services.AddMetricFlow("ExpositionApi", opt => opt.AddTelemetry());
+                        services.AddMetricFlow("ExpositionApi", opt => opt.AddTelemetryCounters());
                     })
                     .Configure(app =>
                     {
@@ -395,7 +395,7 @@ public class MetricFlowMiddlewareTests
                     {
                         services.AddRouting();
                         services.AddControllers().AddApplicationPart(typeof(TestProductsController).Assembly);
-                        services.AddMetricFlow("ControllerApi", opt => opt.AddTelemetry());
+                        services.AddMetricFlow("ControllerApi", opt => opt.AddTelemetryCounters());
                     })
                     .Configure(app =>
                     {

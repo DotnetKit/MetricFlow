@@ -56,7 +56,7 @@ public static class TrackerCounterExtensions
     /// <param name="includeHierarchy">Whether to also register a <see cref="HierarchyCounter"/>.</param>
     /// <param name="configureDuration">Optional configuration delegate for <see cref="DurationCounterOptions"/>.</param>
     /// <returns>The same tracker instance for method chaining.</returns>
-    public static T AddTelemetry<T>(
+    public static T AddTelemetryCounters<T>(
         this T tracker,
         bool includeMemory = false,
         bool includeHierarchy = false,

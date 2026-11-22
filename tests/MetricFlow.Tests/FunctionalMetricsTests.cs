@@ -68,7 +68,7 @@ public class FunctionalMetricsTests
     {
         // Arrange
         using var tracker = new MetricTracker("Billing")
-            .AddTelemetry(includeMemory: true, includeHierarchy: true)
+            .AddTelemetryCounters(includeMemory: true, includeHierarchy: true)
             .AddFunctionalMetrics("currency");
 
         // Act 1 - Point-in-time functional recording
@@ -179,12 +179,12 @@ public class FunctionalMetricsTests
     }
 
     [Fact]
-    public void DependencyInjection_AddTelemetryAndAddFunctionalMetrics_WorkPerTopic()
+    public void DependencyInjection_AddTelemetryCountersAndAddFunctionalMetrics_WorkPerTopic()
     {
         // Arrange
         var services = new ServiceCollection();
         services
-            .AddMetricFlow("HttpTelemetry", opt => opt.AddTelemetry(includeMemory: true))
+            .AddMetricFlow("HttpTelemetry", opt => opt.AddTelemetryCounters(includeMemory: true))
             .AddMetricTracker("BusinessEvents", opt => opt.AddFunctionalMetrics("status"));
 
         using var provider = services.BuildServiceProvider();

@@ -26,7 +26,7 @@ internal class Program
             });
 
             // Add telemetry preset (duration + exceptions) and throughput counter for local snapshots
-            options.AddTelemetry()
+            options.AddTelemetryCounters()
                    .AddThroughputCounter();
 
             // Configure meter cardinality protection to protect Prometheus / OTLP collectors
