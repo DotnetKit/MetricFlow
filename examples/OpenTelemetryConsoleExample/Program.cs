@@ -52,6 +52,30 @@ internal class Program
                                 .ExportIntervalMilliseconds = 1000;
                         }
                     );
+
+                    // Export via OTLP when OTEL_EXPORTER_OTLP_ENDPOINT is configured
+                    var otlpEndpoint = Environment.GetEnvironmentVariable(
+                        "OTEL_EXPORTER_OTLP_ENDPOINT"
+                    );
+                    if (string.IsNullOrWhiteSpace(otlpEndpoint))
+                        throw new ArgumentNullException(
+                            nameof(otlpEndpoint),
+                            "OTEL_EXPORTER_OTLP_ENDPOINT is not configured."
+                        );
+
+                    metrics.AddOtlpExporter(otlp =>
+                    {
+                        if (!otlpEndpoint.Contains("://", StringComparison.Ordinal))
+                        {
+                            otlp.Endpoint = new Uri(
+                                $"https://{otlpEndpoint.TrimEnd('/')}/v1/metrics"
+                            );
+                        }
+
+                        Console.WriteLine(
+                            $"[OTLP] Endpoint={otlp.Endpoint}, Protocol={otlp.Protocol}, HeadersConfigured={!string.IsNullOrWhiteSpace(otlp.Headers)}"
+                        );
+                    });
                 });
             });
 
@@ -103,7 +127,8 @@ internal class Program
         Console.WriteLine(
             "\n4. Flushing OpenTelemetry MeterProvider to terminal (raw BCL measurements):\n"
         );
-        meterProvider.ForceFlush();
+        var flushed = meterProvider.ForceFlush(10_000);
+        Console.WriteLine($"[OTLP] ForceFlush returned: {flushed}");
 
         Console.WriteLine("\n5. MetricFlow In-Memory Aggregated Snapshot Report:\n");
         Console.WriteLine(tracker.ToString());

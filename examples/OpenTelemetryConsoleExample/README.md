@@ -38,7 +38,8 @@ services.AddMetricFlow("OrderProcessingService", options =>
         tags["datacenter"] = "eu-central-1";
     });
 
-    options.AddThroughputCounter();
+    options.AddTelemetryCounters()
+           .AddThroughputCounter();
 
     // Guard against metric explosion on high-cardinality tags
     options.ConfigureMeters(m =>
@@ -51,11 +52,13 @@ services.AddMetricFlow("OrderProcessingService", options =>
 {
     otel.WithMetrics(metrics =>
     {
-        // Export measurements to the console (in production, use AddOtlpExporter or AddPrometheusExporter)
         metrics.AddConsoleExporter((_, readerOptions) =>
         {
             readerOptions.PeriodicExportingMetricReaderOptions.ExportIntervalMilliseconds = 1000;
         });
+
+        // Exports via OTLP using standard OTEL_EXPORTER_OTLP_* environment variables
+        metrics.AddOtlpExporter();
     });
 });
 
@@ -110,12 +113,67 @@ Console.WriteLine(tracker.ToString());
 
 ---
 
-## Running the Example
+## Quickstart
+
+### 1. Start the Local Observability Stack (OTel Collector + Prometheus + Grafana)
 
 From the repository root:
 
 ```bash
-dotnet run --project examples/OpenTelemetryConsoleExample/OpenTelemetryConsoleExample.csproj
+docker compose -f examples/OpenTelemetryConsoleExample/docker-compose.yml up -d
+```
+
+This starts:
+- **OpenTelemetry Collector**: `http://localhost:4318` (OTLP HTTP/protobuf) and `localhost:4317` (OTLP gRPC)
+- **Prometheus**: http://localhost:9090
+- **Grafana**: http://localhost:3000 (anonymous admin login enabled, pre-provisioned **MetricFlow - OpenTelemetry Console Example** home dashboard)
+
+### 2. Run the Example
+
+Pass the OTLP environment variables inline (use `--no-launch-profile` if you also have a local `Properties/launchSettings.json`):
+
+```bash
+OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:4318" \
+OTEL_EXPORTER_OTLP_PROTOCOL="http/protobuf" \
+OTEL_SERVICE_NAME="metricflow-otel-example" \
+dotnet run --no-launch-profile --project examples/OpenTelemetryConsoleExample/OpenTelemetryConsoleExample.csproj
+```
+
+> **IDE tip (`Properties/launchSettings.json`):** `**/launchSettings.json` is gitignored so you can keep local or authenticated endpoints out of source control:
+> ```json
+> {
+>   "profiles": {
+>     "LocalDocker": {
+>       "commandName": "Project",
+>       "environmentVariables": {
+>         "OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4318",
+>         "OTEL_EXPORTER_OTLP_PROTOCOL": "http/protobuf",
+>         "OTEL_SERVICE_NAME": "metricflow-otel-example"
+>       }
+>     }
+>   }
+> }
+> ```
+
+### 3. Inspect Metrics
+
+- **Grafana:** Open http://localhost:3000 — the preconfigured dashboard displays order batches, item totals by region, customer lookup cardinality clamping (`[Other]`), payment exceptions, and average operation durations.
+- **Prometheus:** Open http://localhost:9090 and query `last_over_time({service_name="metricflow-otel-example"}[1h])` or `ProcessOrderBatch_total`.
+
+### 4. Stop & Clean Up
+
+```bash
+docker compose -f examples/OpenTelemetryConsoleExample/docker-compose.yml down -v
+```
+
+### Custom / Remote OTLP Endpoint
+
+```bash
+OTEL_EXPORTER_OTLP_ENDPOINT="https://your-otel-collector.example.com" \
+OTEL_EXPORTER_OTLP_PROTOCOL="http/protobuf" \
+OTEL_SERVICE_NAME="metricflow-otel-example" \
+OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer <YOUR_TOKEN>" \
+dotnet run --no-launch-profile --project examples/OpenTelemetryConsoleExample/OpenTelemetryConsoleExample.csproj
 ```
 
 ### Observing Live with `dotnet-counters`
