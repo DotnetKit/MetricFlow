@@ -1,54 +1,54 @@
-# Hierarchical Scope Trees
+# Hierarchical Operation Correlation
 
-The **Hierarchical Scope Trees** pattern automatically correlates parent and child tracking scopes across asynchronous execution flows (`AsyncLocal`). Powered by [`HierarchyCounter`](xref:DotnetKit.MetricFlow.Counters.HierarchyCounter), it calculates **exclusive self-duration** and **self-allocated memory** for each node, renders visual execution trees (`▼`, `├─`, `└─`), and automatically bridges nested spans into ambient OpenTelemetry `Activity` distributed traces.
+MetricFlow automatically correlates parent and child operations across synchronous and asynchronous execution flows (`AsyncLocal<string?>`) using technical metadata (`MetricFlowMetadataKeys.Parent` = `"metricflow_parent"`), without requiring any dedicated counter or modifying business `tags`.
 
 ---
 
 ## Best For
 
-- **Complex Execution Pipelines**: Multi-step workflows (e.g. Ingestion -> Validation -> Storage -> Notification).
-- **Bottleneck Diagnosis**: Distinguish between slow child dependencies (database, external HTTP) and CPU-bound overhead in the parent method.
-- **Memory Allocation Auditing**: Identify which exact layer in a call stack causes heap allocations.
-- **Distributed Trace Bridging**: Seamlessly map nested in-memory code blocks into OpenTelemetry spans without manually creating `Activity` instances.
+- **Multi-Step Execution Pipelines**: Correlating parent workflows (e.g. `GlobalOperation` → `ExecuteOperation1Async`, `BatchIngestion`, `DynamicProcessor`).
+- **Clean Business Tags**: Keeping `tags` strictly for business dimensions (`region`, `tenant_id`, `tier`) while storing structural/technical metadata (`metricflow_parent`, `trace_id`, `correlation_id`, `items`) in `metadata`.
+- **Readable Reports**: Rendering indented parent-child rows (`└─ `) in `ToMarkdownTable()` and `ConsoleDisplayMode.Table`.
 
 ---
 
 ## Quick Start
 
-Enable the hierarchy counter, execute nested operations, and view the formatted execution tree:
+Nested `Track`, `In`/`Out`, `TrackActionAsync`, and `TrackItems` calls are correlated automatically:
 
 ```csharp
 using DotnetKit.MetricFlow;
+using DotnetKit.MetricFlow.Exporters;
+using DotnetKit.MetricFlow.Sinks.Console;
 
 var tracker = new MetricTracker("CatalogService")
-    .AddHierarchyCounter()
-    .AddMemoryCounter()
+    .AddTelemetryCounters(includeMemory: true)
     .AddThroughputCounter()
     .AddConsoleSink(opt =>
     {
         opt.Colorize = true;
-        opt.ShowHierarchicalTree = true;
+        opt.DisplayMode = ConsoleDisplayMode.Table;
     });
 
-// Parent scope
+// Parent scope (Track or In/Out)
 using (tracker.Track("GetChannelProgramsUseCase"))
 {
     await Task.Delay(20);
 
-    // Child scope 1: Quick cache lookup
+    // Child scope 1: automatically correlated under GetChannelProgramsUseCase
     using (var step1 = tracker.Track("MatchSingleChannelUseCase"))
     {
         step1.SetItems(1);
         await Task.Delay(10);
     }
 
-    // Child scope 2: Database fetch
+    // Child scope 2: automatically correlated under GetChannelProgramsUseCase
     using (var step2 = tracker.Track("TableStorage.GetProgrammesForChannel"))
     {
         step2.SetItems(1450);
         await Task.Delay(50);
 
-        // Grandchild scopes
+        // Grandchild scope: automatically correlated under TableStorage.GetProgrammesForChannel
         using (tracker.Track("TableStorage.QuerySegmentAsync"))
         {
             await Task.Delay(20);
@@ -56,118 +56,38 @@ using (tracker.Track("GetChannelProgramsUseCase"))
     }
 }
 
-// Flush and display the tree snapshot
-await tracker.FlushSinksAsync();
+Console.WriteLine(tracker.ToMarkdownTable());
 ```
 
-### Formatted Console Output
+### Explicit Parent Override
 
-```text
-[CatalogService] Hierarchy Execution Tree:
-▼ GetChannelProgramsUseCase (total: 80.45 ms, self: 20.45 ms, alloc: 12.4 KB)
-  ├─ MatchSingleChannelUseCase (total: 10.12 ms, self: 10.12 ms, items: 1)
-  └─ TableStorage.GetProgrammesForChannel (total: 50.15 ms, self: 30.15 ms, items: 1,450)
-      └─ TableStorage.QuerySegmentAsync (total: 20.00 ms, self: 20.00 ms)
-```
-
----
-
-## Available Options & API Reference
-
-### 1. Counter Registration
-
-| Method | Description |
-| :--- | :--- |
-| `AddHierarchyCounter(string name = "Hierarchy")` | Registers a [`HierarchyCounter`](xref:DotnetKit.MetricFlow.Counters.HierarchyCounter) with an optional custom counter name. |
-| `EnableHierarchical(bool enabled = true)` | Fluent helper alias on [`MetricFlowOptions`](xref:DotnetKit.MetricFlow.MetricFlowOptions) to ensure the hierarchy counter is active. |
-
-### 2. Node Properties in `HierarchyNode`
-
-When inspecting nodes via [`HierarchyNode`](xref:DotnetKit.MetricFlow.Hierarchy.HierarchyNode):
-
-| Property | Type | Description |
-| :--- | :--- | :--- |
-| `MetricName` | `string` | The operation name assigned when tracked. |
-| `Parent` | `HierarchyNode?` | Reference to parent scope node (or null if root). |
-| `Children` | `IReadOnlyList<HierarchyNode>` | Child operations executed within this scope. |
-| `Duration` | `TimeSpan` | Total elapsed duration including all child executions. |
-| `SelfDuration` | `TimeSpan` | Exclusive duration spent solely inside this node (`Duration - Sum(Children.Duration)`). |
-| `AllocatedBytes` | `long` | Total heap memory allocated on current thread during scope. |
-| `SelfAllocatedBytes` | `long` | Exclusive heap memory allocated by this node alone (`AllocatedBytes - Sum(Children.AllocatedBytes)`). |
-| `ItemCount` | `long` | Number of items processed by this operation. |
-| `Failed` | `bool` | Whether the scope failed or encountered an exception. |
-| `Exception` | `Exception?` | Exception captured during scope execution, if any. |
-
-### 3. Tree Snapshot & Retrieval
+When you want to declare or override a parent explicitly (for example, across disconnected scopes or message handlers), pass `metadata: new() { [MetricFlowMetadataKeys.Parent] = "ParentOperation" }` or call `.SetParent("ParentOperation")`:
 
 ```csharp
-// Retrieve hierarchy snapshot for a root operation
-var snapshot = tracker.GetHierarchySnapshot("GetChannelProgramsUseCase");
-
-if (snapshot != null)
+using (tracker.Track("StepA", metadata: new() { [MetricFlowMetadataKeys.Parent] = "WorkflowRoot", ["trace_id"] = "abc-123" }))
 {
-    HierarchyNode root = snapshot.RootNode;
-    Console.WriteLine($"Root: {root.MetricName}, Total: {root.Duration}, Self: {root.SelfDuration}");
+    // ...
+}
+
+using (var scope = tracker.Track("StepB").SetParent("WorkflowRoot"))
+{
+    // ...
 }
 ```
 
 ---
 
-## Frequently Asked Questions (FAQ)
+## Programmatic Inspection
 
-### Q: How does MetricFlow calculate self-duration versus total duration?
-
-**A:** Total duration measures the wall-clock time between `In` and `Out` of the scope. Self-duration subtracts the cumulative duration of all immediate child scopes:
-
-$$\text{SelfDuration} = \max(0, \text{TotalDuration} - \sum \text{Child.Duration})$$
-
-This isolates the exact CPU processing or waiting time in the current function without skewing metrics from downstream calls.
-
----
-
-### Q: Does hierarchy tracking work safely across asynchronous methods and `await` calls?
-
-**A:** Yes. `HierarchyCounter` utilizes .NET `AsyncLocal<HierarchyNode?>`. The tracking context automatically flows down through `async`/`await` state machine boundaries, child tasks, and thread pool hops, restoring the parent scope when child operations complete.
-
----
-
-### Q: How do hierarchical scopes bridge into OpenTelemetry Activity spans?
-
-**A:** `HierarchyCounter` exposes a native `System.Diagnostics.ActivitySource` (`"DotnetKit.MetricFlow"`). When an OpenTelemetry tracer is active:
-1. Entering a scope starts a child `Activity` parented to the ambient trace context.
-2. Scope tags are mapped to span attributes.
-3. Upon exit, `metricflow.self_duration_ms`, `metricflow.allocated_bytes`, and `metricflow.items` are attached to the span.
-4. If an exception occurs, the span status is set to `ActivityStatusCode.Error`.
-
----
-
-### Q: How can I programmatically traverse all nodes in a hierarchy tree?
-
-**A:** You can write a recursive visitor using the `Children` collection:
+Each [`OperationSummary`](xref:DotnetKit.MetricFlow.Presentation.OperationSummary) exposes `ParentOperation` and `Depth`, ordered hierarchically by `tracker.GetOperationSummaries()`:
 
 ```csharp
-var snapshot = tracker.GetHierarchySnapshot("GetChannelProgramsUseCase");
-if (snapshot != null)
+var summaries = tracker.GetOperationSummaries();
+foreach (var summary in summaries)
 {
-    PrintTree(snapshot.RootNode, depth: 0);
+    Console.WriteLine($"{new string(' ', summary.Depth * 2)}{summary.OperationName} (parent: {summary.ParentOperation ?? "root"})");
 }
 
-void PrintTree(HierarchyNode node, int depth)
-{
-    string indent = new(' ', depth * 2);
-    Console.WriteLine($"{indent}- {node.MetricName} (Self: {node.SelfDuration.TotalMilliseconds:N1}ms)");
-    foreach (var child in node.Children)
-    {
-        PrintTree(child, depth + 1);
-    }
-}
+// Or query a single operation's declared parent directly
+var parent = tracker.GetParentOperation("MatchSingleChannelUseCase");
 ```
-
----
-
-### Q: What happens if an exception is thrown in a nested grandchild scope?
-
-**A:** When an exception unwinds the stack:
-- The grandchild scope's `Dispose()` marks the node as `Failed = true` and records the `Exception`.
-- The parent scope still captures its elapsed time and registers its execution snapshot when it completes.
-- In console sinks, failed nodes are visually highlighted in Red with the exception message.

@@ -7,7 +7,7 @@ public readonly struct RecordContext(
     string metricName,
     long value = 1,
     IReadOnlyDictionary<string, string>? tags = null,
-    IReadOnlyDictionary<string, long>? metadata = null,
+    IReadOnlyDictionary<string, string>? metadata = null,
     DateTime? utcTimestamp = null)
 {
     /// <summary>
@@ -26,9 +26,9 @@ public readonly struct RecordContext(
     public IReadOnlyDictionary<string, string>? Tags { get; } = tags;
 
     /// <summary>
-    /// Gets optional numeric metadata associated with this event.
+    /// Gets optional technical metadata associated with this event (e.g. parent, trace_id, correlation_id).
     /// </summary>
-    public IReadOnlyDictionary<string, long>? Metadata { get; } = metadata;
+    public IReadOnlyDictionary<string, string>? Metadata { get; } = metadata;
 
     /// <summary>
     /// Gets the UTC timestamp when this event was recorded.

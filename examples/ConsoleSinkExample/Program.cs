@@ -145,14 +145,14 @@ internal class Program
         );
 
         var hierarchyOptions = new MetricFlowOptions { Topic = "MediaCatalog" }
-            .AddTelemetryCounters(includeMemory: true, includeHierarchy: true)
+            .AddTelemetryCounters(includeMemory: true)
             .AddThroughputCounter();
 
         hierarchyOptions.AddConsoleSink(opt =>
         {
             opt.Colorize = true;
             opt.Prefix = "[Catalog:Trace]";
-            opt.ShowHierarchicalTree = true;
+            opt.DisplayMode = ConsoleDisplayMode.Table;
 
             // 1. Duration thresholds
             opt.AddThreshold<DurationSnapshot>(

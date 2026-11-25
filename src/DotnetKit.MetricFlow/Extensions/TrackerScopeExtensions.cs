@@ -53,7 +53,39 @@ public static class TrackerScopeExtensions
     }
 
     /// <summary>
-    /// Adds or updates a numeric metadata entry on the active tracking scope for technical telemetry and counter consumption.
+    /// Declares the logical parent operation name on the active tracking scope via the <see cref="MetricFlowMetadataKeys.Parent"/> metadata key,
+    /// enabling parent-child grouping in summaries and tables while keeping business tags untouched.
+    /// </summary>
+    /// <param name="scope">The tracking scope disposable.</param>
+    /// <param name="parentOperationName">The parent operation name.</param>
+    /// <returns>The same tracking scope for chaining.</returns>
+    public static IDisposable SetParent(this IDisposable scope, string parentOperationName)
+    {
+        if (scope is CodeTracker codeTracker)
+        {
+            codeTracker.SetParent(parentOperationName);
+        }
+        return scope;
+    }
+
+    /// <summary>
+    /// Adds or updates a technical metadata entry on the active tracking scope (e.g. <see cref="MetricFlowMetadataKeys.Parent"/>, "trace_id", "correlation_id").
+    /// </summary>
+    /// <param name="scope">The tracking scope disposable.</param>
+    /// <param name="key">The metadata key.</param>
+    /// <param name="value">The metadata value.</param>
+    /// <returns>The same tracking scope for chaining.</returns>
+    public static IDisposable SetMetadata(this IDisposable scope, string key, string value)
+    {
+        if (scope is CodeTracker codeTracker)
+        {
+            codeTracker.SetMetadata(key, value);
+        }
+        return scope;
+    }
+
+    /// <summary>
+    /// Adds or updates a numeric technical metadata entry on the active tracking scope (formatted with invariant culture).
     /// </summary>
     /// <param name="scope">The tracking scope disposable.</param>
     /// <param name="key">The metadata key.</param>

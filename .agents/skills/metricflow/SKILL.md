@@ -85,8 +85,7 @@ builder.Services.AddMetricFlow("WebApi", options =>
     // Register desired optional counters
     options.AddThroughputCounter()
            .AddMemoryCounter()
-           .AddExceptionCounter()
-           .AddHierarchyCounter();
+           .AddExceptionCounter();
 });
 
 var app = builder.Build();
@@ -249,7 +248,7 @@ Console.WriteLine(tracker.ToMarkdownTable());
 ### 0. Choosing Telemetry vs. Pure Functional Metrics (v1.1)
 Starting in v1.1, `MetricTracker` starts with **zero default telemetry counters** — you explicitly opt in to the counters you need:
 
-- **Telemetry preset (`.AddTelemetryCounters(...)`)**: Registers `DurationCounter` + `ExceptionCounter` (plus optional `MemoryCounter` and `HierarchyCounter`) for scoped operation profiling via `Track(...)` / `In()` / `Out()`.
+- **Telemetry preset (`.AddTelemetryCounters(...)`)**: Registers `DurationCounter` + `ExceptionCounter` (plus optional `MemoryCounter`) for scoped operation profiling via `Track(...)` / `In()` / `Out()`.
 - **Functional metrics preset (`.AddFunctionalMetrics(...)`)**: Registers a lightweight `CountCounter` + optional `DimensionCounter` breakdowns with zero `Stopwatch`/scope overhead. Record business events directly with `Record(...)` / `Increment(...)`:
 
 ```csharp
@@ -265,7 +264,7 @@ var byCountry = businessTracker.GetDimensionSnapshot("OrderPlaced", "country");
 ```
 
 When a tracker combines **both** `.AddTelemetryCounters()` and `.AddFunctionalMetrics(...)`:
-- `Record()` / `Increment()` invokes functional counters (`CountCounter`, `DimensionCounter`, `ThroughputCounter`) and emits `Counter<long>` to `MeterBridge`, while telemetry counters (`DurationCounter`, `MemoryCounter`, `HierarchyCounter`, `ExceptionCounter`) ignore it.
+- `Record()` / `Increment()` invokes functional counters (`CountCounter`, `DimensionCounter`, `ThroughputCounter`) and emits `Counter<long>` to `MeterBridge`, while telemetry counters (`DurationCounter`, `MemoryCounter`, `ExceptionCounter`) ignore it.
 - `Track()` / `In()` / `Out()` feeds both telemetry and functional counters so correlated `OperationSummary` reports work seamlessly.
 
 ---
@@ -341,14 +340,14 @@ public async IAsyncEnumerable<Product> StreamProductsAsync([EnumeratorCancellati
 
 ---
 
-### 4. Hierarchical Call Trees & Self-Time (`HierarchyCounter`)
-Correlates nested execution scopes across asynchronous flows (`AsyncLocal`) and computes exclusive self-duration and memory allocation:
+### 4. Automatic Parent-Child Operation Hierarchy (`MetricFlowMetadataKeys.Parent`)
+`MetricTracker` automatically correlates nested `Track`, `In`/`Out`, and `Record`/`Increment` calls across asynchronous flows (`AsyncLocal<string?>`) via technical metadata (`MetricFlowMetadataKeys.Parent` = `"metricflow_parent"`), keeping business `tags` untouched and requiring zero extra counters:
 
 ```csharp
-// Enable hierarchy counter during registration
-tracker.AddHierarchyCounter();
+var tracker = new MetricTracker("Orders")
+    .AddTelemetryCounters(includeMemory: true);
 
-// Nested execution scopes
+// Nested execution scopes are automatically correlated via AsyncLocal
 using (tracker.Track("ParentWorkflow"))
 {
     using (tracker.Track("Step1_FetchData"))
@@ -362,14 +361,21 @@ using (tracker.Track("ParentWorkflow"))
     }
 }
 
-// Render formatted call tree
-var tree = tracker.GetHierarchySnapshot("ParentWorkflow");
-Console.WriteLine(tree?.ToFormattedString());
+// Or override explicitly via MetricFlowMetadataKeys.Parent or .SetParent("CustomParent")
+using (tracker.Track("Step3_Override", metadata: new() { [MetricFlowMetadataKeys.Parent] = "ParentWorkflow" }))
+{
+    await Task.Delay(10);
+}
+
+// Render hierarchical Markdown table (or ConsoleDisplayMode.Table)
+Console.WriteLine(tracker.ToMarkdownTable());
 /*
-Output:
-▼ [ParentWorkflow] (72.50 ms, self: 2.50 ms)
-  ├─ [Step1_FetchData] (20.00 ms)
-  └─ [Step2_Compute] (50.00 ms)
+| Operation | Operations | Duration (Avg) | ... |
+| :--- | ---: | ---: | ... |
+| ParentWorkflow | 1 | 72.50 ms | ... |
+| └─ Step1_FetchData | 1 | 20.00 ms | ... |
+| └─ Step2_Compute | 1 | 50.00 ms | ... |
+| └─ Step3_Override | 1 | 10.00 ms | ... |
 */
 ```
 

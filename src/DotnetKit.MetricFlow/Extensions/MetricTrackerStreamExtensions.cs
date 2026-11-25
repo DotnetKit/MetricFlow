@@ -49,7 +49,7 @@ public static class MetricTrackerStreamExtensions
         IMetricTracker tracker,
         string operationName,
         Dictionary<string, string>? tags,
-        Dictionary<string, long>? metadata = null,
+        Dictionary<string, string>? metadata = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -113,7 +113,7 @@ public static class MetricTrackerStreamExtensions
         IMetricTracker tracker,
         string operationName,
         Dictionary<string, string>? tags,
-        Dictionary<string, long>? metadata = null)
+        Dictionary<string, string>? metadata = null)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(tracker);
@@ -127,7 +127,7 @@ public static class MetricTrackerStreamExtensions
         IMetricTracker tracker,
         string operationName,
         Dictionary<string, string>? tags,
-        Dictionary<string, long>? metadata,
+        Dictionary<string, string>? metadata,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var scope = tracker.Track(operationName, tags, metadata);
@@ -172,7 +172,7 @@ public static class MetricTrackerStreamExtensions
         IMetricTracker tracker,
         string operationName,
         Dictionary<string, string>? tags,
-        Dictionary<string, long>? metadata)
+        Dictionary<string, string>? metadata)
     {
         var scope = tracker.Track(operationName, tags, metadata);
         long itemCount = 0;

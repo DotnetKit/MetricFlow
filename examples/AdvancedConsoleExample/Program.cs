@@ -1,4 +1,5 @@
 using DotnetKit.MetricFlow;
+using DotnetKit.MetricFlow.Exporters;
 
 namespace AdvancedConsoleExample;
 
@@ -33,6 +34,11 @@ internal class Program
 
         tracker.Out("GlobalOperation");
 
+        // 0. Output correlated Markdown summary table with automatic parent-child hierarchy (via AsyncLocal MetricFlowMetadataKeys.Parent)
+        Console.WriteLine("=== Operation Summary Table (Automatic Parent-Child Hierarchy) ===");
+        Console.WriteLine(tracker.ToMarkdownTable());
+        Console.WriteLine();
+
         // 1. Output comprehensive telemetry breakdown for all counters
         Console.WriteLine(tracker.ToString());
 
@@ -62,7 +68,7 @@ internal class Program
 
     internal static async Task ExecuteOperation1Async(MetricTracker tracker, int i)
     {
-        // Operation1: tracks duration and memory allocation (metric name resolved dynamically via [CallerMemberName])
+        // Operation1: automatically correlated under GlobalOperation via ambient AsyncLocal parent metadata
         using var op1 = tracker.Track(tags: new() { ["operation_id"] = $"{i}" });
 
         await Task.Delay(2);
@@ -99,7 +105,10 @@ internal class Program
     {
         // Batch operation: tracks batch throughput upfront via TrackItems
         var batchSize = (i + 1) * 250; // 250 to 2,500 items per batch
-        using var scope = tracker.TrackItems("BatchIngestion", batchSize, new() { ["batch_id"] = $"{i}" });
+        using var scope = tracker.TrackItems(
+            "BatchIngestion",
+            batchSize,
+            additionalTags: new() { ["batch_id"] = $"{i}" });
 
         await Task.Delay(5);
 

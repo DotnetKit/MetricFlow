@@ -31,9 +31,9 @@ public readonly ref struct OutContext
     public IReadOnlyDictionary<string, string>? Tags { get; }
 
     /// <summary>
-    /// Gets numeric metadata attached to this operation, if any.
+    /// Gets technical metadata attached to this operation (e.g. parent, trace_id, correlation_id, items), if any.
     /// </summary>
-    public IReadOnlyDictionary<string, long>? Metadata { get; }
+    public IReadOnlyDictionary<string, string>? Metadata { get; }
 
     /// <summary>
     /// Gets the UTC timestamp when the operation exited.
@@ -48,7 +48,7 @@ public readonly ref struct OutContext
     /// <param name="exception">Optional exception thrown during execution.</param>
     /// <param name="duration">Optional elapsed duration.</param>
     /// <param name="tags">Optional key-value tags.</param>
-    /// <param name="metadata">Optional numeric metadata.</param>
+    /// <param name="metadata">Optional technical metadata.</param>
     /// <param name="utcTimestamp">Optional explicit exit timestamp; defaults to <see cref="DateTime.UtcNow"/>.</param>
     public OutContext(
         string metricName,
@@ -56,7 +56,7 @@ public readonly ref struct OutContext
         Exception? exception = null,
         TimeSpan? duration = null,
         IReadOnlyDictionary<string, string>? tags = null,
-        IReadOnlyDictionary<string, long>? metadata = null,
+        IReadOnlyDictionary<string, string>? metadata = null,
         DateTime? utcTimestamp = null)
     {
         MetricName = metricName;

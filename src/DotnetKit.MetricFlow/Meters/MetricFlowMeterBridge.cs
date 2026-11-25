@@ -42,7 +42,7 @@ public class MetricFlowMeterBridge : IMetricMeterBridge
     public TagList? RecordOperationIn(
         string metricName,
         IReadOnlyDictionary<string, string>? tags,
-        IReadOnlyDictionary<string, long>? metadata)
+        IReadOnlyDictionary<string, string>? metadata)
     {
         if (!IsEnabled || !_options.RecordActiveOperations)
         {
@@ -72,7 +72,7 @@ public class MetricFlowMeterBridge : IMetricMeterBridge
         bool failed,
         Exception? exception,
         IReadOnlyDictionary<string, string>? tags,
-        IReadOnlyDictionary<string, long>? metadata)
+        IReadOnlyDictionary<string, string>? metadata)
     {
         if (!IsEnabled)
         {
@@ -114,7 +114,7 @@ public class MetricFlowMeterBridge : IMetricMeterBridge
         string metricName,
         long value,
         IReadOnlyDictionary<string, string>? tags,
-        IReadOnlyDictionary<string, long>? metadata)
+        IReadOnlyDictionary<string, string>? metadata)
     {
         if (!IsEnabled)
         {

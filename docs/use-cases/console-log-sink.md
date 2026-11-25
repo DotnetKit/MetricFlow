@@ -68,7 +68,6 @@ using (tracker.Track("ProcessOrder"))
 | `IncludeTopicTags` | `bool` | `true` | Displays topic-level tags in the header output. |
 | `Prefix` | `string` | `"[MetricFlow]"` | Label prepended to every output line. |
 | `DisplayMode` | `ConsoleDisplayMode` | `FlatLog` | Output presentation style (`FlatLog`, `Table`, or `Markdown`). |
-| `ShowHierarchicalTree` | `bool` | `true` | Renders nested parent-child trees (`▼`, `├─`, `└─`). |
 | `ShowDimensionBreakdown` | `bool` | `true` | Renders dimension categories in table view. |
 | `MaxDimensionValuesToRender` | `int` | `4` | Max unique dimension values shown before truncation. |
 | `ShowTableHeaders` | `bool` | `true` | Renders table headers and divider rows. |

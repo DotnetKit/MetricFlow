@@ -18,7 +18,7 @@ Rather than relying on polling background timers or dedicated background threads
 - **ANSI Color Coding**: Built-in ANSI colors highlight normal rates (green), warnings/errors (red), and metric targets (yellow/cyan).
 - **Native Threshold Color Coding & Dynamic Selectors**: Declarative `opt.AddThreshold<TSnapshot>(warn, critical, ...)` and dynamic `opt.ColorSelector = snapshot => ...` pattern matching.
 - **Configurable Units & Custom Formatters**: Customizable duration units (`DurationUnit.Auto`, `Seconds`, etc.), memory units (`MemoryUnit.Auto`, `Megabytes`, etc.), throughput labels (`ThroughputUnit`), and strongly-typed snapshot formatters (`opt.AddFormatter<TSnapshot>`).
-- **Hierarchical Parent-Child Scope Trees**: First-class rendering of execution trees (`▼`, `├─`, `└─`) with self-duration and self-allocated memory breakdown (`ShowHierarchicalTree = true`).
+- **Automatic Parent-Child Table Hierarchy**: Indented parent-child operation rows (`└─ `) correlated automatically via `AsyncLocal` technical metadata (`DisplayMode = ConsoleDisplayMode.Table`).
 - **Execution-Lifecycle Sampling Triggers**:
   - **Stride Sampling (`EmitEveryNExecutions`)**: Automatically emits snapshots every $N$ executions (e.g., every 5 or 100 operations).
   - **Latency / Slow-Operation Sampling (`EmitOnSlowDurationThreshold`)**: Immediately emits snapshots when an operation exceeds a duration threshold (e.g., > 100ms).
@@ -164,15 +164,14 @@ Track correlated parent-child scopes across asynchronous tasks, customize displa
 
 ```csharp
 var hierarchyOptions = new MetricFlowOptions { Topic = "MediaCatalog" }
-    .AddHierarchyCounter()
-    .AddMemoryCounter()
+    .AddTelemetryCounters(includeMemory: true)
     .AddThroughputCounter();
 
 hierarchyOptions.AddConsoleSink(opt =>
 {
     opt.Colorize = true;
     opt.Prefix = "[Catalog:Trace]";
-    opt.ShowHierarchicalTree = true; // Enables tree rendering for root parent operations
+    opt.DisplayMode = ConsoleDisplayMode.Table; // Renders indented parent-child rows automatically
 
     // Unit customization
     opt.DurationUnit = DurationUnit.Auto; // Automatically scales between ms, s, m, h

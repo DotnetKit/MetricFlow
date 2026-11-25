@@ -27,7 +27,7 @@ public static class MetricExportExtensions
     )
     {
         ArgumentNullException.ThrowIfNull(source);
-        return source.GetAllSnapshots().ToMarkdownTable(options);
+        return source.GetOperationSummaries().ToMarkdownTable(options);
     }
 
     /// <summary>
@@ -111,8 +111,12 @@ public static class MetricExportExtensions
             var mem = op.Memory != null ? FormatBytes(op.Memory.AverageAllocatedBytes) : "-";
             var fail = $"{op.TotalFailures:N0} ({(op.FailureRate * 100).ToString("F1", culture)}%)";
 
+            var opLabel = op.Depth > 0
+                ? $"{new string(' ', (op.Depth - 1) * 2)}└─ {EscapeMarkdown(op.OperationName)}"
+                : EscapeMarkdown(op.OperationName);
+
             sb.Append("| ")
-                .Append(EscapeMarkdown(op.OperationName))
+                .Append(opLabel)
                 .Append(" | ")
                 .Append(ops)
                 .Append(" | ")

@@ -3,7 +3,6 @@ using System.Text;
 using DotnetKit.MetricFlow.Abstractions;
 using DotnetKit.MetricFlow.Counters;
 using DotnetKit.MetricFlow.Exporters;
-using DotnetKit.MetricFlow.Hierarchy;
 
 namespace DotnetKit.MetricFlow.Sinks.Console;
 
@@ -295,25 +294,6 @@ public class ConsoleMetricSink : IMetricSink
                 sb.Append(", Total: ").Append(options.FormatMemory(m.TotalAllocatedBytes));
                 break;
 
-            case HierarchyTreeSnapshot tree:
-                if (options.ShowHierarchicalTree)
-                {
-                    sb.AppendLine();
-                    var formattedTree = tree.ToFormattedString(
-                        color,
-                        node => ResolveNodeColor(node, options),
-                        options.FormatDuration,
-                        options.FormatMemory);
-                    sb.Append(formattedTree.TrimEnd('\r', '\n'));
-                }
-                else
-                {
-                    sb.Append("Root: ").Append(tree.Root.MetricName)
-                      .Append(", Duration: ").Append(options.FormatDuration(tree.Root.Duration))
-                      .Append(", Nodes: ").Append(CountNodes(tree.Root));
-                }
-                break;
-
             default:
                 // Fallback to formatted string cleaned of excess newlines for single-line display
                 var formatted = snapshot.ToFormattedString();
@@ -330,53 +310,5 @@ public class ConsoleMetricSink : IMetricSink
                 }
                 break;
         }
-    }
-
-    private static ConsoleColor? ResolveNodeColor(HierarchyNode node, ConsoleMetricSinkOptions options)
-    {
-        if (options.ColorSelector != null || options.ThresholdRules.Count > 0)
-        {
-            var dummyDuration = new DurationSnapshot(
-                MetricName: node.MetricName,
-                CounterName: "Duration",
-                InCount: 1,
-                OutCount: 1,
-                FailedCount: node.Failed ? 1 : 0,
-                AverageDuration: node.Duration,
-                MinDuration: node.Duration,
-                MaxDuration: node.Duration,
-                TotalDuration: node.Duration,
-                Timestamp: node.StartTimeUtc);
-
-            var resolved = options.ResolveColor(dummyDuration);
-            if (resolved.HasValue) return resolved.Value;
-
-            if (node.AllocatedBytes > 0)
-            {
-                var dummyMemory = new MemorySnapshot(
-                    MetricName: node.MetricName,
-                    CounterName: "Memory",
-                    OperationCount: 1,
-                    TotalAllocatedBytes: node.AllocatedBytes,
-                    AverageAllocatedBytes: node.AllocatedBytes,
-                    MinAllocatedBytes: node.AllocatedBytes,
-                    MaxAllocatedBytes: node.AllocatedBytes,
-                    Timestamp: node.StartTimeUtc);
-
-                var memColor = options.ResolveColor(dummyMemory);
-                if (memColor.HasValue) return memColor.Value;
-            }
-        }
-        return null;
-    }
-
-    private static int CountNodes(HierarchyNode node)
-    {
-        var count = 1;
-        foreach (var child in node.Children)
-        {
-            count += CountNodes(child);
-        }
-        return count;
     }
 }

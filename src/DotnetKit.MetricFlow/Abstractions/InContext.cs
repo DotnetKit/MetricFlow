@@ -16,9 +16,9 @@ public readonly ref struct InContext
     public IReadOnlyDictionary<string, string>? Tags { get; }
 
     /// <summary>
-    /// Gets numeric metadata attached to this operation, if any.
+    /// Gets technical metadata attached to this operation (e.g. parent, trace_id, correlation_id, items), if any.
     /// </summary>
-    public IReadOnlyDictionary<string, long>? Metadata { get; }
+    public IReadOnlyDictionary<string, string>? Metadata { get; }
 
     /// <summary>
     /// Gets the UTC timestamp when the operation entered.
@@ -30,12 +30,12 @@ public readonly ref struct InContext
     /// </summary>
     /// <param name="metricName">The name of the metric.</param>
     /// <param name="tags">Optional key-value tags.</param>
-    /// <param name="metadata">Optional numeric metadata.</param>
+    /// <param name="metadata">Optional technical metadata.</param>
     /// <param name="utcTimestamp">Optional explicit entry timestamp; defaults to <see cref="DateTime.UtcNow"/>.</param>
     public InContext(
         string metricName,
         IReadOnlyDictionary<string, string>? tags = null,
-        IReadOnlyDictionary<string, long>? metadata = null,
+        IReadOnlyDictionary<string, string>? metadata = null,
         DateTime? utcTimestamp = null)
     {
         MetricName = metricName;

@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace DotnetKit.MetricFlow;
 
 /// <summary>
@@ -7,7 +9,7 @@ internal static class ItemCountExtractor
 {
     public static bool TryExtractItemCount(
         IReadOnlyDictionary<string, string>? tags,
-        IReadOnlyDictionary<string, long>? metadata,
+        IReadOnlyDictionary<string, string>? metadata,
         out long items)
     {
         if (metadata != null && TryExtractFromMetadata(metadata, out items))
@@ -24,39 +26,24 @@ internal static class ItemCountExtractor
         return false;
     }
 
-    public static bool TryExtractFromMetadata(IReadOnlyDictionary<string, long> metadata, out long items)
-    {
-        if (metadata.TryGetValue("items", out items)) return true;
-        if (metadata.TryGetValue("count", out items)) return true;
-        if (metadata.TryGetValue("batch_size", out items)) return true;
-
-        foreach (var (key, value) in metadata)
-        {
-            if (string.Equals(key, "items", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(key, "count", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(key, "batch_size", StringComparison.OrdinalIgnoreCase))
-            {
-                items = value;
-                return true;
-            }
-        }
-
-        items = 0;
-        return false;
-    }
+    public static bool TryExtractFromMetadata(IReadOnlyDictionary<string, string> metadata, out long items)
+        => TryExtractFromDictionary(metadata, out items);
 
     public static bool TryExtractFromTags(IReadOnlyDictionary<string, string> tags, out long items)
-    {
-        if (tags.TryGetValue("items", out var itemsStr) && long.TryParse(itemsStr, out items)) return true;
-        if (tags.TryGetValue("count", out var countStr) && long.TryParse(countStr, out items)) return true;
-        if (tags.TryGetValue("batch_size", out var batchStr) && long.TryParse(batchStr, out items)) return true;
+        => TryExtractFromDictionary(tags, out items);
 
-        foreach (var (key, value) in tags)
+    private static bool TryExtractFromDictionary(IReadOnlyDictionary<string, string> values, out long items)
+    {
+        if (values.TryGetValue("items", out var itemsStr) && long.TryParse(itemsStr, NumberStyles.Integer, CultureInfo.InvariantCulture, out items)) return true;
+        if (values.TryGetValue("count", out var countStr) && long.TryParse(countStr, NumberStyles.Integer, CultureInfo.InvariantCulture, out items)) return true;
+        if (values.TryGetValue("batch_size", out var batchStr) && long.TryParse(batchStr, NumberStyles.Integer, CultureInfo.InvariantCulture, out items)) return true;
+
+        foreach (var (key, value) in values)
         {
             if ((string.Equals(key, "items", StringComparison.OrdinalIgnoreCase) ||
                  string.Equals(key, "count", StringComparison.OrdinalIgnoreCase) ||
                  string.Equals(key, "batch_size", StringComparison.OrdinalIgnoreCase)) &&
-                long.TryParse(value, out items))
+                long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out items))
             {
                 return true;
             }

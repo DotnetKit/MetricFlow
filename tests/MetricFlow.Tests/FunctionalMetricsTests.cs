@@ -68,7 +68,7 @@ public class FunctionalMetricsTests
     {
         // Arrange
         using var tracker = new MetricTracker("Billing")
-            .AddTelemetryCounters(includeMemory: true, includeHierarchy: true)
+            .AddTelemetryCounters(includeMemory: true)
             .AddFunctionalMetrics("currency");
 
         // Act 1 - Point-in-time functional recording
@@ -79,7 +79,6 @@ public class FunctionalMetricsTests
         tracker.GetDurationSnapshot("InvoiceIssued").Should().BeNull();
         tracker.GetMemorySnapshot("InvoiceIssued").Should().BeNull();
         tracker.GetExceptionSnapshot("InvoiceIssued").Should().BeNull();
-        tracker.GetHierarchySnapshot("InvoiceIssued").Should().BeNull();
 
         var invoiceCount = tracker.GetCountSnapshot("InvoiceIssued");
         invoiceCount.Should().NotBeNull();

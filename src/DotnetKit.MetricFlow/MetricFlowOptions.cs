@@ -308,15 +308,13 @@ public class MetricFlowOptions
 
     /// <summary>
     /// Registers the standard telemetry counter preset (<see cref="DurationCounter"/> and <see cref="ExceptionCounter"/>,
-    /// plus optional <see cref="MemoryCounter"/> and <see cref="HierarchyCounter"/>).
+    /// plus optional <see cref="MemoryCounter"/>).
     /// </summary>
     /// <param name="includeMemory">Whether to also register a <see cref="MemoryCounter"/>.</param>
-    /// <param name="includeHierarchy">Whether to also register a <see cref="HierarchyCounter"/>.</param>
     /// <param name="configureDuration">Optional configuration delegate for <see cref="DurationCounterOptions"/>.</param>
     /// <returns>The options instance for chaining.</returns>
     public MetricFlowOptions AddTelemetryCounters(
         bool includeMemory = false,
-        bool includeHierarchy = false,
         Action<DurationCounterOptions>? configureDuration = null)
     {
         AddDurationCounter(configureDuration);
@@ -325,11 +323,6 @@ public class MetricFlowOptions
         if (includeMemory)
         {
             AddMemoryCounter();
-        }
-
-        if (includeHierarchy)
-        {
-            AddHierarchyCounter();
         }
 
         return this;
@@ -390,31 +383,6 @@ public class MetricFlowOptions
     }
 
     /// <summary>
-    /// Adds a <see cref="HierarchyCounter"/> to track hierarchical parent-child operations across async execution contexts.
-    /// </summary>
-    /// <param name="name">Optional custom counter name. Defaults to <see cref="HierarchyCounter.DefaultCounterName"/>.</param>
-    /// <returns>The options instance for chaining.</returns>
-    public MetricFlowOptions AddHierarchyCounter(string name = HierarchyCounter.DefaultCounterName)
-    {
-        Counters.Add(new HierarchyCounter(name));
-        return this;
-    }
-
-    /// <summary>
-    /// Enables hierarchical parent-child scope tracking (alias for <see cref="AddHierarchyCounter"/>).
-    /// </summary>
-    /// <param name="enabled">Whether to add the hierarchy counter.</param>
-    /// <returns>The options instance for chaining.</returns>
-    public MetricFlowOptions EnableHierarchical(bool enabled = true)
-    {
-        if (enabled && !Counters.Any(c => c is HierarchyCounter))
-        {
-            AddHierarchyCounter();
-        }
-        return this;
-    }
-
-    /// <summary>
     /// Adds a <see cref="DimensionCounter"/> to the configured counters.
     /// </summary>
     /// <param name="dimensionKey">The target tag or metadata key to aggregate on.</param>
@@ -463,7 +431,7 @@ public class MetricFlowOptions
     /// <returns>The options instance for chaining.</returns>
     public MetricFlowOptions AddDimensionCounter(
         string name,
-        Func<IReadOnlyDictionary<string, string>?, IReadOnlyDictionary<string, long>?, string?> selector,
+        Func<IReadOnlyDictionary<string, string>?, IReadOnlyDictionary<string, string>?, string?> selector,
         int maxUniqueValues = 250,
         string overflowBucket = "[Other]",
         string? dimensionName = null)

@@ -1,6 +1,5 @@
 using DotnetKit.MetricFlow.Abstractions;
 using DotnetKit.MetricFlow.Counters;
-using DotnetKit.MetricFlow.Hierarchy;
 using DotnetKit.MetricFlow.Presentation;
 
 // ReSharper disable once CheckNamespace
@@ -56,7 +55,6 @@ public static class OperationSummaryExtensions
             MemorySnapshot? memory = null;
             FailureSnapshot? failure = null;
             ExceptionSnapshot? exception = null;
-            HierarchyTreeSnapshot? hierarchy = null;
             CountSnapshot? count = null;
             List<DimensionSnapshot>? dimensions = null;
             List<IMetricSnapshot>? additional = null;
@@ -79,9 +77,6 @@ public static class OperationSummaryExtensions
                         break;
                     case ExceptionSnapshot ex when exception == null:
                         exception = ex;
-                        break;
-                    case HierarchyTreeSnapshot h when hierarchy == null:
-                        hierarchy = h;
                         break;
                     case CountSnapshot c when count == null:
                         count = c;
@@ -106,7 +101,6 @@ public static class OperationSummaryExtensions
                     Failure: failure,
                     Exception: exception,
                     Dimensions: dimensions,
-                    Hierarchy: hierarchy,
                     AdditionalSnapshots: additional,
                     Count: count
                 )
@@ -126,7 +120,97 @@ public static class OperationSummaryExtensions
     )
     {
         ArgumentNullException.ThrowIfNull(source);
-        return source.GetAllSnapshots().GetOperationSummaries();
+        var summaries = source.GetAllSnapshots().GetOperationSummaries();
+
+        if (source is not IMetricTracker tracker || summaries.Count == 0)
+        {
+            return summaries;
+        }
+
+        var hasAnyParent = false;
+        var enriched = new List<OperationSummary>(summaries.Count);
+        foreach (var summary in summaries)
+        {
+            var parent = tracker.GetParentOperation(summary.OperationName);
+            if (!string.IsNullOrWhiteSpace(parent))
+            {
+                hasAnyParent = true;
+                enriched.Add(summary with { ParentOperation = parent });
+            }
+            else
+            {
+                enriched.Add(summary);
+            }
+        }
+
+        return hasAnyParent ? OrderHierarchically(enriched) : enriched;
+    }
+
+    private static List<OperationSummary> OrderHierarchically(
+        List<OperationSummary> summaries
+    )
+    {
+        var byName = new Dictionary<string, OperationSummary>(StringComparer.OrdinalIgnoreCase);
+        foreach (var summary in summaries)
+        {
+            byName.TryAdd(summary.OperationName, summary);
+        }
+
+        var childrenByParent = new Dictionary<string, List<OperationSummary>>(StringComparer.OrdinalIgnoreCase);
+        var roots = new List<OperationSummary>();
+
+        foreach (var summary in summaries)
+        {
+            if (!string.IsNullOrWhiteSpace(summary.ParentOperation)
+                && byName.ContainsKey(summary.ParentOperation)
+                && !string.Equals(summary.OperationName, summary.ParentOperation, StringComparison.OrdinalIgnoreCase))
+            {
+                if (!childrenByParent.TryGetValue(summary.ParentOperation, out var children))
+                {
+                    children = [];
+                    childrenByParent[summary.ParentOperation] = children;
+                }
+                children.Add(summary);
+            }
+            else
+            {
+                roots.Add(summary);
+            }
+        }
+
+        var ordered = new List<OperationSummary>(summaries.Count);
+        var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        void Visit(OperationSummary node, int depth)
+        {
+            if (!visited.Add(node.OperationName))
+            {
+                return;
+            }
+
+            ordered.Add(depth > 0 ? node with { Depth = depth } : node);
+
+            if (childrenByParent.TryGetValue(node.OperationName, out var children))
+            {
+                foreach (var child in children)
+                {
+                    Visit(child, depth + 1);
+                }
+            }
+        }
+
+        foreach (var root in roots)
+        {
+            Visit(root, depth: 0);
+        }
+
+        // Guard against cycles where every node referenced another node in the cycle
+        foreach (var summary in summaries.Where(s => !visited.Contains(s.OperationName)))
+        {
+            Visit(summary, depth: 0);
+        }
+
+        return ordered;
     }
 
     /// <summary>
@@ -150,6 +234,14 @@ public static class OperationSummaryExtensions
         }
 
         var summaries = snapshots.GetOperationSummaries();
-        return summaries.Count > 0 ? summaries[0] : null;
+        if (summaries.Count == 0)
+        {
+            return null;
+        }
+
+        var parent = tracker.GetParentOperation(operationName);
+        return !string.IsNullOrWhiteSpace(parent)
+            ? summaries[0] with { ParentOperation = parent }
+            : summaries[0];
     }
 }

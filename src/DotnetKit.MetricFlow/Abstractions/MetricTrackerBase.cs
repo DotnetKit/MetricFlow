@@ -22,11 +22,18 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
 
     private readonly ConcurrentDictionary<string, IMetricSink> _sinks = new(StringComparer.OrdinalIgnoreCase);
     private readonly MetricSinkTriggerOptions _sinkTriggers;
+    /// <summary>
+    /// Standard metadata key used to declare a logical parent operation name (<see cref="MetricFlowMetadataKeys.Parent"/>).
+    /// </summary>
+    public const string ParentMetadataKey = MetricFlowMetadataKeys.Parent;
+
     private readonly ConcurrentDictionary<string, long> _metricExecutionCounts = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, long> _operationSequences = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, string> _operationParents = new(StringComparer.OrdinalIgnoreCase);
     private long _operationSequenceCounter;
 
     private readonly AsyncLocal<Dictionary<string, Stack<InOperationState>>?> _asyncOperations = new();
+    private readonly AsyncLocal<string?> _ambientOperation = new();
     private readonly AsyncLocal<Dictionary<string, int>?> _asyncDroppedCounts = new();
 
     private readonly double? _samplingRate;
@@ -191,9 +198,9 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
     /// </summary>
     /// <param name="metricName">The name of the metric operation.</param>
     /// <param name="tags">Optional tags associated with this execution.</param>
-    /// <param name="metadata">Optional numeric metadata (e.g. byte size, item counts).</param>
+    /// <param name="metadata">Optional technical metadata (e.g. parent, trace_id, correlation_id, items).</param>
     /// <returns>A disposable tracker scope.</returns>
-    public IDisposable Track(string metricName, Dictionary<string, string>? tags = null, Dictionary<string, long>? metadata = null)
+    public IDisposable Track(string metricName, Dictionary<string, string>? tags = null, Dictionary<string, string>? metadata = null)
     {
         if (ShouldDrop(_samplingRate))
         {
@@ -213,17 +220,30 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
         }
 
         EnsureOperationSequence(metricName);
-        return new CodeTracker(active, metricName, tags, metadata, _meterBridge, onCompleted);
+        ResolveAndRecordParent(metricName, metadata, out var effectiveMetadata);
+
+        var previousAmbient = _ambientOperation.Value;
+        _ambientOperation.Value = metricName;
+
+        return new CodeTracker(
+            active,
+            metricName,
+            tags,
+            effectiveMetadata,
+            _meterBridge,
+            onCompleted,
+            RecordOperationParent,
+            () => _ambientOperation.Value = previousAmbient);
     }
 
     /// <summary>
     /// Begins tracking an execution scope using the calling member name as the metric name.
     /// </summary>
     /// <param name="tags">Optional tags associated with this execution.</param>
-    /// <param name="metadata">Optional numeric metadata.</param>
+    /// <param name="metadata">Optional technical metadata.</param>
     /// <param name="metricName">Automatically populated with the caller member name.</param>
     /// <returns>A disposable tracker scope.</returns>
-    public IDisposable Track(Dictionary<string, string>? tags = null, Dictionary<string, long>? metadata = null, [CallerMemberName] string metricName = "")
+    public IDisposable Track(Dictionary<string, string>? tags = null, Dictionary<string, string>? metadata = null, [CallerMemberName] string metricName = "")
         => Track(metricName, tags, metadata);
 
     /// <summary>
@@ -231,8 +251,8 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
     /// </summary>
     /// <param name="metricName">The name of the metric operation.</param>
     /// <param name="tags">Optional tags associated with this operation.</param>
-    /// <param name="metadata">Optional numeric metadata.</param>
-    public void In(string metricName, Dictionary<string, string>? tags = null, Dictionary<string, long>? metadata = null)
+    /// <param name="metadata">Optional technical metadata.</param>
+    public void In(string metricName, Dictionary<string, string>? tags = null, Dictionary<string, string>? metadata = null)
     {
         if (ShouldDrop(_samplingRate))
         {
@@ -241,10 +261,14 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
         }
 
         EnsureOperationSequence(metricName);
+        ResolveAndRecordParent(metricName, metadata, out var effectiveMetadata);
+
+        var previousAmbient = _ambientOperation.Value;
+        _ambientOperation.Value = metricName;
 
         var active = _activeCounters;
         var states = new object?[active.Length];
-        var inContext = new InContext(metricName, tags, metadata);
+        var inContext = new InContext(metricName, tags, effectiveMetadata);
 
         for (var i = 0; i < active.Length; i++)
         {
@@ -254,19 +278,19 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
         TagList? inFlightTags = null;
         if (_meterBridge is { IsEnabled: true })
         {
-            inFlightTags = _meterBridge.RecordOperationIn(metricName, tags, metadata);
+            inFlightTags = _meterBridge.RecordOperationIn(metricName, tags, effectiveMetadata);
         }
 
-        RecordInOperation(metricName, new InOperationState(Stopwatch.GetTimestamp(), active, states, inFlightTags));
+        RecordInOperation(metricName, new InOperationState(Stopwatch.GetTimestamp(), active, states, inFlightTags, previousAmbient));
     }
 
     /// <summary>
     /// Records the entry of an operation using the calling member name as the metric name.
     /// </summary>
     /// <param name="tags">Optional tags associated with this operation.</param>
-    /// <param name="metadata">Optional numeric metadata.</param>
+    /// <param name="metadata">Optional technical metadata.</param>
     /// <param name="metricName">Automatically populated with the caller member name.</param>
-    public void In(Dictionary<string, string>? tags = null, Dictionary<string, long>? metadata = null, [CallerMemberName] string metricName = "")
+    public void In(Dictionary<string, string>? tags = null, Dictionary<string, string>? metadata = null, [CallerMemberName] string metricName = "")
         => In(metricName, tags, metadata);
 
     internal void HandleOperationCompleted(string metricName, TimeSpan duration, bool failed, Exception? exception)
@@ -288,14 +312,14 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
     /// <param name="failed">Whether the operation failed logically.</param>
     /// <param name="exception">Optional exception that caused failure.</param>
     /// <param name="duration">Optional explicit duration; if null, elapsed time is computed automatically.</param>
-    /// <param name="metadata">Optional numeric metadata.</param>
+    /// <param name="metadata">Optional technical metadata.</param>
     /// <param name="metricName">Automatically populated with the caller member name.</param>
     public void Out(
         Dictionary<string, string>? tags = null,
         bool failed = false,
         Exception? exception = null,
         TimeSpan? duration = null,
-        Dictionary<string, long>? metadata = null,
+        Dictionary<string, string>? metadata = null,
         [CallerMemberName] string metricName = "")
         => Out(metricName, tags, failed, exception, duration, metadata);
 
@@ -307,14 +331,14 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
     /// <param name="failed">Whether the operation failed logically.</param>
     /// <param name="exception">Optional exception that caused failure.</param>
     /// <param name="duration">Optional explicit duration; if null, elapsed time is computed automatically.</param>
-    /// <param name="metadata">Optional numeric metadata.</param>
+    /// <param name="metadata">Optional technical metadata.</param>
     public void Out(
         string metricName,
         Dictionary<string, string>? tags = null,
         bool failed = false,
         Exception? exception = null,
         TimeSpan? duration = null,
-        Dictionary<string, long>? metadata = null)
+        Dictionary<string, string>? metadata = null)
     {
         if (TryConsumeDropped(metricName))
         {
@@ -322,6 +346,11 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
         }
 
         var opState = TryPopInOperation(metricName);
+
+        if (opState != null)
+        {
+            _ambientOperation.Value = opState.PreviousAmbientOperation;
+        }
 
         if (!duration.HasValue && opState != null)
         {
@@ -373,11 +402,11 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
     /// </summary>
     /// <param name="metricName">The name of the functional metric or business event.</param>
     /// <param name="tags">Optional key-value string tags (business dimensions) associated with this event.</param>
-    /// <param name="metadata">Optional numeric metadata associated with this event.</param>
+    /// <param name="metadata">Optional technical metadata associated with this event.</param>
     public void Record(
         string metricName,
         Dictionary<string, string>? tags = null,
-        Dictionary<string, long>? metadata = null)
+        Dictionary<string, string>? metadata = null)
         => Increment(metricName, 1, tags, metadata);
 
     /// <summary>
@@ -386,12 +415,12 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
     /// <param name="metricName">The name of the functional metric or business event.</param>
     /// <param name="value">The incremental value to add. Defaults to 1.</param>
     /// <param name="tags">Optional key-value string tags (business dimensions) associated with this event.</param>
-    /// <param name="metadata">Optional numeric metadata associated with this event.</param>
+    /// <param name="metadata">Optional technical metadata associated with this event.</param>
     public void Increment(
         string metricName,
         long value = 1,
         Dictionary<string, string>? tags = null,
-        Dictionary<string, long>? metadata = null)
+        Dictionary<string, string>? metadata = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(metricName);
 
@@ -401,11 +430,12 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
         }
 
         EnsureOperationSequence(metricName);
+        ResolveAndRecordParent(metricName, metadata, out var effectiveMetadata);
 
         var active = _activeCounters;
         if (active.Length > 0)
         {
-            var recordContext = new RecordContext(metricName, value, tags, metadata);
+            var recordContext = new RecordContext(metricName, value, tags, effectiveMetadata);
             foreach (var counter in active)
             {
                 if (counter.IsEnabled)
@@ -417,7 +447,7 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
 
         if (_meterBridge is { IsEnabled: true })
         {
-            _meterBridge.RecordMetric(metricName, value, tags, metadata);
+            _meterBridge.RecordMetric(metricName, value, tags, effectiveMetadata);
         }
 
         HandleOperationCompleted(metricName, TimeSpan.Zero, failed: false, exception: null);
@@ -576,6 +606,77 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
         }
     }
 
+    /// <inheritdoc />
+    public string? GetParentOperation(string metricName)
+    {
+        return string.IsNullOrWhiteSpace(metricName)
+            ? null
+            : _operationParents.GetValueOrDefault(metricName);
+    }
+
+    internal void RecordOperationParent(string metricName, string? parentOperation)
+    {
+        if (string.IsNullOrWhiteSpace(metricName)
+            || string.IsNullOrWhiteSpace(parentOperation)
+            || string.Equals(metricName, parentOperation, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        _operationParents[metricName] = parentOperation;
+    }
+
+    private void ResolveAndRecordParent(
+        string metricName,
+        Dictionary<string, string>? metadata,
+        out Dictionary<string, string>? effectiveMetadata)
+    {
+        if (TryGetExplicitParent(metadata, out var explicitParent))
+        {
+            RecordOperationParent(metricName, explicitParent);
+            effectiveMetadata = metadata;
+            return;
+        }
+
+        var ambientParent = _ambientOperation.Value;
+        if (!string.IsNullOrWhiteSpace(ambientParent)
+            && !string.Equals(ambientParent, metricName, StringComparison.OrdinalIgnoreCase))
+        {
+            RecordOperationParent(metricName, ambientParent);
+            effectiveMetadata = metadata != null
+                ? new Dictionary<string, string>(metadata) { [ParentMetadataKey] = ambientParent }
+                : new Dictionary<string, string> { [ParentMetadataKey] = ambientParent };
+            return;
+        }
+
+        effectiveMetadata = metadata;
+    }
+
+    private static bool TryGetExplicitParent(Dictionary<string, string>? metadata, out string? parent)
+    {
+        if (metadata != null)
+        {
+            if (metadata.TryGetValue(ParentMetadataKey, out var directParent) && !string.IsNullOrWhiteSpace(directParent))
+            {
+                parent = directParent;
+                return true;
+            }
+
+            foreach (var (key, value) in metadata)
+            {
+                if (string.Equals(key, ParentMetadataKey, StringComparison.OrdinalIgnoreCase)
+                    && !string.IsNullOrWhiteSpace(value))
+                {
+                    parent = value;
+                    return true;
+                }
+            }
+        }
+
+        parent = null;
+        return false;
+    }
+
     /// <summary>
     /// Resets all registered counters, execution counts, and meter bridges.
     /// </summary>
@@ -587,6 +688,8 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
         }
         _metricExecutionCounts.Clear();
         _operationSequences.Clear();
+        _operationParents.Clear();
+        _ambientOperation.Value = null;
         Interlocked.Exchange(ref _operationSequenceCounter, 0);
         _meterBridge?.Reset();
     }
@@ -738,12 +841,18 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
         return false;
     }
 
-    private sealed class InOperationState(long startTimestamp, ICounter[] counters, object?[] states, TagList? inFlightTags)
+    private sealed class InOperationState(
+        long startTimestamp,
+        ICounter[] counters,
+        object?[] states,
+        TagList? inFlightTags,
+        string? previousAmbientOperation)
     {
         public long StartTimestamp => startTimestamp;
         public ICounter[] Counters => counters;
         public object?[] States => states;
         public TagList? InFlightTags => inFlightTags;
+        public string? PreviousAmbientOperation => previousAmbientOperation;
     }
 
     private sealed class NoOpDisposable : IDisposable

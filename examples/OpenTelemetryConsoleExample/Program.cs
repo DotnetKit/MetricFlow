@@ -58,8 +58,7 @@ internal class Program
                         "OTEL_EXPORTER_OTLP_ENDPOINT"
                     );
                     if (string.IsNullOrWhiteSpace(otlpEndpoint))
-                        throw new ArgumentNullException(
-                            nameof(otlpEndpoint),
+                        throw new InvalidOperationException(
                             "OTEL_EXPORTER_OTLP_ENDPOINT is not configured."
                         );
 

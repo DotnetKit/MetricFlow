@@ -378,7 +378,7 @@ public class ThroughputCounterTests
     {
         // Arrange
         IReadOnlyDictionary<string, string>? capturedTags = null;
-        IReadOnlyDictionary<string, long>? capturedMetadata = null;
+        IReadOnlyDictionary<string, string>? capturedMetadata = null;
 
         var spy = new ContextSpyCounter("Spy");
         var tracker = new MetricTracker("TagsIsolationTest")
@@ -399,7 +399,7 @@ public class ThroughputCounterTests
         capturedTags.Should().NotContainKey("items");
 
         capturedMetadata.Should().NotBeNull();
-        capturedMetadata.Should().ContainKey("items").WhoseValue.Should().Be(250);
+        capturedMetadata.Should().ContainKey("items").WhoseValue.Should().Be("250");
 
         var snapshot = tracker.GetThroughputSnapshot("IsolatedOp");
         snapshot.Should().NotBeNull();
@@ -416,7 +416,7 @@ public class ThroughputCounterTests
         // Act
         tracker.In("ManualOp");
         Thread.Sleep(5);
-        tracker.Out("ManualOp", metadata: new() { ["items"] = 750 });
+        tracker.Out("ManualOp", metadata: new() { ["items"] = "750" });
 
         // Assert
         var snapshot = tracker.GetThroughputSnapshot("ManualOp");
@@ -460,7 +460,7 @@ public class ThroughputCounterTests
             .AddThroughputCounter();
 
         // Act
-        using (tracker.Track("AlternativeMetaOp", metadata: new() { [metaKey] = expectedCount }))
+        using (tracker.Track("AlternativeMetaOp", metadata: new() { [metaKey] = expectedCount.ToString() }))
         {
         }
 
@@ -474,7 +474,7 @@ public class ThroughputCounterTests
     private sealed class ContextSpyCounter(string name) : CounterBase(name)
     {
         public IReadOnlyDictionary<string, string>? LastOutContextTags { get; private set; }
-        public IReadOnlyDictionary<string, long>? LastOutContextMetadata { get; private set; }
+        public IReadOnlyDictionary<string, string>? LastOutContextMetadata { get; private set; }
 
         public override object? OnIn(in InContext context) => null;
 

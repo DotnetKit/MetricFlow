@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using DotnetKit.MetricFlow.Abstractions;
 
@@ -23,12 +24,12 @@ public static class MetricTrackerItemExtensions
         string metricName,
         long itemCount,
         Dictionary<string, string>? additionalTags = null,
-        Dictionary<string, long>? additionalMetadata = null)
+        Dictionary<string, string>? additionalMetadata = null)
     {
         ArgumentNullException.ThrowIfNull(tracker);
 
-        var metadata = additionalMetadata != null ? new Dictionary<string, long>(additionalMetadata) : new Dictionary<string, long>();
-        metadata["items"] = itemCount;
+        var metadata = additionalMetadata != null ? new Dictionary<string, string>(additionalMetadata) : new Dictionary<string, string>();
+        metadata["items"] = itemCount.ToString(CultureInfo.InvariantCulture);
         return tracker.Track(metricName, additionalTags, metadata);
     }
 
@@ -45,7 +46,7 @@ public static class MetricTrackerItemExtensions
         this IMetricTracker tracker,
         long itemCount,
         Dictionary<string, string>? additionalTags = null,
-        Dictionary<string, long>? additionalMetadata = null,
+        Dictionary<string, string>? additionalMetadata = null,
         [CallerMemberName] string metricName = "")
     {
         return TrackItems(tracker, metricName, itemCount, additionalTags, additionalMetadata);

@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using DotnetKit.MetricFlow.Abstractions;
 using DotnetKit.MetricFlow.Meters;
 
@@ -13,11 +14,13 @@ public class CodeTracker : IDisposable
     private readonly object?[] _states;
     private readonly string _metricName;
     private Dictionary<string, string>? _tags;
-    private Dictionary<string, long>? _metadata;
+    private Dictionary<string, string>? _metadata;
     private readonly long _startTimestamp;
     private readonly IMetricMeterBridge? _meterBridge;
     private readonly TagList? _inFlightTagList;
     private readonly Action<string, TimeSpan, bool, Exception?>? _onCompleted;
+    private readonly Action<string, string>? _onParentSet;
+    private readonly Action? _onDisposed;
 
     private bool _failed;
     private Exception? _exception;
@@ -34,12 +37,12 @@ public class CodeTracker : IDisposable
     /// <param name="counters">The active counters to notify.</param>
     /// <param name="metricName">The name of the metric.</param>
     /// <param name="tags">Optional key-value tags.</param>
-    /// <param name="metadata">Optional numeric metadata.</param>
+    /// <param name="metadata">Optional technical metadata.</param>
     public CodeTracker(
         ICounter[] counters,
         string metricName,
         Dictionary<string, string>? tags = null,
-        Dictionary<string, long>? metadata = null)
+        Dictionary<string, string>? metadata = null)
         : this(counters, metricName, tags, metadata, meterBridge: null, onCompleted: null)
     {
     }
@@ -50,13 +53,13 @@ public class CodeTracker : IDisposable
     /// <param name="counters">The active counters to notify.</param>
     /// <param name="metricName">The name of the metric.</param>
     /// <param name="tags">Optional key-value tags.</param>
-    /// <param name="metadata">Optional numeric metadata.</param>
+    /// <param name="metadata">Optional technical metadata.</param>
     /// <param name="meterBridge">Optional meter bridge connecting to System.Diagnostics.Metrics.</param>
     public CodeTracker(
         ICounter[] counters,
         string metricName,
         Dictionary<string, string>? tags,
-        Dictionary<string, long>? metadata,
+        Dictionary<string, string>? metadata,
         IMetricMeterBridge? meterBridge)
         : this(counters, metricName, tags, metadata, meterBridge, onCompleted: null)
     {
@@ -68,25 +71,31 @@ public class CodeTracker : IDisposable
     /// <param name="counters">The active counters to notify.</param>
     /// <param name="metricName">The name of the metric.</param>
     /// <param name="tags">Optional key-value tags.</param>
-    /// <param name="metadata">Optional numeric metadata.</param>
+    /// <param name="metadata">Optional technical metadata.</param>
     /// <param name="meterBridge">Optional meter bridge connecting to System.Diagnostics.Metrics.</param>
     /// <param name="onCompleted">Optional callback invoked upon operation completion.</param>
+    /// <param name="onParentSet">Optional callback invoked when a parent operation is declared via metadata or <see cref="SetParent"/>.</param>
+    /// <param name="onDisposed">Optional callback invoked when the scope is disposed (e.g. to restore ambient parent context).</param>
     public CodeTracker(
         ICounter[] counters,
         string metricName,
         Dictionary<string, string>? tags,
-        Dictionary<string, long>? metadata,
+        Dictionary<string, string>? metadata,
         IMetricMeterBridge? meterBridge,
-        Action<string, TimeSpan, bool, Exception?>? onCompleted)
+        Action<string, TimeSpan, bool, Exception?>? onCompleted,
+        Action<string, string>? onParentSet = null,
+        Action? onDisposed = null)
     {
         _counters = counters;
         _metricName = metricName;
         _tags = tags != null ? new Dictionary<string, string>(tags) : null;
-        _metadata = metadata != null ? new Dictionary<string, long>(metadata) : null;
+        _metadata = metadata != null ? new Dictionary<string, string>(metadata) : null;
         _startTimestamp = Stopwatch.GetTimestamp();
         _states = new object?[counters.Length];
         _meterBridge = meterBridge;
         _onCompleted = onCompleted;
+        _onParentSet = onParentSet;
+        _onDisposed = onDisposed;
 
 
         var inContext = new InContext(metricName, _tags, _metadata);
@@ -145,18 +154,46 @@ public class CodeTracker : IDisposable
     }
 
     /// <summary>
-    /// Adds or updates a numeric metadata value for the tracked operation.
+    /// Declares the logical parent operation name for this tracking scope via the <see cref="MetricFlowMetadataKeys.Parent"/> metadata key,
+    /// enabling parent-child grouping in summaries and tables while keeping business tags untouched.
+    /// </summary>
+    /// <param name="parentOperationName">The parent operation name.</param>
+    /// <returns>This tracker instance for fluent chaining.</returns>
+    public CodeTracker SetParent(string parentOperationName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(parentOperationName);
+        return SetMetadata(MetricFlowMetadataKeys.Parent, parentOperationName);
+    }
+
+    /// <summary>
+    /// Adds or updates a technical metadata entry for the tracked operation (e.g. <see cref="MetricFlowMetadataKeys.Parent"/>, "trace_id", "correlation_id", "items").
+    /// </summary>
+    /// <param name="key">The metadata key.</param>
+    /// <param name="value">The metadata value.</param>
+    /// <returns>This tracker instance for fluent chaining.</returns>
+    public CodeTracker SetMetadata(string key, string value)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        _metadata ??= new Dictionary<string, string>();
+        _metadata[key] = value;
+
+        if (string.Equals(key, MetricFlowMetadataKeys.Parent, StringComparison.OrdinalIgnoreCase)
+            && !string.IsNullOrWhiteSpace(value))
+        {
+            _onParentSet?.Invoke(_metricName, value);
+        }
+
+        return this;
+    }
+
+    /// <summary>
+    /// Adds or updates a numeric technical metadata entry for the tracked operation (formatted with invariant culture).
     /// </summary>
     /// <param name="key">The metadata key (e.g. "items", "bytes").</param>
     /// <param name="value">The numeric value.</param>
     /// <returns>This tracker instance for fluent chaining.</returns>
     public CodeTracker SetMetadata(string key, long value)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(key);
-        _metadata ??= new Dictionary<string, long>();
-        _metadata[key] = value;
-        return this;
-    }
+        => SetMetadata(key, value.ToString(CultureInfo.InvariantCulture));
 
     /// <summary>
     /// Convenience helper to record the number of items processed by this operation.
@@ -203,6 +240,7 @@ public class CodeTracker : IDisposable
 
             _meterBridge?.RecordOperationOut(_metricName, duration, _failed, _exception, _tags, _metadata);
             _onCompleted?.Invoke(_metricName, duration, _failed, _exception);
+            _onDisposed?.Invoke();
         }
     }
 

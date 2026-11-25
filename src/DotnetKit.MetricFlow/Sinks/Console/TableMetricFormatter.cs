@@ -86,7 +86,9 @@ public static class TableMetricFormatter
         foreach (var op in operations)
         {
             // 1. Operation column
-            var opText = op.OperationName;
+            var opText = op.Depth > 0
+                ? $"{new string(' ', (op.Depth - 1) * 2)}└─ {op.OperationName}"
+                : op.OperationName;
             if (opText.Length > maxOpLen)
                 maxOpLen = opText.Length;
 

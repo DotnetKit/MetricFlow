@@ -75,7 +75,6 @@ var tracker = new MetricTracker("DataIngestion")
     .AddMemoryCounter()                          // Captures heap allocation deltas
     .AddExceptionCounter()                       // Records thrown exception distributions
     .AddFailureCounter()                         // Tracks logical vs exception failures
-    .AddHierarchyCounter()                       // Correlates parent-child execution scopes
     .AddDimensionCounter("customer_tier")        // Groups metrics by dimension tags
     .AddDimensionCounter("tenant_region", ["tenant", "region"]); // Multi-tag dimension
 ```
@@ -87,7 +86,7 @@ var tracker = new MetricTracker("DataIngestion")
 var duration = tracker.GetDurationSnapshot("ProcessOrder");
 var throughput = tracker.GetThroughputSnapshot("BatchIngestion");
 var dimension = tracker.GetDimensionSnapshot("DynamicProcessor", "customer_tier");
-var hierarchy = tracker.GetHierarchySnapshot("ParentPipeline");
+var summaries = tracker.GetOperationSummaries();  // Hierarchically ordered via AsyncLocal MetricFlowMetadataKeys.Parent
 
 // Multi-format tabular exporters
 string markdownTable = tracker.ToMarkdownTable(); // Formatted GitHub-flavored markdown table

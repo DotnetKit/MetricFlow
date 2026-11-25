@@ -31,7 +31,7 @@ public interface IMetricMeterBridge : IDisposable
     /// <summary>
     /// Records the start of an in-flight operation and returns the active tag list for subsequent decrement.
     /// </summary>
-    TagList? RecordOperationIn(string metricName, IReadOnlyDictionary<string, string>? tags, IReadOnlyDictionary<string, long>? metadata);
+    TagList? RecordOperationIn(string metricName, IReadOnlyDictionary<string, string>? tags, IReadOnlyDictionary<string, string>? metadata);
 
     /// <summary>
     /// Decrements the active in-flight operation using the tag list captured at start.
@@ -47,7 +47,7 @@ public interface IMetricMeterBridge : IDisposable
         bool failed,
         Exception? exception,
         IReadOnlyDictionary<string, string>? tags,
-        IReadOnlyDictionary<string, long>? metadata);
+        IReadOnlyDictionary<string, string>? metadata);
 
     /// <summary>
     /// Records a point-in-time functional metric increment to System.Diagnostics.Metrics Counter&lt;long&gt; instruments.
@@ -56,7 +56,7 @@ public interface IMetricMeterBridge : IDisposable
         string metricName,
         long value,
         IReadOnlyDictionary<string, string>? tags,
-        IReadOnlyDictionary<string, long>? metadata)
+        IReadOnlyDictionary<string, string>? metadata)
     {
     }
 

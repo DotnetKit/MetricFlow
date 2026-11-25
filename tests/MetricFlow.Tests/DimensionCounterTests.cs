@@ -354,7 +354,7 @@ public class DimensionCounterTests
             (tags, metadata) =>
             {
                 var country = tags?.GetValueOrDefault("country") ?? "Unknown";
-                var amount = metadata?.GetValueOrDefault("amount") ?? 0;
+                var amount = long.TryParse(metadata?.GetValueOrDefault("amount"), out var parsedAmount) ? parsedAmount : 0;
 
                 if (amount >= 1000)
                     return $"VIP_{country}";
@@ -405,7 +405,7 @@ public class DimensionCounterTests
             "HighValueOrders",
             (_, metadata) =>
             {
-                var isHighValue = metadata?.GetValueOrDefault("amount") > 500;
+                var isHighValue = long.TryParse(metadata?.GetValueOrDefault("amount"), out var parsedAmount) && parsedAmount > 500;
                 return isHighValue ? "HighValue" : null;
             }
         );

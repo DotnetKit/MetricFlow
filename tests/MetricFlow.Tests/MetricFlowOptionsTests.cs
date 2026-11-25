@@ -129,7 +129,7 @@ public class MetricFlowOptionsTests
             name: "OrderTier",
             selector: (_, meta) =>
             {
-                var amount = meta?.GetValueOrDefault("amount") ?? 0;
+                var amount = long.TryParse(meta?.GetValueOrDefault("amount"), out var parsedAmount) ? parsedAmount : 0;
                 return amount > 1000 ? "High" : "Standard";
             },
             maxUniqueValues: 10,

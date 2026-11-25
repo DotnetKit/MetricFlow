@@ -22,7 +22,7 @@ It can be used in both ASP.NET Core and non-ASP.NET Core applications.
 | [**Simple Implementation**](docs/use-cases/simple-implementation.md)               | Targeted method/loop profiling, CLI jobs, algorithms        | Standalone instantiation           | `new MetricTracker(...)`                               | [BasicConsoleExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/BasicConsoleExample) & [AdvancedConsoleExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/AdvancedConsoleExample) |
 | [**DI-Based Implementation**](docs/use-cases/di-based-implementation.md)           | Background workers, daemons, multi-tenant                   | Standard DI (`IServiceCollection`) | `IMetricTracker`, `[FromKeyedServices]`, `IMetricFlow` | [AdvancedConsoleWithDIExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/AdvancedConsoleWithDIExample)                                                                                             |
 | [**Console Log Sink & Triggers**](docs/use-cases/console-log-sink.md)              | Real-time formatted console logging, timer-free sampling    | Standalone or DI                   | `AddConsoleSink(...)`, `ConfigureSinkSampling(...)`    | [ConsoleSinkExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/ConsoleSinkExample)                                                                                                                 |
-| [**Hierarchical Scope Trees**](docs/use-cases/hierarchical-scope-trees.md)         | Parent-child execution flows, self-time / self-memory       | Standalone or DI                   | `AddHierarchyCounter()`, `GetHierarchySnapshot(...)`   | [ConsoleSinkExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/ConsoleSinkExample)                                                                                                                 |
+| [**Hierarchical Correlation**](docs/use-cases/hierarchical-scope-trees.md)         | Automatic parent-child operation grouping across async flows | Standalone or DI                   | `MetricFlowMetadataKeys.Parent`, `ToMarkdownTable()`   | [AdvancedConsoleExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/AdvancedConsoleExample)                                                                                                       |
 | [**Logger Sink (Serilog / ILogger)**](docs/use-cases/logger-sink.md)               | Centralized structured logging, APM forwarders, log files   | Standalone or DI                   | `AddLoggerSink(...)`, `ConfigureSinkSampling(...)`     | [LoggerSinkExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/LoggerSinkExample)                                                                                                                   |
 | [**Web Implementation**](docs/use-cases/web-implementation.md)                     | Web APIs, microservices, HTTP routing                       | ASP.NET Core pipeline              | `app.UseMetricFlow()`, `app.MapMetricFlow("/metrics")` | [WebApiExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/WebApiExample)                                                                                                                           |
 | [**OpenTelemetry & Observability**](docs/use-cases/opentelemetry-observability.md) | Prometheus, Grafana, Datadog, OTLP collectors, CLI counters | OpenTelemetry SDK / BCL            | `.AddMetricFlowInstrumentation()`, `dotnet-counters`   | [OpenTelemetryConsoleExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/OpenTelemetryConsoleExample)                                                                                               |
@@ -34,13 +34,13 @@ It can be used in both ASP.NET Core and non-ASP.NET Core applications.
 ### Core Metrics & Measurement
 
 - **Zero-Overhead Functional Metrics (`CountCounter`, `Record` / `Increment`)**: Track pure business events and custom dimensional breakdowns without `Stopwatch` or `In`/`Out` scope overhead using `.AddFunctionalMetrics(...)`, `tracker.Record(...)`, and `tracker.Increment(...)`.
-- **Opt-In Telemetry Preset (`.AddTelemetryCounters(...)`)**: High-precision operation timing (`DurationCounter`), heap allocation (`MemoryCounter`), exception tracking (`ExceptionCounter`), failure rates (`FailureCounter`), and nested call trees (`HierarchyCounter`) — opt in only to what you need.
+- **Opt-In Telemetry Preset (`.AddTelemetryCounters(...)`)**: High-precision operation timing (`DurationCounter`), heap allocation (`MemoryCounter`), exception tracking (`ExceptionCounter`), and failure rates (`FailureCounter`) — opt in only to what you need.
 - **Throughput & Item Tracking**: Measure batch sizes, entity counts, and processing rates (items/sec) with `ThroughputCounter`.
 - **Dimensional Breakdown & Slicing**: Slice and compute operation or event distributions by business dimensions, tags, or computed rules with `DimensionCounter` and built-in cardinality safeguards.
 
 ### Flow & Execution Context
 
-- **Hierarchical Metrics & Correlation**: Automatically correlate parent and nested child tracking scopes across asynchronous execution contexts (`AsyncLocal`) with `HierarchyCounter`. Computes exclusive self-duration and self-allocated memory, renders formatted tree snapshots (`▼`, `├─`, `└─`), and bridges to ambient OpenTelemetry Activity spans.
+- **Automatic Parent-Child Correlation**: Automatically correlates nested `Track`, `In`/`Out`, and `Record`/`Increment` operations across asynchronous execution contexts (`AsyncLocal<string?>`) via technical metadata (`MetricFlowMetadataKeys.Parent` = `"metricflow_parent"`) — keeping business `tags` untouched and rendering indented rows (`└─ `) in Markdown and Console tables with zero extra counters.
 - **Asynchronous Stream Tracking**: Native `TrackStream` for `IAsyncEnumerable<T>` and `IEnumerable<T>` with automatic item counting and duration tracking.
 - **Metadata and Tags**: Add contextual information to metrics for rich analysis and filtering.
 - **Sampling**: Thread-safe sampling control to balance performance and data volume.
@@ -284,15 +284,12 @@ public async IAsyncEnumerable<Item> GetItemsAsync([EnumeratorCancellation] Cance
 }
 ```
 
-##### Hierarchical Scope Tracking (`HierarchyCounter` / `GetHierarchySnapshot`)
+##### Automatic Parent-Child Operation Correlation (`MetricFlowMetadataKeys.Parent`)
 
-Correlate parent and nested child operations across asynchronous execution contexts (`AsyncLocal`) with zero manual token passing. MetricFlow computes exclusive self-duration and self-allocated memory by subtracting child metrics from total parent values:
+MetricFlow automatically correlates nested parent and child operations across asynchronous execution contexts (`AsyncLocal<string?>`) via technical metadata (`MetricFlowMetadataKeys.Parent` = `"metricflow_parent"`), keeping business `tags` untouched and requiring no extra counter:
 
 ```csharp
-// 1. Enable hierarchy counter on tracker or DI options
-tracker.AddHierarchyCounter();
-
-// 2. Track parent and nested child operations naturally
+// 1. Track parent and nested child operations naturally
 using (tracker.Track("GetChannelProgramsUseCase"))
 {
     using (var step1 = tracker.Track("MatchSingleChannelUseCase"))
@@ -308,13 +305,14 @@ using (tracker.Track("GetChannelProgramsUseCase"))
     }
 }
 
-// 3. Inspect formatted execution tree
-var tree = tracker.GetHierarchySnapshot("GetChannelProgramsUseCase");
-Console.WriteLine(tree?.ToFormattedString());
+// 2. Render hierarchical Markdown table (or ConsoleDisplayMode.Table)
+Console.WriteLine(tracker.ToMarkdownTable());
 /* Output:
-▼ [GetChannelProgramsUseCase] (75.82 ms, self: 0.82 ms | alloc: 24.50 KB, self: 9.10 KB)
-  ├─ [MatchSingleChannelUseCase] (10.20 ms | items: 1 | alloc: 4.25 KB)
-  └─ [TableStorage.GetProgrammesForChannel] (64.80 ms | items: 1450 | alloc: 11.15 KB)
+| Operation | Operations | Duration (Avg) | ... |
+| :--- | ---: | ---: | ... |
+| GetChannelProgramsUseCase | 1 | 75.82 ms | ... |
+| └─ MatchSingleChannelUseCase | 1 | 10.20 ms | ... |
+| └─ TableStorage.GetProgrammesForChannel | 1 | 64.80 ms | ... |
 */
 ```
 

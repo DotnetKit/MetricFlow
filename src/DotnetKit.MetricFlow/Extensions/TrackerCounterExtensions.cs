@@ -1,6 +1,5 @@
 using DotnetKit.MetricFlow.Abstractions;
 using DotnetKit.MetricFlow.Counters;
-using DotnetKit.MetricFlow.Hierarchy;
 
 // ReSharper disable once CheckNamespace
 namespace DotnetKit.MetricFlow;
@@ -48,18 +47,16 @@ public static class TrackerCounterExtensions
 
     /// <summary>
     /// Registers the standard telemetry counter preset (<see cref="DurationCounter"/> and <see cref="ExceptionCounter"/>,
-    /// plus optional <see cref="MemoryCounter"/> and <see cref="HierarchyCounter"/>).
+    /// plus optional <see cref="MemoryCounter"/>).
     /// </summary>
     /// <typeparam name="T">The metric tracker type.</typeparam>
     /// <param name="tracker">The tracker instance.</param>
     /// <param name="includeMemory">Whether to also register a <see cref="MemoryCounter"/>.</param>
-    /// <param name="includeHierarchy">Whether to also register a <see cref="HierarchyCounter"/>.</param>
     /// <param name="configureDuration">Optional configuration delegate for <see cref="DurationCounterOptions"/>.</param>
     /// <returns>The same tracker instance for method chaining.</returns>
     public static T AddTelemetryCounters<T>(
         this T tracker,
         bool includeMemory = false,
-        bool includeHierarchy = false,
         Action<DurationCounterOptions>? configureDuration = null)
         where T : IMetricTracker
     {
@@ -70,11 +67,6 @@ public static class TrackerCounterExtensions
         if (includeMemory)
         {
             tracker.AddMemoryCounter();
-        }
-
-        if (includeHierarchy)
-        {
-            tracker.AddHierarchyCounter();
         }
 
         return tracker;
@@ -191,21 +183,6 @@ public static class TrackerCounterExtensions
     {
         ArgumentNullException.ThrowIfNull(tracker);
         tracker.RegisterCounter(new FailureCounter(name));
-        return tracker;
-    }
-
-    /// <summary>
-    /// Registers a <see cref="HierarchyCounter"/> on the metric tracker to automatically correlate parent-child operations across async contexts.
-    /// </summary>
-    /// <typeparam name="T">The metric tracker type.</typeparam>
-    /// <param name="tracker">The tracker instance.</param>
-    /// <param name="name">Optional custom counter name. Defaults to <see cref="HierarchyCounter.DefaultCounterName"/>.</param>
-    /// <returns>The same tracker instance for method chaining.</returns>
-    public static T AddHierarchyCounter<T>(this T tracker, string name = HierarchyCounter.DefaultCounterName)
-        where T : IMetricTracker
-    {
-        ArgumentNullException.ThrowIfNull(tracker);
-        tracker.RegisterCounter(new HierarchyCounter(name));
         return tracker;
     }
 
@@ -355,22 +332,6 @@ public static class TrackerCounterExtensions
         => tracker.GetFailureShapshot(metricName, counterName);
 
     /// <summary>
-    /// Retrieves the <see cref="HierarchyTreeSnapshot"/> for a specific metric name, or <c>null</c> if not tracked.
-    /// </summary>
-    /// <param name="tracker">The tracker instance.</param>
-    /// <param name="metricName">The name of the metric.</param>
-    /// <param name="counterName">Optional counter name. Defaults to <see cref="HierarchyCounter.DefaultCounterName"/>.</param>
-    /// <returns>The hierarchy tree snapshot or null.</returns>
-    public static HierarchyTreeSnapshot? GetHierarchySnapshot(
-        this IMetricTracker tracker,
-        string metricName,
-        string counterName = HierarchyCounter.DefaultCounterName)
-    {
-        ArgumentNullException.ThrowIfNull(tracker);
-        return tracker.GetSnapshot<HierarchyTreeSnapshot>(metricName, counterName);
-    }
-
-    /// <summary>
     /// Registers a <see cref="DimensionCounter"/> on the metric tracker to aggregate operation counts by a dimension tag or metadata key.
     /// </summary>
     /// <typeparam name="T">The metric tracker type.</typeparam>
@@ -433,7 +394,7 @@ public static class TrackerCounterExtensions
     public static T AddDimensionCounter<T>(
         this T tracker,
         string name,
-        Func<IReadOnlyDictionary<string, string>?, IReadOnlyDictionary<string, long>?, string?> selector,
+        Func<IReadOnlyDictionary<string, string>?, IReadOnlyDictionary<string, string>?, string?> selector,
         int maxUniqueValues = 250,
         string overflowBucket = "[Other]",
         string? dimensionName = null)

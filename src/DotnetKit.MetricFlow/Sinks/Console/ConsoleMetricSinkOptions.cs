@@ -62,11 +62,6 @@ public class ConsoleMetricSinkOptions
     public ConsoleDisplayMode DisplayMode { get; set; } = ConsoleDisplayMode.FlatLog;
 
     /// <summary>
-    /// Whether to render hierarchical parent-child execution trees when a hierarchy snapshot is emitted. Defaults to true.
-    /// </summary>
-    public bool ShowHierarchicalTree { get; set; } = true;
-
-    /// <summary>
     /// Whether to render categorical dimension breakdowns as sub-rows beneath the stage row in Table mode. Defaults to true.
     /// </summary>
     public bool ShowDimensionBreakdown { get; set; } = true;

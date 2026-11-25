@@ -56,37 +56,37 @@ public interface IMetricTracker : IMetricSnapshotsSource
     /// </summary>
     /// <param name="metricName">The name of the metric or operation being tracked.</param>
     /// <param name="tags">Optional key-value string tags associated with this execution.</param>
-    /// <param name="metadata">Optional numeric metadata (e.g. byte counts, item counts) associated with this execution.</param>
+    /// <param name="metadata">Optional technical metadata (e.g. parent, trace_id, correlation_id, items) associated with this execution.</param>
     /// <returns>A disposable scope object that marks the exit of the tracked operation upon disposal.</returns>
-    IDisposable Track(string metricName, Dictionary<string, string>? tags = null, Dictionary<string, long>? metadata = null);
+    IDisposable Track(string metricName, Dictionary<string, string>? tags = null, Dictionary<string, string>? metadata = null);
 
     /// <summary>
     /// Begins tracking an operation scope using the caller's member name as the metric name.
     /// Disposing the returned object automatically completes the operation.
     /// </summary>
     /// <param name="tags">Optional key-value string tags associated with this execution.</param>
-    /// <param name="metadata">Optional numeric metadata associated with this execution.</param>
+    /// <param name="metadata">Optional technical metadata associated with this execution.</param>
     /// <param name="metricName">The caller member name, automatically supplied by the compiler.</param>
     /// <returns>A disposable scope object that marks the exit of the tracked operation upon disposal.</returns>
-    IDisposable Track(Dictionary<string, string>? tags = null, Dictionary<string, long>? metadata = null, [CallerMemberName] string metricName = "");
+    IDisposable Track(Dictionary<string, string>? tags = null, Dictionary<string, string>? metadata = null, [CallerMemberName] string metricName = "");
 
     /// <summary>
     /// Records the entry point of an operation across all enabled counters.
     /// </summary>
     /// <param name="metricName">The name of the metric or operation.</param>
     /// <param name="tags">Optional key-value tags.</param>
-    /// <param name="metadata">Optional numeric metadata.</param>
+    /// <param name="metadata">Optional technical metadata.</param>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Naming", "CA1716:Identifiers should not match keywords", Justification = "In/Out represents the core lifecycle pairing in MetricFlow domain")]
-    void In(string metricName, Dictionary<string, string>? tags = null, Dictionary<string, long>? metadata = null);
+    void In(string metricName, Dictionary<string, string>? tags = null, Dictionary<string, string>? metadata = null);
 
     /// <summary>
     /// Records the entry point of an operation across all enabled counters using the caller member name.
     /// </summary>
     /// <param name="tags">Optional key-value tags.</param>
-    /// <param name="metadata">Optional numeric metadata.</param>
+    /// <param name="metadata">Optional technical metadata.</param>
     /// <param name="metricName">The caller member name, automatically supplied by the compiler.</param>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Naming", "CA1716:Identifiers should not match keywords", Justification = "In/Out represents the core lifecycle pairing in MetricFlow domain")]
-    void In(Dictionary<string, string>? tags = null, Dictionary<string, long>? metadata = null, [CallerMemberName] string metricName = "");
+    void In(Dictionary<string, string>? tags = null, Dictionary<string, string>? metadata = null, [CallerMemberName] string metricName = "");
 
 
     /// <summary>
@@ -97,14 +97,14 @@ public interface IMetricTracker : IMetricSnapshotsSource
     /// <param name="failed"><c>true</c> if the operation failed logically; otherwise, <c>false</c>.</param>
     /// <param name="exception">Optional exception thrown during the operation, if any.</param>
     /// <param name="duration">Optional explicit elapsed duration of the operation.</param>
-    /// <param name="metadata">Optional numeric metadata.</param>
+    /// <param name="metadata">Optional technical metadata.</param>
     void Out(
         string metricName,
         Dictionary<string, string>? tags = null,
         bool failed = false,
         Exception? exception = null,
         TimeSpan? duration = null,
-        Dictionary<string, long>? metadata = null);
+        Dictionary<string, string>? metadata = null);
 
     /// <summary>
     /// Records the exit or completion of an operation across all enabled counters using the caller member name.
@@ -113,14 +113,14 @@ public interface IMetricTracker : IMetricSnapshotsSource
     /// <param name="failed"><c>true</c> if the operation failed logically; otherwise, <c>false</c>.</param>
     /// <param name="exception">Optional exception thrown during the operation, if any.</param>
     /// <param name="duration">Optional explicit elapsed duration of the operation.</param>
-    /// <param name="metadata">Optional numeric metadata.</param>
+    /// <param name="metadata">Optional technical metadata.</param>
     /// <param name="metricName">The caller member name, automatically supplied by the compiler.</param>
     void Out(
         Dictionary<string, string>? tags = null,
         bool failed = false,
         Exception? exception = null,
         TimeSpan? duration = null,
-        Dictionary<string, long>? metadata = null,
+        Dictionary<string, string>? metadata = null,
         [CallerMemberName] string metricName = "");
 
     /// <summary>
@@ -130,8 +130,8 @@ public interface IMetricTracker : IMetricSnapshotsSource
     /// </summary>
     /// <param name="metricName">The name of the functional metric or business event.</param>
     /// <param name="tags">Optional key-value string tags (business dimensions) associated with this event.</param>
-    /// <param name="metadata">Optional numeric metadata associated with this event.</param>
-    void Record(string metricName, Dictionary<string, string>? tags = null, Dictionary<string, long>? metadata = null)
+    /// <param name="metadata">Optional technical metadata associated with this event.</param>
+    void Record(string metricName, Dictionary<string, string>? tags = null, Dictionary<string, string>? metadata = null)
         => Increment(metricName, 1, tags, metadata);
 
     /// <summary>
@@ -142,8 +142,8 @@ public interface IMetricTracker : IMetricSnapshotsSource
     /// <param name="metricName">The name of the functional metric or business event.</param>
     /// <param name="value">The incremental value to add. Defaults to 1.</param>
     /// <param name="tags">Optional key-value string tags (business dimensions) associated with this event.</param>
-    /// <param name="metadata">Optional numeric metadata associated with this event.</param>
-    void Increment(string metricName, long value = 1, Dictionary<string, string>? tags = null, Dictionary<string, long>? metadata = null)
+    /// <param name="metadata">Optional technical metadata associated with this event.</param>
+    void Increment(string metricName, long value = 1, Dictionary<string, string>? tags = null, Dictionary<string, string>? metadata = null)
     {
     }
 
@@ -198,6 +198,13 @@ public interface IMetricTracker : IMetricSnapshotsSource
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns>A ValueTask representing the flush operation.</returns>
     ValueTask FlushSinksAsync(CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+
+    /// <summary>
+    /// Gets the declared parent operation name for the specified metric, if recorded via <c>parent</c> metadata or <see cref="TrackerScopeExtensions.SetParent"/>.
+    /// </summary>
+    /// <param name="metricName">The name of the metric or operation.</param>
+    /// <returns>The parent operation name, or <c>null</c> if none was declared.</returns>
+    string? GetParentOperation(string metricName) => null;
 
     /// <summary>
     /// Clears all recorded metric states across all registered counters.

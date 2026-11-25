@@ -1,6 +1,5 @@
 using DotnetKit.MetricFlow.Abstractions;
 using DotnetKit.MetricFlow.Counters;
-using DotnetKit.MetricFlow.Hierarchy;
 
 namespace DotnetKit.MetricFlow.Presentation;
 
@@ -15,9 +14,10 @@ public record OperationSummary(
     FailureSnapshot? Failure = null,
     ExceptionSnapshot? Exception = null,
     IReadOnlyList<DimensionSnapshot>? Dimensions = null,
-    HierarchyTreeSnapshot? Hierarchy = null,
     IReadOnlyList<IMetricSnapshot>? AdditionalSnapshots = null,
-    CountSnapshot? Count = null
+    CountSnapshot? Count = null,
+    string? ParentOperation = null,
+    int Depth = 0
 )
 {
     /// <summary>

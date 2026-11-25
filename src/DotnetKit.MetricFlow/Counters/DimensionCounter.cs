@@ -17,7 +17,7 @@ public class DimensionCounter : CounterBase<object?>
     private long _sequenceCounter;
     private readonly Func<
         IReadOnlyDictionary<string, string>?,
-        IReadOnlyDictionary<string, long>?,
+        IReadOnlyDictionary<string, string>?,
         string?
     > _dimensionSelector;
 
@@ -88,7 +88,7 @@ public class DimensionCounter : CounterBase<object?>
         string name,
         Func<
             IReadOnlyDictionary<string, string>?,
-            IReadOnlyDictionary<string, long>?,
+            IReadOnlyDictionary<string, string>?,
             string?
         > selector,
         int maxUniqueValues = 250,
@@ -222,7 +222,7 @@ public class DimensionCounter : CounterBase<object?>
 
     private static string? ExtractSingleTag(
         IReadOnlyDictionary<string, string>? tags,
-        IReadOnlyDictionary<string, long>? metadata,
+        IReadOnlyDictionary<string, string>? metadata,
         string key
     )
     {
@@ -246,14 +246,14 @@ public class DimensionCounter : CounterBase<object?>
         {
             if (metadata.TryGetValue(key, out var directMeta))
             {
-                return directMeta.ToString();
+                return directMeta;
             }
 
             foreach (var (k, v) in metadata)
             {
                 if (string.Equals(k, key, StringComparison.OrdinalIgnoreCase))
                 {
-                    return v.ToString();
+                    return v;
                 }
             }
         }
@@ -263,7 +263,7 @@ public class DimensionCounter : CounterBase<object?>
 
     private static string? ExtractMultiTags(
         IReadOnlyDictionary<string, string>? tags,
-        IReadOnlyDictionary<string, long>? metadata,
+        IReadOnlyDictionary<string, string>? metadata,
         IReadOnlyList<string> keys,
         string delimiter
     )
@@ -398,7 +398,7 @@ public class TagBreakdownCounter : DimensionCounter
         string name,
         Func<
             IReadOnlyDictionary<string, string>?,
-            IReadOnlyDictionary<string, long>?,
+            IReadOnlyDictionary<string, string>?,
             string?
         > selector,
         int maxUniqueValues = 250,

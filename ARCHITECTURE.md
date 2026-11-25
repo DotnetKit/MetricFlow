@@ -138,7 +138,6 @@ Starting in v1.1, `MetricTracker` starts with **zero default counters**. Counter
 | **`MemoryCounter`** | Telemetry | `MemoryTrackingToken` | Computes allocated byte delta across sync and async hops on `OnOut`. Ignores `OnRecord`. | `MemorySnapshot` |
 | **`ExceptionCounter`** | Telemetry | `null` (0 cost) | Categorizes thrown exceptions by type on `OnOut`. Ignores `OnRecord`. | `ExceptionSnapshot` |
 | **`FailureCounter`** | Telemetry | `null` (0 cost) | Separates logical failures vs. exception failures on `OnOut`. Ignores `OnRecord`. | `FailureSnapshot` |
-| **`HierarchyCounter`** | Telemetry | `HierarchyScopeToken` | Correlates parent-child scopes via `AsyncLocal` and computes self-time/self-memory on `OnOut`. Ignores `OnRecord`. | `HierarchyTreeSnapshot` |
 
 ### High-Throughput Batch Tracking (`ThroughputCounter`)
 In high-volume streaming, ingestion, or batch jobs (e.g. database ETL, message queues, indexing pipelines), operations process variable-sized item payloads. `ThroughputCounter` (and its alias `ItemCounter`):
@@ -382,7 +381,7 @@ flowchart TD
 
 - **`IMetricSink`**: Unified sink abstraction supporting synchronous `Emit(IReadOnlyList<IMetricSnapshot>)` and asynchronous `EmitAsync(...)` with bidirectional default interface implementations.
 - **Built-in Sinks**:
-  - **`ConsoleMetricSink`**: Formats snapshots into structured single-line console output with ANSI colorization, configurable units (`DurationUnit`, `MemoryUnit`, `ThroughputUnit`), dynamic color selectors, and formatted execution trees (`HierarchyTreeSnapshot`).
+  - **`ConsoleMetricSink`**: Formats snapshots into structured single-line console output or hierarchical tables (`ConsoleDisplayMode.Table`) with ANSI colorization, configurable units (`DurationUnit`, `MemoryUnit`, `ThroughputUnit`), and dynamic color selectors.
   - **`LoggerMetricSink`**: Emits structured log entries via `Microsoft.Extensions.Logging.ILogger` or `ILoggerFactory`, extracting metric properties into structured parameters for Serilog, OpenTelemetry, and Seq.
   - **`ObservableMetricSink`**: Implements `IObservable<IReadOnlyList<IMetricSnapshot>>` for reactive event streaming without timers.
 - **Timer-Free Execution Triggers (`MetricSinkTriggerOptions`)**:

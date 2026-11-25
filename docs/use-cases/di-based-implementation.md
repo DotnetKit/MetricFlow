@@ -81,7 +81,6 @@ await host.RunAsync();
 | `AddThroughputCounter(string name)` | Method | Fluent | Tracks item throughput rates and batch sizes. |
 | `AddMemoryCounter(string name)` | Method | Fluent | Measures heap allocation deltas per operation. |
 | `AddFailureCounter(string name)` | Method | Fluent | Distinguishes logical business failures from exceptions. |
-| `AddHierarchyCounter(string name)` | Method | Fluent | Enables async parent-child scope tracking and self-time. |
 | `AddDimensionCounter(...)` | Method | Fluent | Aggregates distributions across custom business dimensions. |
 | `ConfigureSinkSampling(...)` | Method | Fluent | Configures timer-free execution triggers for sinks. |
 | `ConfigureMeters(...)` | Method | Fluent | Configures `System.Diagnostics.Metrics` and cardinality limits. |
