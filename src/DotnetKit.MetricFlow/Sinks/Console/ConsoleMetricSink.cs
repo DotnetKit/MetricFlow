@@ -29,6 +29,8 @@ public class ConsoleMetricSink : IMetricSink
     /// </summary>
     public ConsoleMetricSinkOptions Options => _options;
 
+    internal Func<string, string?>? ParentResolver { get; set; }
+
     /// <summary>
     /// Initializes a new instance of <see cref="ConsoleMetricSink"/> with optional configuration.
     /// </summary>
@@ -67,8 +69,8 @@ public class ConsoleMetricSink : IMetricSink
         switch (_options.DisplayMode)
         {
             case ConsoleDisplayMode.Table:
-                var operations = snapshots.GetOperationSummaries();
-                var table = TableMetricFormatter.RenderTable(operations, _options);
+                var tableOps = snapshots.GetOperationSummaries(ParentResolver);
+                var table = TableMetricFormatter.RenderTable(tableOps, _options);
                 if (!string.IsNullOrEmpty(table))
                 {
                     writer.WriteLine(table);
@@ -76,10 +78,20 @@ public class ConsoleMetricSink : IMetricSink
                 break;
 
             case ConsoleDisplayMode.Markdown:
-                var md = snapshots.ToMarkdownTable();
+                var mdOps = snapshots.GetOperationSummaries(ParentResolver);
+                var md = mdOps.ToMarkdownTable();
                 if (!string.IsNullOrEmpty(md))
                 {
                     writer.WriteLine(md);
+                }
+                break;
+
+            case ConsoleDisplayMode.Tree:
+                var treeOps = snapshots.GetOperationSummaries(ParentResolver);
+                var tree = TreeMetricFormatter.RenderTree(treeOps, _options);
+                if (!string.IsNullOrEmpty(tree))
+                {
+                    writer.WriteLine(tree);
                 }
                 break;
 

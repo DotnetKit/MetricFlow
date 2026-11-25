@@ -120,9 +120,18 @@ public static class OperationSummaryExtensions
     )
     {
         ArgumentNullException.ThrowIfNull(source);
-        var summaries = source.GetAllSnapshots().GetOperationSummaries();
+        return source.GetAllSnapshots().GetOperationSummaries(
+            source is IMetricTracker tracker ? tracker.GetParentOperation : null
+        );
+    }
 
-        if (source is not IMetricTracker tracker || summaries.Count == 0)
+    internal static IReadOnlyList<OperationSummary> GetOperationSummaries(
+        this IEnumerable<IMetricSnapshot> snapshots,
+        Func<string, string?>? parentResolver
+    )
+    {
+        var summaries = snapshots.GetOperationSummaries();
+        if (parentResolver == null || summaries.Count == 0)
         {
             return summaries;
         }
@@ -131,7 +140,7 @@ public static class OperationSummaryExtensions
         var enriched = new List<OperationSummary>(summaries.Count);
         foreach (var summary in summaries)
         {
-            var parent = tracker.GetParentOperation(summary.OperationName);
+            var parent = parentResolver(summary.OperationName);
             if (!string.IsNullOrWhiteSpace(parent))
             {
                 hasAnyParent = true;

@@ -17,15 +17,15 @@ It can be used in both ASP.NET Core and non-ASP.NET Core applications.
 
 ### Streamlined Use Cases
 
-| Use Case                                                                           | Best For                                                    | Registration Style                 | Primary Injections / APIs                              | Example Project                                                                                                                                                                                                     |
-| :--------------------------------------------------------------------------------- | :---------------------------------------------------------- | :--------------------------------- | :----------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [**Simple Implementation**](docs/use-cases/simple-implementation.md)               | Targeted method/loop profiling, CLI jobs, algorithms        | Standalone instantiation           | `new MetricTracker(...)`                               | [BasicConsoleExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/BasicConsoleExample) & [AdvancedConsoleExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/AdvancedConsoleExample) |
-| [**DI-Based Implementation**](docs/use-cases/di-based-implementation.md)           | Background workers, daemons, multi-tenant                   | Standard DI (`IServiceCollection`) | `IMetricTracker`, `[FromKeyedServices]`, `IMetricFlow` | [AdvancedConsoleWithDIExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/AdvancedConsoleWithDIExample)                                                                                             |
-| [**Console Log Sink & Triggers**](docs/use-cases/console-log-sink.md)              | Real-time formatted console logging, timer-free sampling    | Standalone or DI                   | `AddConsoleSink(...)`, `ConfigureSinkSampling(...)`    | [ConsoleSinkExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/ConsoleSinkExample)                                                                                                                 |
-| [**Hierarchical Correlation**](docs/use-cases/hierarchical-scope-trees.md)         | Automatic parent-child operation grouping across async flows | Standalone or DI                   | `MetricFlowMetadataKeys.Parent`, `ToMarkdownTable()`   | [AdvancedConsoleExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/AdvancedConsoleExample)                                                                                                       |
-| [**Logger Sink (Serilog / ILogger)**](docs/use-cases/logger-sink.md)               | Centralized structured logging, APM forwarders, log files   | Standalone or DI                   | `AddLoggerSink(...)`, `ConfigureSinkSampling(...)`     | [LoggerSinkExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/LoggerSinkExample)                                                                                                                   |
-| [**Web Implementation**](docs/use-cases/web-implementation.md)                     | Web APIs, microservices, HTTP routing                       | ASP.NET Core pipeline              | `app.UseMetricFlow()`, `app.MapMetricFlow("/metrics")` | [WebApiExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/WebApiExample)                                                                                                                           |
-| [**OpenTelemetry & Observability**](docs/use-cases/opentelemetry-observability.md) | Prometheus, Grafana, Datadog, OTLP collectors, CLI counters | OpenTelemetry SDK / BCL            | `.AddMetricFlowInstrumentation()`, `dotnet-counters`   | [OpenTelemetryConsoleExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/OpenTelemetryConsoleExample)                                                                                               |
+| Use Case                                                                           | Best For                                                     | Registration Style                 | Primary Injections / APIs                              | Example Project                                                                                                                                                                                                     |
+| :--------------------------------------------------------------------------------- | :----------------------------------------------------------- | :--------------------------------- | :----------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [**Simple Implementation**](docs/use-cases/simple-implementation.md)               | Targeted method/loop profiling, CLI jobs, algorithms         | Standalone instantiation           | `new MetricTracker(...)`                               | [BasicConsoleExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/BasicConsoleExample) & [AdvancedConsoleExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/AdvancedConsoleExample) |
+| [**DI-Based Implementation**](docs/use-cases/di-based-implementation.md)           | Background workers, daemons, multi-tenant                    | Standard DI (`IServiceCollection`) | `IMetricTracker`, `[FromKeyedServices]`, `IMetricFlow` | [AdvancedConsoleWithDIExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/AdvancedConsoleWithDIExample)                                                                                             |
+| [**Console Log Sink & Triggers**](docs/use-cases/console-log-sink.md)              | Real-time formatted console logging, timer-free sampling     | Standalone or DI                   | `AddConsoleSink(...)`, `ConfigureSinkSampling(...)`    | [ConsoleSinkExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/ConsoleSinkExample)                                                                                                                 |
+| [**Hierarchical Correlation**](docs/use-cases/hierarchical-scope-trees.md)         | Automatic parent-child operation grouping across async flows | Standalone or DI                   | `MetricFlowMetadataKeys.Parent`, `ToMarkdownTable()`   | [AdvancedConsoleExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/AdvancedConsoleExample)                                                                                                         |
+| [**Logger Sink (Serilog / ILogger)**](docs/use-cases/logger-sink.md)               | Centralized structured logging, APM forwarders, log files    | Standalone or DI                   | `AddLoggerSink(...)`, `ConfigureSinkSampling(...)`     | [LoggerSinkExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/LoggerSinkExample)                                                                                                                   |
+| [**Web Implementation**](docs/use-cases/web-implementation.md)                     | Web APIs, microservices, HTTP routing                        | ASP.NET Core pipeline              | `app.UseMetricFlow()`, `app.MapMetricFlow("/metrics")` | [WebApiExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/WebApiExample)                                                                                                                           |
+| [**OpenTelemetry & Observability**](docs/use-cases/opentelemetry-observability.md) | Prometheus, Grafana, Datadog, OTLP collectors, CLI counters  | OpenTelemetry SDK / BCL            | `.AddMetricFlowInstrumentation()`, `dotnet-counters`   | [OpenTelemetryConsoleExample](https://github.com/DotnetKit/MetricFlow/tree/main/examples/OpenTelemetryConsoleExample)                                                                                               |
 
 ---
 
@@ -272,7 +272,7 @@ Seamlessly track asynchronous or synchronous data streams with automatic duratio
 // In an adapter, repository, or use-case:
 return _programmesClient.FindManyAsync(...)
     .Select(item => item.ToProgram())
-    .TrackStream(_tracker, "TableStorage.GetProgrammesForChannel");
+    .TrackStream(_tracker, "Adapter.GetProgrammesForChannel");
 
 // With cancellation support and CallerMemberName:
 public async IAsyncEnumerable<Item> GetItemsAsync([EnumeratorCancellation] CancellationToken ct = default)
@@ -292,27 +292,26 @@ MetricFlow automatically correlates nested parent and child operations across as
 // 1. Track parent and nested child operations naturally
 using (tracker.Track("GetChannelProgramsUseCase"))
 {
-    using (var step1 = tracker.Track("MatchSingleChannelUseCase"))
+    using (var step1 = tracker.Track("Adapter.MatchSingleChannelUseCase"))
     {
         step1.SetItems(1);
         await Task.Delay(10);
     }
 
-    using (var step2 = tracker.Track("TableStorage.GetProgrammesForChannel"))
+    using (var step2 = tracker.Track("Adapter.GetProgrammesForChannel"))
     {
         step2.SetItems(1450);
         await Task.Delay(65);
     }
 }
 
-// 2. Render hierarchical Markdown table (or ConsoleDisplayMode.Table)
-Console.WriteLine(tracker.ToMarkdownTable());
+// 2. Render visual execution tree (ConsoleDisplayMode.Tree) or Markdown table (ToMarkdownTable())
+Console.WriteLine(TreeMetricFormatter.RenderTree(tracker.GetOperationSummaries()));
 /* Output:
-| Operation | Operations | Duration (Avg) | ... |
-| :--- | ---: | ---: | ... |
-| GetChannelProgramsUseCase | 1 | 75.82 ms | ... |
-| └─ MatchSingleChannelUseCase | 1 | 10.20 ms | ... |
-| └─ TableStorage.GetProgrammesForChannel | 1 | 64.80 ms | ... |
+▼ [GetChannelProgramsUseCase] (159.74 ms, self: 30.88 ms | items: 1 | alloc: 50.42 KB, self: 24.26 KB)
+  ├─ [Adapter.MatchSingleChannelUseCase] (11.26 ms | items: 1 | alloc: 4.68 KB)
+  └─ [Adapter.GetProgrammesForChannel] (117.60 ms, self: 66.24 ms | items: 1,450 | alloc: 21.48 KB, self: 15.60 KB)
+      └─ [TableStorage.QuerySegmentAsync] x2 (51.35 ms, avg: 25.68 ms | items: 2 | alloc: 5.88 KB)
 */
 ```
 

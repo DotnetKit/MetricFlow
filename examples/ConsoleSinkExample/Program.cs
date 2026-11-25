@@ -93,8 +93,10 @@ internal class Program
             "\n>>> [Scenario 3] Native Threshold Color Coding & Dynamic Color Selector <<<\n"
         );
 
-        var paymentOptions = new MetricFlowOptions { Topic = "PaymentGateway" }
-            .AddDurationCounter();
+        var paymentOptions = new MetricFlowOptions
+        {
+            Topic = "PaymentGateway",
+        }.AddDurationCounter();
 
         // Configure console sink with native duration thresholds and custom color rules
         paymentOptions.AddConsoleSink(opt =>
@@ -152,7 +154,7 @@ internal class Program
         {
             opt.Colorize = true;
             opt.Prefix = "[Catalog:Trace]";
-            opt.DisplayMode = ConsoleDisplayMode.Table;
+            opt.DisplayMode = ConsoleDisplayMode.Tree;
 
             // 1. Duration thresholds
             opt.AddThreshold<DurationSnapshot>(
@@ -202,14 +204,14 @@ internal class Program
             await Task.Delay(30);
 
             // Child 1: Quick lookup
-            using (var step1 = catalogTracker.Track("MatchSingleChannelUseCase"))
+            using (var step1 = catalogTracker.Track("Adapter.MatchSingleChannelUseCase"))
             {
                 step1.SetItems(1);
                 await Task.Delay(10);
             }
 
             // Child 2: Data fetch (triggers warning threshold > 50ms)
-            using (var step2 = catalogTracker.Track("TableStorage.GetProgrammesForChannel"))
+            using (var step2 = catalogTracker.Track("Adapter.GetProgrammesForChannel"))
             {
                 step2.SetItems(1450);
                 await Task.Delay(65);
@@ -286,8 +288,13 @@ internal class Program
         }
 
         // Flush Table view
-        pipelineTracker.FlushSinks();
+        await pipelineTracker.FlushSinksAsync();
 
+        var parent = pipelineTracker.GetAllSnapshots();
+        foreach (var current in parent)
+        {
+            Console.WriteLine(current.ToFormattedString());
+        }
         // Multi-Format Exporters Demo
         Console.WriteLine("\n--- GitHub-Flavored Markdown Table Export ---");
         Console.WriteLine(pipelineTracker.ToMarkdownTable());

@@ -6,7 +6,7 @@ This example demonstrates the structured **Console Log Sink** (`ConsoleMetricSin
 
 ## Overview
 
-MetricFlow provides a high-performance, structured console log sink (`ConsoleMetricSink`) that formats and writes metric snapshots directly to standard output (or any configured `TextWriter`). 
+MetricFlow provides a high-performance, structured console log sink (`ConsoleMetricSink`) that formats and writes metric snapshots directly to standard output (or any configured `TextWriter`).
 
 Rather than relying on polling background timers or dedicated background threads, MetricFlow introduces **execution-lifecycle sampling triggers** evaluated during operation completion (`Track(...)` disposal or `Out(...)`). This ensures **zero idle CPU overhead**, making it ideal for high-throughput microservices, serverless workloads (AWS Lambda, Azure Functions), and CLI utilities.
 
@@ -18,7 +18,7 @@ Rather than relying on polling background timers or dedicated background threads
 - **ANSI Color Coding**: Built-in ANSI colors highlight normal rates (green), warnings/errors (red), and metric targets (yellow/cyan).
 - **Native Threshold Color Coding & Dynamic Selectors**: Declarative `opt.AddThreshold<TSnapshot>(warn, critical, ...)` and dynamic `opt.ColorSelector = snapshot => ...` pattern matching.
 - **Configurable Units & Custom Formatters**: Customizable duration units (`DurationUnit.Auto`, `Seconds`, etc.), memory units (`MemoryUnit.Auto`, `Megabytes`, etc.), throughput labels (`ThroughputUnit`), and strongly-typed snapshot formatters (`opt.AddFormatter<TSnapshot>`).
-- **Automatic Parent-Child Table Hierarchy**: Indented parent-child operation rows (`└─ `) correlated automatically via `AsyncLocal` technical metadata (`DisplayMode = ConsoleDisplayMode.Table`).
+- **Automatic Parent-Child Tree & Table Views**: Indented parent-child execution trees (`▼`, `├─`, `└─` via `DisplayMode = ConsoleDisplayMode.Tree`) and tables (`ConsoleDisplayMode.Table`) correlated automatically via `AsyncLocal` technical metadata.
 - **Execution-Lifecycle Sampling Triggers**:
   - **Stride Sampling (`EmitEveryNExecutions`)**: Automatically emits snapshots every $N$ executions (e.g., every 5 or 100 operations).
   - **Latency / Slow-Operation Sampling (`EmitOnSlowDurationThreshold`)**: Immediately emits snapshots when an operation exceeds a duration threshold (e.g., > 100ms).
@@ -171,7 +171,7 @@ hierarchyOptions.AddConsoleSink(opt =>
 {
     opt.Colorize = true;
     opt.Prefix = "[Catalog:Trace]";
-    opt.DisplayMode = ConsoleDisplayMode.Table; // Renders indented parent-child rows automatically
+    opt.DisplayMode = ConsoleDisplayMode.Tree; // Renders visual parent-child execution tree (▼, ├─, └─)
 
     // Unit customization
     opt.DurationUnit = DurationUnit.Auto; // Automatically scales between ms, s, m, h
@@ -179,7 +179,7 @@ hierarchyOptions.AddConsoleSink(opt =>
     opt.ThroughputUnit = "epg_items/s";   // Custom throughput rate label
 
     // Optional: Add custom formatters for specific snapshot types or counter names
-    opt.AddFormatter<FailureSnapshot>(f => 
+    opt.AddFormatter<FailureSnapshot>(f =>
         $"[CUSTOM-FAIL] Operations: {f.TotalOperations}, Failures: {f.TotalFailures}");
 });
 
@@ -188,13 +188,13 @@ using var tracker = new MetricTracker(hierarchyOptions);
 // Correlates automatically across AsyncLocal execution contexts
 using (tracker.Track("GetChannelProgramsUseCase"))
 {
-    using (var step1 = tracker.Track("MatchSingleChannelUseCase"))
+    using (var step1 = tracker.Track("Adapter.MatchSingleChannelUseCase"))
     {
         step1.SetItems(1);
         await Task.Delay(10);
     }
 
-    using (var step2 = tracker.Track("TableStorage.GetProgrammesForChannel"))
+    using (var step2 = tracker.Track("Adapter.GetProgrammesForChannel"))
     {
         step2.SetItems(1450);
         await Task.Delay(65);
@@ -221,7 +221,7 @@ dotnet run --project examples/ConsoleSinkExample/ConsoleSinkExample.csproj
 
 ```text
 ================================================================
-        MetricFlow - Structured Console Log Sink Example        
+        MetricFlow - Structured Console Log Sink Example
 ================================================================
 
 >>> [Scenario 1] Standalone MetricTracker & Timer-Free Lifecycle Triggers <<<
@@ -281,28 +281,11 @@ Tracking operations in standalone tracker (no automatic triggers configured)...
 >>> [Scenario 4] Hierarchical Parent-Child Scopes & Custom Colors <<<
 
 Executing parent operation with nested child operations...
-[23:07:00.020] [Catalog:Trace] [Exception:MatchSingleChannelUseCase] Operations: 1, Exceptions: 0 (0.0%)
-[23:07:00.021] [Catalog:Trace] [Exception:TableStorage.GetProgrammesForChannel] Operations: 1, Exceptions: 0 (0.0%)
-[23:07:00.021] [Catalog:Trace] [Exception:TableStorage.QuerySegmentAsync] Operations: 2, Exceptions: 0 (0.0%)
-[23:07:00.021] [Catalog:Trace] [Exception:GetChannelProgramsUseCase] Operations: 1, Exceptions: 0 (0.0%)
-[23:07:00.020] [Catalog:Trace] [Hierarchy:GetChannelProgramsUseCase] 
-▼ [GetChannelProgramsUseCase] (165.75 ms, self: 38.64 ms | alloc: 25.01 KB, self: 9.35 KB)
-  ├─ [MatchSingleChannelUseCase] (11.30 ms | items: 1 | alloc: 4.49 KB)
-  └─ [TableStorage.GetProgrammesForChannel] (115.81 ms, self: 65.36 ms | items: 1450 | alloc: 11.16 KB, self: 5.67 KB)
-      ├─ [TableStorage.QuerySegmentAsync] (25.28 ms | alloc: 5.02 KB)
-      └─ [TableStorage.QuerySegmentAsync] (25.17 ms | alloc: 488 B)
-[23:07:00.021] [Catalog:Trace] [Duration:MatchSingleChannelUseCase] Avg: 11.30 ms, Min: 11.30 ms, Max: 11.30 ms, Total: 11.30 ms
-[23:07:00.021] [Catalog:Trace] [Duration:TableStorage.GetProgrammesForChannel] Avg: 115.81 ms, Min: 115.81 ms, Max: 115.81 ms, Total: 115.81 ms
-[23:07:00.021] [Catalog:Trace] [Duration:TableStorage.QuerySegmentAsync] Avg: 25.22 ms, Min: 25.17 ms, Max: 25.28 ms, Total: 50.45 ms
-[23:07:00.021] [Catalog:Trace] [Duration:GetChannelProgramsUseCase] Avg: 165.75 ms, Min: 165.75 ms, Max: 165.75 ms, Total: 165.75 ms
-[23:07:00.022] [Catalog:Trace] [Throughput:MatchSingleChannelUseCase] TotalItems: 1, Operations: 1, Rate: 88.5 epg_items/s
-[23:07:00.022] [Catalog:Trace] [Throughput:TableStorage.GetProgrammesForChannel] TotalItems: 1450, Operations: 1, Rate: 12520.4 epg_items/s
-[23:07:00.022] [Catalog:Trace] [Throughput:TableStorage.QuerySegmentAsync] TotalItems: 2, Operations: 2, Rate: 39.6 epg_items/s
-[23:07:00.022] [Catalog:Trace] [Throughput:GetChannelProgramsUseCase] TotalItems: 1, Operations: 1, Rate: 6.0 epg_items/s
-[23:07:00.024] [Catalog:Trace] [Memory:MatchSingleChannelUseCase] Operations: 1, Avg: 4.46 KB, Total: 4.46 KB
-[23:07:00.024] [Catalog:Trace] [Memory:TableStorage.GetProgrammesForChannel] Operations: 1, Avg: 11.17 KB, Total: 11.17 KB
-[23:07:00.024] [Catalog:Trace] [Memory:TableStorage.QuerySegmentAsync] Operations: 2, Avg: 2.72 KB, Total: 5.45 KB
-[23:07:00.024] [Catalog:Trace] [Memory:GetChannelProgramsUseCase] Operations: 1, Avg: 21.84 KB, Total: 21.84 KB
+[21:50:33.800] [Catalog:Trace]
+▼ [GetChannelProgramsUseCase] (159.74 ms, self: 30.88 ms | items: 1 | alloc: 50.42 KB, self: 24.26 KB)
+  ├─ [Adapter.MatchSingleChannelUseCase] (11.26 ms | items: 1 | alloc: 4.68 KB)
+  └─ [Adapter.GetProgrammesForChannel] (117.60 ms, self: 66.24 ms | items: 1,450 | alloc: 21.48 KB, self: 15.60 KB)
+      └─ [TableStorage.QuerySegmentAsync] x2 (51.35 ms, avg: 25.68 ms | items: 2 | alloc: 5.88 KB)
 
 Structured console log sink example completed successfully!
 ```

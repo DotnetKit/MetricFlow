@@ -117,7 +117,7 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
         {
             foreach (var sink in sinks)
             {
-                _sinks[sink.Name] = sink;
+                RegisterSink(sink);
             }
         }
 
@@ -517,6 +517,10 @@ public abstract class MetricTrackerBase : IMetricTracker, IDisposable
     public IMetricTracker RegisterSink(IMetricSink sink)
     {
         ArgumentNullException.ThrowIfNull(sink);
+        if (sink is Sinks.Console.ConsoleMetricSink consoleSink)
+        {
+            consoleSink.ParentResolver = GetParentOperation;
+        }
         _sinks[sink.Name] = sink;
         return this;
     }

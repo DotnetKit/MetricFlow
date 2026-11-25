@@ -18,5 +18,11 @@ public enum ConsoleDisplayMode
     /// <summary>
     /// Formats snapshots as a GitHub-flavored Markdown table.
     /// </summary>
-    Markdown = 2
+    Markdown = 2,
+
+    /// <summary>
+    /// Renders correlated parent-child operations as an indented visual execution tree (<c>▼</c>, <c>├─</c>, <c>└─</c>)
+    /// with total and exclusive self duration/memory metrics.
+    /// </summary>
+    Tree = 3
 }

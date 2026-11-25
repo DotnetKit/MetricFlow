@@ -165,6 +165,61 @@ public class OperationParentHierarchyTests
     }
 
     [Fact]
+    public async Task ConsoleSink_TreeDisplayMode_RendersVisualParentChildTreeWithSelfMetrics()
+    {
+        // Arrange
+        using var writer = new StringWriter();
+        using var tracker = new MetricTracker("MediaCatalog")
+            .AddTelemetryCounters(includeMemory: true)
+            .AddThroughputCounter()
+            .AddConsoleSink(opt =>
+            {
+                opt.OutputWriter = writer;
+                opt.Colorize = false;
+                opt.DisplayMode = ConsoleDisplayMode.Tree;
+            });
+
+        // Act
+        using (tracker.Track("GetChannelProgramsUseCase"))
+        {
+            await Task.Delay(15);
+            using (var step1 = tracker.Track("Adapter.MatchSingleChannelUseCase"))
+            {
+                step1.SetItems(1);
+                await Task.Delay(5);
+            }
+
+            using (var step2 = tracker.Track("Adapter.GetProgrammesForChannel"))
+            {
+                step2.SetItems(1450);
+                await Task.Delay(10);
+
+                using (tracker.Track("TableStorage.QuerySegmentAsync"))
+                {
+                    await Task.Delay(5);
+                }
+
+                using (tracker.Track("TableStorage.QuerySegmentAsync"))
+                {
+                    await Task.Delay(5);
+                }
+            }
+        }
+
+        await tracker.FlushSinksAsync();
+        var output = writer.ToString();
+
+        // Assert
+        output.Should().Contain("▼ [GetChannelProgramsUseCase]");
+        output.Should().Contain("self:");
+        output.Should().Contain("  ├─ [Adapter.MatchSingleChannelUseCase]");
+        output.Should().Contain("  └─ [Adapter.GetProgrammesForChannel]");
+        output.Should().Contain("      └─ [TableStorage.QuerySegmentAsync] x2");
+        output.Should().Contain("avg:");
+        output.Should().Contain("items: 1,450");
+    }
+
+    [Fact]
     public void ParentMetadata_WithCyclesOrMissingParent_DoesNotInfiniteLoop()
     {
         // Arrange
@@ -179,6 +234,66 @@ public class OperationParentHierarchyTests
         // Assert
         summaries.Should().HaveCount(3);
         summaries.Select(s => s.OperationName).Should().Contain(["OpA", "OpB", "Orphan"]);
+    }
+
+    [Fact]
+    public async Task ConsoleDisplayModeTree_RendersVisualParentChildTreeWithSelfDurationAndItems()
+    {
+        // Arrange
+        using var writer = new StringWriter();
+        using var tracker = new MetricTracker("MediaCatalog")
+            .AddTelemetryCounters(includeMemory: true)
+            .AddThroughputCounter()
+            .AddConsoleSink(opt =>
+            {
+                opt.OutputWriter = writer;
+                opt.Colorize = false;
+                opt.IncludeTimestamp = false;
+                opt.Prefix = "[Catalog:Trace]";
+                opt.DisplayMode = ConsoleDisplayMode.Tree;
+            });
+
+        // Act
+        using (tracker.Track("GetChannelProgramsUseCase"))
+        {
+            await Task.Delay(10);
+
+            using (var step1 = tracker.Track("Adapter.MatchSingleChannelUseCase"))
+            {
+                step1.SetItems(1);
+                await Task.Delay(5);
+            }
+
+            using (var step2 = tracker.Track("Adapter.GetProgrammesForChannel"))
+            {
+                step2.SetItems(1450);
+                await Task.Delay(10);
+
+                using (tracker.Track("TableStorage.QuerySegmentAsync"))
+                {
+                    await Task.Delay(5);
+                }
+
+                using (tracker.Track("TableStorage.QuerySegmentAsync"))
+                {
+                    await Task.Delay(5);
+                }
+            }
+        }
+
+        await tracker.FlushSinksAsync();
+        var output = writer.ToString();
+
+        // Assert
+        output.Should().Contain("[Catalog:Trace]");
+        output.Should().Contain("▼ [GetChannelProgramsUseCase]");
+        output.Should().Contain("self:");
+        output.Should().Contain("├─ [Adapter.MatchSingleChannelUseCase]");
+        output.Should().Contain("items: 1");
+        output.Should().Contain("└─ [Adapter.GetProgrammesForChannel]");
+        output.Should().Contain("items: 1,450");
+        output.Should().Contain("└─ [TableStorage.QuerySegmentAsync] x2");
+        output.Should().Contain("avg:");
     }
 
     private sealed class ContextSpyCounter(string name) : CounterBase(name)

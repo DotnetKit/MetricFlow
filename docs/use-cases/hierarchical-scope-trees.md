@@ -27,36 +27,51 @@ var tracker = new MetricTracker("CatalogService")
     .AddConsoleSink(opt =>
     {
         opt.Colorize = true;
-        opt.DisplayMode = ConsoleDisplayMode.Table;
+        opt.DisplayMode = ConsoleDisplayMode.Tree;
     });
 
 // Parent scope (Track or In/Out)
 using (tracker.Track("GetChannelProgramsUseCase"))
 {
-    await Task.Delay(20);
+    await Task.Delay(30);
 
     // Child scope 1: automatically correlated under GetChannelProgramsUseCase
-    using (var step1 = tracker.Track("MatchSingleChannelUseCase"))
+    using (var step1 = tracker.Track("Adapter.MatchSingleChannelUseCase"))
     {
         step1.SetItems(1);
         await Task.Delay(10);
     }
 
     // Child scope 2: automatically correlated under GetChannelProgramsUseCase
-    using (var step2 = tracker.Track("TableStorage.GetProgrammesForChannel"))
+    using (var step2 = tracker.Track("Adapter.GetProgrammesForChannel"))
     {
         step2.SetItems(1450);
-        await Task.Delay(50);
+        await Task.Delay(65);
 
-        // Grandchild scope: automatically correlated under TableStorage.GetProgrammesForChannel
+        // Grandchild scopes: automatically correlated under Adapter.GetProgrammesForChannel
         using (tracker.Track("TableStorage.QuerySegmentAsync"))
         {
-            await Task.Delay(20);
+            await Task.Delay(25);
+        }
+
+        using (tracker.Track("TableStorage.QuerySegmentAsync"))
+        {
+            await Task.Delay(25);
         }
     }
 }
 
-Console.WriteLine(tracker.ToMarkdownTable());
+await tracker.FlushSinksAsync();
+```
+
+### Formatted Console Tree Output (`ConsoleDisplayMode.Tree`)
+
+```text
+[21:50:33.800] [Catalog:Trace]
+▼ [GetChannelProgramsUseCase] (159.74 ms, self: 30.88 ms | items: 1 | alloc: 50.42 KB, self: 24.26 KB)
+  ├─ [Adapter.MatchSingleChannelUseCase] (11.26 ms | items: 1 | alloc: 4.68 KB)
+  └─ [Adapter.GetProgrammesForChannel] (117.60 ms, self: 66.24 ms | items: 1,450 | alloc: 21.48 KB, self: 15.60 KB)
+      └─ [TableStorage.QuerySegmentAsync] x2 (51.35 ms, avg: 25.68 ms | items: 2 | alloc: 5.88 KB)
 ```
 
 ### Explicit Parent Override
@@ -89,5 +104,5 @@ foreach (var summary in summaries)
 }
 
 // Or query a single operation's declared parent directly
-var parent = tracker.GetParentOperation("MatchSingleChannelUseCase");
+var parent = tracker.GetParentOperation("Adapter.MatchSingleChannelUseCase");
 ```
