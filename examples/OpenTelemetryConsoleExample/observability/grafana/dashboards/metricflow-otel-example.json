@@ -35,7 +35,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(last_over_time(ProcessOrderBatch_total{service_name=~\"$service\"}[1h]))"
+          "expr": "sum(last_over_time(process_order_batch_count_total{service_name=~\"$service\"}[1h]))"
         }
       ],
       "fieldConfig": {
@@ -54,7 +54,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(last_over_time(ProcessOrderBatch_items_total{service_name=~\"$service\"}[1h]))"
+          "expr": "sum(last_over_time(process_order_batch_items_total{service_name=~\"$service\"}[1h]))"
         }
       ],
       "fieldConfig": {
@@ -73,7 +73,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(last_over_time(CustomerLookup_total{service_name=~\"$service\"}[1h]))"
+          "expr": "sum(last_over_time(customer_lookup_count_total{service_name=~\"$service\"}[1h]))"
         }
       ],
       "fieldConfig": {
@@ -92,7 +92,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(last_over_time(ValidatePayment_exceptions_total{service_name=~\"$service\"}[1h]))"
+          "expr": "sum(last_over_time(validate_payment_exceptions_total{service_name=~\"$service\"}[1h]))"
         }
       ],
       "fieldConfig": {
@@ -119,11 +119,11 @@
           "refId": "A",
           "instant": true,
           "legendFormat": "{{operation}}",
-          "expr": "sum by (operation) (last_over_time({__name__=~\".*_duration_milliseconds_sum\", service_name=~\"$service\"}[1h])) / sum by (operation) (last_over_time({__name__=~\".*_duration_milliseconds_count\", service_name=~\"$service\"}[1h]))"
+          "expr": "sum by (operation) (last_over_time({__name__=~\".*_duration_seconds_sum\", service_name=~\"$service\"}[1h])) / sum by (operation) (last_over_time({__name__=~\".*_duration_seconds_count\", service_name=~\"$service\"}[1h]))"
         }
       ],
       "fieldConfig": {
-        "defaults": { "unit": "ms" }
+        "defaults": { "unit": "s" }
       }
     },
     {
@@ -137,7 +137,7 @@
           "refId": "A",
           "instant": true,
           "legendFormat": "{{region}}",
-          "expr": "sum by (region) (last_over_time(ProcessOrderBatch_items_total{service_name=~\"$service\"}[1h]))"
+          "expr": "sum by (region) (last_over_time(process_order_batch_items_total{service_name=~\"$service\"}[1h]))"
         }
       ]
     },
@@ -152,7 +152,7 @@
           "refId": "A",
           "instant": true,
           "legendFormat": "{{customer_id}}",
-          "expr": "sum by (customer_id) (last_over_time(CustomerLookup_total{service_name=~\"$service\"}[1h]))"
+          "expr": "sum by (customer_id) (last_over_time(customer_lookup_count_total{service_name=~\"$service\"}[1h]))"
         }
       ]
     },
@@ -166,7 +166,7 @@
         {
           "refId": "A",
           "legendFormat": "{{operation}} ({{status}})",
-          "expr": "sum by (operation, status) ({__name__=~\"(ProcessOrderBatch|CustomerLookup|ValidatePayment)_total\", service_name=~\"$service\"})"
+          "expr": "sum by (operation, status) ({__name__=~\"(process_order_batch|customer_lookup|validate_payment)_count_total\", service_name=~\"$service\"})"
         }
       ]
     }

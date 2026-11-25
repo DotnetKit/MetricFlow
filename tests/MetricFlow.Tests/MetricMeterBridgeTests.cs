@@ -38,7 +38,7 @@ public class MetricMeterBridgeTests
         listener.SetMeasurementEventCallback<long>((instrument, measurement, tags, _) =>
         {
             var tagDict = ConvertTags(tags);
-            if (instrument.Name.EndsWith(".total"))
+            if (instrument.Name.EndsWith(".count"))
             {
                 totalRecords.Add((instrument.Name, measurement, tagDict));
             }
@@ -59,7 +59,7 @@ public class MetricMeterBridgeTests
         // Assert
         durationRecords.Should().ContainSingle();
         var durationRecord = durationRecords.First();
-        durationRecord.InstrumentName.Should().Be("Checkout.duration");
+        durationRecord.InstrumentName.Should().Be("checkout.duration");
         durationRecord.Value.Should().BeGreaterThan(0.0);
         durationRecord.Tags["operation"].Should().Be("Checkout");
         durationRecord.Tags["status"].Should().Be("ok");
@@ -67,7 +67,7 @@ public class MetricMeterBridgeTests
 
         totalRecords.Should().ContainSingle();
         var totalRecord = totalRecords.First();
-        totalRecord.InstrumentName.Should().Be("Checkout.total");
+        totalRecord.InstrumentName.Should().Be("checkout.count");
         totalRecord.Value.Should().Be(1);
         totalRecord.Tags["operation"].Should().Be("Checkout");
         totalRecord.Tags["status"].Should().Be("ok");
@@ -93,7 +93,7 @@ public class MetricMeterBridgeTests
 
         listener.SetMeasurementEventCallback<long>((instrument, measurement, tags, _) =>
         {
-            if (instrument.Name.EndsWith(".total"))
+            if (instrument.Name.EndsWith(".count"))
             {
                 var tagDict = ConvertTags(tags);
                 if (tagDict.TryGetValue("user_id", out var userId))
@@ -275,7 +275,7 @@ public class MetricMeterBridgeTests
         var exEvent = exceptionEvents.First();
         exEvent.Count.Should().Be(1);
         exEvent.Tags["operation"].Should().Be("FailingOperation");
-        exEvent.Tags["exception.type"].Should().Be(typeof(InvalidOperationException).FullName);
+        exEvent.Tags["error.type"].Should().Be(typeof(InvalidOperationException).FullName);
         exEvent.Tags["status"].Should().Be("error");
 
         durationEvents.Should().NotBeEmpty();
@@ -413,12 +413,12 @@ public class MetricMeterBridgeTests
         using (tracker.Track("ActionA")) { }
         using (tracker.Track("ActionB")) { }
 
-        // Assert: instruments should be operation.duration, operation.total, etc.
+        // Assert: instruments should be operation.duration, operation.count, etc.
         var distinctInstruments = instrumentNames.Distinct().ToList();
         distinctInstruments.Should().Contain("operation.duration");
-        distinctInstruments.Should().Contain("operation.total");
-        distinctInstruments.Should().NotContain("ActionA.duration");
-        distinctInstruments.Should().NotContain("ActionB.duration");
+        distinctInstruments.Should().Contain("operation.count");
+        distinctInstruments.Should().NotContain("action_a.duration");
+        distinctInstruments.Should().NotContain("action_b.duration");
     }
 
     [Fact]
@@ -438,7 +438,7 @@ public class MetricMeterBridgeTests
 
         listener.SetMeasurementEventCallback<long>((instrument, measurement, _, _) =>
         {
-            if (instrument.Name.EndsWith(".total")) totalRecorded = true;
+            if (instrument.Name.EndsWith(".count")) totalRecorded = true;
         });
 
         listener.SetMeasurementEventCallback<double>((instrument, measurement, _, _) =>

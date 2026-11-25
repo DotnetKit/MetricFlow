@@ -138,11 +138,11 @@ public class FunctionalMetricsTests
 
         // Assert
         recordedMeasurements.Should().HaveCount(2);
-        recordedMeasurements[0].InstrumentName.Should().Be("OrderCreated.total");
+        recordedMeasurements[0].InstrumentName.Should().Be("order_created.count");
         recordedMeasurements[0].Value.Should().Be(1);
         recordedMeasurements[0].Tags["region"].Should().Be("EU");
 
-        recordedMeasurements[1].InstrumentName.Should().Be("OrderCreated.total");
+        recordedMeasurements[1].InstrumentName.Should().Be("order_created.count");
         recordedMeasurements[1].Value.Should().Be(5);
         recordedMeasurements[1].Tags["region"].Should().Be("US");
     }

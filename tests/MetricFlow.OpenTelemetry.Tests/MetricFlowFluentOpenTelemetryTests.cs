@@ -40,8 +40,8 @@ public class MetricFlowFluentOpenTelemetryTests
 
         // Assert
         exportedMetrics.Should().NotBeEmpty();
-        exportedMetrics.Should().Contain(m => m.Name == "Checkout.duration");
-        exportedMetrics.Should().Contain(m => m.Name == "Checkout.total");
+        exportedMetrics.Should().Contain(m => m.Name == "checkout.duration");
+        exportedMetrics.Should().Contain(m => m.Name == "checkout.count");
     }
 
     [Fact]
@@ -66,7 +66,7 @@ public class MetricFlowFluentOpenTelemetryTests
 
         // Assert
         exportedMetrics.Should().NotBeEmpty();
-        exportedMetrics.Should().Contain(m => m.Name == "AuthorizeCard.total");
+        exportedMetrics.Should().Contain(m => m.Name == "authorize_card.count");
     }
 
     [Fact]

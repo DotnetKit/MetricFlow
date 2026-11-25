@@ -37,13 +37,13 @@ public class OpenTelemetryIntegrationTests
         // Assert
         exportedMetrics.Should().NotBeEmpty();
 
-        var durationMetric = exportedMetrics.FirstOrDefault(m => m.Name == "ProcessPayment.duration");
+        var durationMetric = exportedMetrics.FirstOrDefault(m => m.Name == "process_payment.duration");
         durationMetric.Should().NotBeNull();
-        durationMetric.Unit.Should().Be("ms");
+        durationMetric.Unit.Should().Be("s");
 
-        var totalMetric = exportedMetrics.FirstOrDefault(m => m.Name == "ProcessPayment.total");
+        var totalMetric = exportedMetrics.FirstOrDefault(m => m.Name == "process_payment.count");
         totalMetric.Should().NotBeNull();
-        totalMetric.Unit.Should().Be("{operations}");
+        totalMetric.Unit.Should().Be("{operation}");
 
         // Inspect metric points
         var totalPoints = new List<MetricPoint>();
@@ -83,8 +83,8 @@ public class OpenTelemetryIntegrationTests
 
         // Assert
         var metricNames = exportedMetrics.Select(m => m.Name).ToList();
-        metricNames.Should().Contain(n => n.StartsWith("AllowedOp"));
-        metricNames.Should().NotContain(n => n.StartsWith("IgnoredOp"));
+        metricNames.Should().Contain(n => n.StartsWith("allowed_op"));
+        metricNames.Should().NotContain(n => n.StartsWith("ignored_op"));
     }
 
     [Fact]
@@ -108,7 +108,7 @@ public class OpenTelemetryIntegrationTests
         meterProvider.ForceFlush();
 
         // Assert
-        var itemsMetric = exportedMetrics.FirstOrDefault(m => m.Name == "DataIngest.items");
+        var itemsMetric = exportedMetrics.FirstOrDefault(m => m.Name == "data_ingest.items");
         itemsMetric.Should().NotBeNull();
 
         var points = new List<MetricPoint>();

@@ -81,31 +81,31 @@ public class MetricFlowMeterBridge : IMetricMeterBridge
 
         var instruments = GetOrAddInstruments(metricName);
 
-        // 1. Duration histogram: {metricName}.duration (ms)
+        // 1. Duration histogram: {prefix}.duration (s)
         var status = failed || exception != null ? "error" : "ok";
-        var durationTags = CreateMeasurementTagList(metricName, status: status, exceptionType: null, tags);
-        instruments.Duration.Record(duration.TotalMilliseconds, in durationTags);
+        var durationTags = CreateMeasurementTagList(metricName, status: status, errorType: null, tags);
+        instruments.Duration.Record(duration.TotalSeconds, in durationTags);
 
-        // 2. Execution counts: {metricName}.total
-        instruments.Total.Add(1, in durationTags);
+        // 2. Execution counts: {prefix}.count
+        instruments.Count.Add(1, in durationTags);
 
-        // 3. Throughput / Items: {metricName}.items
+        // 3. Throughput / Items: {prefix}.items
         if (ItemCountExtractor.TryExtractItemCount(tags, metadata, out var items))
         {
-            var itemTags = CreateMeasurementTagList(metricName, status: null, exceptionType: null, tags);
+            var itemTags = CreateMeasurementTagList(metricName, status: null, errorType: null, tags);
             instruments.Items.Add(items, in itemTags);
         }
         else if (_options.AlwaysRecordItems)
         {
-            var itemTags = CreateMeasurementTagList(metricName, status: null, exceptionType: null, tags);
+            var itemTags = CreateMeasurementTagList(metricName, status: null, errorType: null, tags);
             instruments.Items.Add(1, in itemTags);
         }
 
-        // 4. ExceptionCounter: {metricName}.exceptions
+        // 4. Exceptions: {prefix}.exceptions
         if (failed || exception != null)
         {
-            var exType = exception?.GetType().FullName ?? "OperationFailed";
-            var exTags = CreateMeasurementTagList(metricName, status: "error", exceptionType: exType, tags);
+            var errType = exception?.GetType().FullName ?? "OperationFailed";
+            var exTags = CreateMeasurementTagList(metricName, status: "error", errorType: errType, tags);
             instruments.Exceptions.Add(1, in exTags);
         }
     }
@@ -122,8 +122,8 @@ public class MetricFlowMeterBridge : IMetricMeterBridge
         }
 
         var instruments = GetOrAddInstruments(metricName);
-        var metricTags = CreateMeasurementTagList(metricName, status: null, exceptionType: null, tags);
-        instruments.Total.Add(value, in metricTags);
+        var metricTags = CreateMeasurementTagList(metricName, status: null, errorType: null, tags);
+        instruments.Count.Add(value, in metricTags);
     }
 
     public TagList CreateActiveTagList(string metricName, IReadOnlyDictionary<string, string>? tags)
@@ -136,7 +136,7 @@ public class MetricFlowMeterBridge : IMetricMeterBridge
     public TagList CreateMeasurementTagList(
         string metricName,
         string? status,
-        string? exceptionType,
+        string? errorType,
         IReadOnlyDictionary<string, string>? tags)
     {
         var tagList = new TagList { { "operation", metricName } };
@@ -146,9 +146,9 @@ public class MetricFlowMeterBridge : IMetricMeterBridge
             tagList.Add("status", status);
         }
 
-        if (exceptionType != null)
+        if (errorType != null)
         {
-            tagList.Add("exception.type", exceptionType);
+            tagList.Add("error.type", errorType);
         }
 
         AppendSanitizedTags(ref tagList, tags);
@@ -200,23 +200,23 @@ public class MetricFlowMeterBridge : IMetricMeterBridge
             {
                 Duration = _meter.CreateHistogram<double>(
                     name: $"{prefix}.duration",
-                    unit: "ms",
-                    description: "Duration of operation in milliseconds."),
-                Total = _meter.CreateCounter<long>(
-                    name: $"{prefix}.total",
-                    unit: "{operations}",
+                    unit: "s",
+                    description: "Duration of operation in seconds."),
+                Count = _meter.CreateCounter<long>(
+                    name: $"{prefix}.count",
+                    unit: "{operation}",
                     description: "Total number of operations executed."),
                 Items = _meter.CreateCounter<long>(
                     name: $"{prefix}.items",
-                    unit: "{items}",
+                    unit: "{item}",
                     description: "Total number of items processed."),
                 Exceptions = _meter.CreateCounter<long>(
                     name: $"{prefix}.exceptions",
-                    unit: "{exceptions}",
+                    unit: "{exception}",
                     description: "Total number of exceptions encountered."),
                 Active = _meter.CreateUpDownCounter<long>(
                     name: $"{prefix}.active",
-                    unit: "{operations}",
+                    unit: "{operation}",
                     description: "Number of currently active in-flight operations.")
             };
         });
@@ -234,19 +234,41 @@ public class MetricFlowMeterBridge : IMetricMeterBridge
     {
         if (string.IsNullOrWhiteSpace(metricName)) return "operation";
 
-        var sb = new StringBuilder(metricName.Length);
-        foreach (var c in metricName)
+        var sb = new StringBuilder(metricName.Length + 4);
+        for (var i = 0; i < metricName.Length; i++)
         {
-            if (char.IsLetterOrDigit(c) || c == '_' || c == '.' || c == '-')
+            var c = metricName[i];
+            if (char.IsUpper(c))
+            {
+                if (i > 0)
+                {
+                    var prev = metricName[i - 1];
+                    var nextIsLower = i + 1 < metricName.Length && char.IsLower(metricName[i + 1]);
+                    if ((char.IsLower(prev) || char.IsDigit(prev) || (char.IsUpper(prev) && nextIsLower))
+                        && sb.Length > 0
+                        && sb[^1] != '_'
+                        && sb[^1] != '.')
+                    {
+                        sb.Append('_');
+                    }
+                }
+                sb.Append(char.ToLowerInvariant(c));
+            }
+            else if (char.IsLower(c) || char.IsDigit(c) || c == '_' || c == '.')
             {
                 sb.Append(c);
             }
             else
             {
-                sb.Append('_');
+                if (sb.Length > 0 && sb[^1] != '_' && sb[^1] != '.')
+                {
+                    sb.Append('_');
+                }
             }
         }
-        return sb.ToString();
+
+        var result = sb.ToString().Trim('_', '.');
+        return string.IsNullOrEmpty(result) ? "operation" : result;
     }
 
     public void Reset()
@@ -274,7 +296,7 @@ public class MetricFlowMeterBridge : IMetricMeterBridge
     private sealed class OperationInstruments
     {
         public required Histogram<double> Duration { get; init; }
-        public required Counter<long> Total { get; init; }
+        public required Counter<long> Count { get; init; }
         public required Counter<long> Items { get; init; }
         public required Counter<long> Exceptions { get; init; }
         public required UpDownCounter<long> Active { get; init; }
