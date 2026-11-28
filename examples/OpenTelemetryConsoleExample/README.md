@@ -2,7 +2,7 @@
 
 This example demonstrates native **OpenTelemetry** integration with **MetricFlow** using the `DotnetKit.MetricFlow.OpenTelemetry` package. It showcases how MetricFlow operations automatically bridge into standard .NET `System.Diagnostics.Metrics` (`Meter`) instruments while retaining MetricFlow's in-memory aggregated snapshots and cardinality guards.
 
-<img width="1786" height="1210" alt="image" src="https://github.com/user-attachments/assets/cd1adef9-9ac1-4179-a747-8b0316f6f25a" />
+<img width="1716" height="1186" alt="image" src="https://github.com/user-attachments/assets/09a69974-328f-403e-a744-98acc08fcf3f" />
 
 ---
 
