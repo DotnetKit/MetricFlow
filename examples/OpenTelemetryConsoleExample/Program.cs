@@ -1,6 +1,5 @@
 using DotnetKit.MetricFlow;
 using DotnetKit.MetricFlow.Abstractions;
-using DotnetKit.MetricFlow.OpenTelemetry;
 using Microsoft.Extensions.DependencyInjection;
 using OpenTelemetry.Metrics;
 
@@ -14,69 +13,9 @@ internal class Program
         Console.WriteLine("    MetricFlow + OpenTelemetry .NET Integration Example");
         Console.WriteLine("===================================================================\n");
 
-        // 1. Configure MetricFlow and OpenTelemetry together in DI using .WithOpenTelemetry()
+        // 1. Configure MetricFlow and OpenTelemetry via dedicated DI extension
         var services = new ServiceCollection();
-
-        services
-            .AddMetricFlow(
-                "OrderProcessingService",
-                options =>
-                {
-                    options.AddTagsEnricher(tags =>
-                    {
-                        tags["environment"] = "Production";
-                        tags["datacenter"] = "eu-central-1";
-                    });
-
-                    // Add telemetry preset (duration + exceptions) and throughput counter for local snapshots
-                    options.AddTelemetryCounters().AddThroughputCounter();
-
-                    // Configure meter cardinality protection to protect Prometheus / OTLP collectors
-                    options.ConfigureMeters(m =>
-                    {
-                        m.MaxUniqueTagValues = 3;
-                        m.OverflowBucket = "[Other]";
-                    });
-                }
-            )
-            .WithOpenTelemetry(otel =>
-            {
-                otel.WithMetrics(metrics =>
-                {
-                    // Export directly to console (in production, use .AddOtlpExporter() or .AddPrometheusExporter())
-                    metrics.AddConsoleExporter(
-                        (_, metricReaderOptions) =>
-                        {
-                            metricReaderOptions
-                                .PeriodicExportingMetricReaderOptions
-                                .ExportIntervalMilliseconds = 1000;
-                        }
-                    );
-
-                    // Export via OTLP when OTEL_EXPORTER_OTLP_ENDPOINT is configured
-                    var otlpEndpoint = Environment.GetEnvironmentVariable(
-                        "OTEL_EXPORTER_OTLP_ENDPOINT"
-                    );
-                    if (string.IsNullOrWhiteSpace(otlpEndpoint))
-                        throw new InvalidOperationException(
-                            "OTEL_EXPORTER_OTLP_ENDPOINT is not configured."
-                        );
-
-                    metrics.AddOtlpExporter(otlp =>
-                    {
-                        if (!otlpEndpoint.Contains("://", StringComparison.Ordinal))
-                        {
-                            otlp.Endpoint = new Uri(
-                                $"https://{otlpEndpoint.TrimEnd('/')}/v1/metrics"
-                            );
-                        }
-
-                        Console.WriteLine(
-                            $"[OTLP] Endpoint={otlp.Endpoint}, Protocol={otlp.Protocol}, HeadersConfigured={!string.IsNullOrWhiteSpace(otlp.Headers)}"
-                        );
-                    });
-                });
-            });
+        services.AddOrderProcessingMetrics();
 
         using var serviceProvider = services.BuildServiceProvider();
 
@@ -113,23 +52,40 @@ internal class Program
 
         try
         {
-            using (tracker.Track("ValidatePayment"))
-            {
-                throw new InvalidOperationException("Payment gateway timeout simulation.");
-            }
+            tracker.TrackAction(
+                "ValidatePayment",
+                () => throw new InvalidOperationException("Payment gateway timeout simulation.")
+            );
         }
-        catch (Exception ex)
+        catch (InvalidOperationException)
         {
-            tracker.Out("ValidatePayment", failed: true, exception: ex);
+            // Exception already recorded once on ValidatePayment with status="error"
         }
 
         Console.WriteLine(
-            "\n4. Flushing OpenTelemetry MeterProvider to terminal (raw BCL measurements):\n"
+            "4. Recording pure functional business metrics (Record / Increment)...\n"
+        );
+
+        string[] plans = ["Free", "Pro", "Enterprise"];
+        for (var i = 0; i < 90; i++)
+        {
+            var region = regions[i % regions.Length];
+            var plan = plans[i % plans.Length];
+            tracker.Record("OrderPlaced", new() { ["region"] = region, ["plan"] = plan });
+            tracker.Increment(
+                "ItemsSold",
+                (i + 1) * 3,
+                new() { ["region"] = region, ["plan"] = plan }
+            );
+        }
+
+        Console.WriteLine(
+            "\n5. Flushing OpenTelemetry MeterProvider to terminal (raw BCL measurements):\n"
         );
         var flushed = meterProvider.ForceFlush(10_000);
         Console.WriteLine($"[OTLP] ForceFlush returned: {flushed}");
 
-        Console.WriteLine("\n5. MetricFlow In-Memory Aggregated Snapshot Report:\n");
+        Console.WriteLine("\n6. MetricFlow In-Memory Aggregated Snapshot Report:\n");
         Console.WriteLine(tracker.ToString());
 
         Console.WriteLine(
