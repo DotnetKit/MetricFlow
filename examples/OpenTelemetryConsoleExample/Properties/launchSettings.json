@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json.schemastore.org/launchsettings.json",
+  "profiles": {
+    "OpenTelemetryConsoleExample": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4318",
+        "OTEL_SERVICE_NAME": "metricflow-otel-example",
+        "OTEL_EXPORTER_OTLP_PROTOCOL": "http/protobuf"
+      }
+    }
+  }
+}
